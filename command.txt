@@ -1,0 +1,18 @@
+Instalacija migrate preko go
+------------------------------
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+migrate -version
+
+ls ~/go/bin/migrate.exe -- kako bi smo putanju stavili u Makefile jer make ne vidi migrate
+
+U koliko smo zabrljali sa migracijom
+--------------------------------------
+najbolje je da dropnemo bazu:
+docker exec -it postgres16 dropdb tdi_evid --- mora direktno u komandnoj liniji, ne preko make-a
+kreiramo ponovo
+docker exec -it postgres16 createdb --username=root --owner=root tdi_evid --moramo direktno ne preko make-a
+
+
+Za ciscenje kesa
+---------------
+go clean -modcache

@@ -1,0 +1,828 @@
+definitions:
+  api.apiErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  api.apiResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  api.loginUserRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  api.loginUserResponse:
+    properties:
+      access_token:
+        type: string
+      access_token_expires_at:
+        type: string
+      refresh_token:
+        type: string
+      refresh_token_expires_at:
+        type: string
+      user:
+        $ref: '#/definitions/api.userResponse'
+    type: object
+  api.userResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      username:
+        type: string
+    type: object
+  models.Hall:
+    properties:
+      cols:
+        items:
+          type: integer
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      rows:
+        items:
+          type: string
+        type: array
+    type: object
+  models.Movie:
+    properties:
+      actors:
+        type: string
+      directors:
+        type: string
+      duration:
+        type: integer
+      genre:
+        type: string
+      id:
+        type: string
+      plot:
+        type: string
+      poster:
+        type: string
+      screening:
+        type: string
+      screenings:
+        items:
+          $ref: '#/definitions/models.Screening'
+        type: array
+      title:
+        type: string
+    type: object
+  models.Repertoire:
+    properties:
+      date:
+        type: string
+      dateSt:
+        type: string
+      hall:
+        type: string
+      id:
+        type: string
+      movieId:
+        type: string
+      numOfResTickets:
+        type: integer
+      numOfTickets:
+        type: integer
+      reservSeats:
+        items:
+          type: string
+        type: array
+      time:
+        type: string
+    type: object
+  models.Reservation:
+    properties:
+      creationDate:
+        type: string
+      date:
+        type: string
+      hall:
+        type: string
+      id:
+        type: string
+      movieId:
+        type: string
+      movieTitle:
+        type: string
+      repertoiresId:
+        type: string
+      reservSeats:
+        items:
+          type: string
+        type: array
+      time:
+        type: string
+      userId:
+        type: string
+      username:
+        type: string
+    type: object
+  models.Screening:
+    properties:
+      date:
+        type: string
+      hall:
+        type: string
+      time:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /halls:
+    get:
+      consumes:
+      - application/json
+      description: Get all the existing halls
+      operationId: listHalls
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Hall'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing halls
+    post:
+      consumes:
+      - application/json
+      description: Insert new hall
+      operationId: InsertHall
+      parameters:
+      - description: Create hall
+        in: body
+        name: hall
+        required: true
+        schema:
+          $ref: '#/definitions/models.Hall'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.Hall'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Insert new hall
+  /halls/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a single hall
+      operationId: DeleteHall
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.apiResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete a single hall
+    put:
+      consumes:
+      - application/json
+      description: Update a single hall
+      operationId: UpdateHall
+      parameters:
+      - description: Hall ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update hall
+        in: body
+        name: hall
+        required: true
+        schema:
+          $ref: '#/definitions/models.Hall'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Hall'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Update a single hall
+  /halls/{name}:
+    get:
+      consumes:
+      - application/json
+      description: Get the existing halls
+      operationId: searchHall
+      parameters:
+      - description: Hall name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Hall'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing halls
+  /movies:
+    get:
+      consumes:
+      - application/json
+      description: Get all the existing movies
+      operationId: listMovies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing movies
+    post:
+      consumes:
+      - application/json
+      description: Insert new movie
+      operationId: InsertMovie
+      parameters:
+      - description: Create movie
+        in: body
+        name: movie
+        required: true
+        schema:
+          $ref: '#/definitions/models.Movie'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Insert new movie
+  /movies/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a single movie
+      operationId: DeleteMovie
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.apiResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete a single movie
+    get:
+      consumes:
+      - application/json
+      description: Get the existing movie by id
+      operationId: searchMovies
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing movie by id
+    put:
+      consumes:
+      - application/json
+      description: Update a single movie
+      operationId: UpdateMovie
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update hall
+        in: body
+        name: movie
+        required: true
+        schema:
+          $ref: '#/definitions/models.Movie'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Movie'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Update a single movie
+  /repertoires:
+    get:
+      consumes:
+      - application/json
+      description: Get the existing repertoires
+      operationId: ListRepertoires
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Repertoire'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing repertoires
+    post:
+      consumes:
+      - application/json
+      description: Insert new repertoire
+      operationId: AddRepertoire
+      parameters:
+      - description: Create repertoire
+        in: body
+        name: repertoire
+        required: true
+        schema:
+          $ref: '#/definitions/models.Repertoire'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.Repertoire'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Insert new repertoire
+  /repertoires/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a single repertoire
+      operationId: DeleteRepertoire
+      parameters:
+      - description: repertoire ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.apiResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete a single repertoire
+    get:
+      consumes:
+      - application/json
+      description: Get the existing repertoire by id
+      operationId: GetRepertoire
+      parameters:
+      - description: Repertoire ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Repertoire'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: List existing repertoire by id
+    put:
+      consumes:
+      - application/json
+      description: Update a single repertoire
+      operationId: UpdateRepertoire
+      parameters:
+      - description: Repertoire ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update repertoire
+        in: body
+        name: repertoire
+        required: true
+        schema:
+          $ref: '#/definitions/models.Repertoire'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Repertoire'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Update a single repertoire
+  /repertoires/movie:
+    delete:
+      consumes:
+      - application/json
+      description: Delete all repertoires for the movie
+      operationId: DeleteRepertoireForMovie
+      parameters:
+      - description: movie ID
+        in: query
+        name: movie_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.apiResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete all repertoires for the movie
+    get:
+      consumes:
+      - application/json
+      description: Get all the existing repertoires for the movie between startDate
+        and endDate
+      operationId: GetAllRepertoireForMovie
+      parameters:
+      - description: Movie ID
+        in: query
+        name: movie_id
+        required: true
+        type: string
+      - description: Start Date
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: End Date
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Repertoire'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Get all the existing repertoires for the movie between startDate and
+        endDate
+  /reservation:
+    post:
+      consumes:
+      - application/json
+      description: Insert new reservation
+      operationId: AddReservation
+      parameters:
+      - description: Create reservation
+        in: body
+        name: reservation
+        required: true
+        schema:
+          $ref: '#/definitions/models.Reservation'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/models.Reservation'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Insert new reservation
+  /reservation/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a single reservation
+      operationId: CancelReservation
+      parameters:
+      - description: reservation ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.apiResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Delete a single reservation
+  /reservationforuser:
+    get:
+      consumes:
+      - application/json
+      description: Get all the existing reservations for user
+      operationId: GetAllReservationsForUser
+      parameters:
+      - description: Username
+        in: query
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Reservation'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      security:
+      - bearerAuth: []
+      summary: Get all the existing reservations for user
+  /users/login:
+    post:
+      description: Authenticates a user and provides a Paseto/JWT to Authorize API
+        calls
+      operationId: loginUser
+      parameters:
+      - description: User login request
+        in: body
+        name: loginUserRequest
+        required: true
+        schema:
+          $ref: '#/definitions/api.loginUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/api.loginUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/api.apiErrorResponse'
+      summary: Provides a JSON Web Token
+securityDefinitions:
+  bearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
