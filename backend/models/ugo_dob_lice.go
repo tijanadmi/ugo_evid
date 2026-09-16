@@ -7,7 +7,6 @@ import (
 type UgoDobLice struct {
 	ID             int            `json:"id"`
 	SapDobavljac   SapDobavljac   `json:"sap_dobavljac"`
-	UgoOrg         UgoOrg         `json:"ugo_org"`
 	Ime            string         `json:"ime"`
 	RadnoMesto     string         `json:"radno_mesto,omitempty"`
 	Telefon        string         `json:"telefon,omitempty"`

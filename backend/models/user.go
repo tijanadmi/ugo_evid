@@ -5,10 +5,10 @@ import (
 )
 
 type User struct {
-	ID               int       `json:"id,omitempty"`
-	ADUsername       string    `json:"ad_username,omitempty"`
+	ID         int    `json:"id,omitempty"`
+	ADUsername string `json:"ad_username,omitempty"`
+	// Username is the API/token alias for AD_SIFRA, not a separate database column.
 	Username         string    `json:"username"`
-	Password         string    `json:"-"`
 	FullName         string    `json:"full_name,omitempty"`
 	DateOfCreation   time.Time `json:"creation_date,omitempty"`
 	DateOfLastUpdate time.Time `json:"update_date,omitempty"`

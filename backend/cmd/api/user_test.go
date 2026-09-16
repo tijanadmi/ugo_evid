@@ -26,7 +26,7 @@ func (s loginStore) GetUserByUsername(context.Context, string) (*models.User, er
 
 func TestADLogin(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	active := &models.User{ID: 1, Username: "app.alias", ADUsername: "ad.account", Status: "A"}
+	active := &models.User{ID: 1, Username: "ad.account", ADUsername: "ad.account", Status: "A"}
 	for _, tc := range []struct {
 		name           string
 		user           *models.User
@@ -56,7 +56,7 @@ func TestADLogin(t *testing.T) {
 				return tc.ldapErr
 			}
 			rec := httptest.NewRecorder()
-			server.router.ServeHTTP(rec, httptest.NewRequest("POST", "/users/login", strings.NewReader(`{"username":"app.alias","password":"secret"}`)))
+			server.router.ServeHTTP(rec, httptest.NewRequest("POST", "/users/login", strings.NewReader(`{"username":"ad.account","password":"secret"}`)))
 			if rec.Code != tc.status || bound != tc.bind {
 				t.Fatalf("status=%d bind=%v body=%s", rec.Code, bound, rec.Body.String())
 			}
@@ -66,7 +66,7 @@ func TestADLogin(t *testing.T) {
 					t.Fatal(err)
 				}
 				payload, err := server.tokenMaker.VerifyToken(response.AccessToken)
-				if err != nil || payload.Username != "app.alias" {
+				if err != nil || payload.Username != "ad.account" {
 					t.Fatal("invalid access token")
 				}
 				if strings.Contains(rec.Body.String(), "secret") {

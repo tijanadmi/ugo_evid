@@ -39,10 +39,10 @@ dl.radno_mesto AS c22,
 dl.telefon AS c23,
 dl.email AS c24,
 dl.status AS c25
- FROM ugo_evid e
-        JOIN sap_ugovori su ON su.id = e.id_sap_ugovor
-        JOIN ugo_org o      ON o.id = e.id_ugo_org
-        LEFT JOIN ugo_dob_lica dl ON dl.id = e.id_ugo_dob_lica
+ FROM TED.UGO_EVID e
+        JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
+        JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
+        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
         WHERE e.id = :p1
     `
 
@@ -121,10 +121,10 @@ dl.telefon AS c23,
 dl.email AS c24,
 dl.status AS c25,
 COUNT(*) OVER() AS c26
- FROM ugo_evid e
-        JOIN sap_ugovori su ON su.id = e.id_sap_ugovor
-        JOIN ugo_org o      ON o.id = e.id_ugo_org
-        LEFT JOIN ugo_dob_lica dl ON dl.id = e.id_ugo_dob_lica
+ FROM TED.UGO_EVID e
+        JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
+        JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
+        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
         WHERE 1=1
     `
 
@@ -206,7 +206,7 @@ COUNT(*) OVER() AS c26
 func (r *OracleStore) InsertUgoEvid(ctx context.Context, e *models.UgoEvid) (*models.UgoEvid, error) {
 
 	query := `
-        INSERT INTO ugo_evid
+        INSERT INTO TED.UGO_EVID
             (id_sap_ugovor, id_ugo_org, ime, telefon, email, status, datpri, datizm, id_ugo_dob_lica)
         VALUES
             (:p1, :p2, :p3, :p4, :p5, :p6, :p7, :p8, :p9)
@@ -254,7 +254,7 @@ func (r *OracleStore) InsertUgoEvid(ctx context.Context, e *models.UgoEvid) (*mo
 func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*models.UgoEvid, error) {
 
 	query := `
-        UPDATE ugo_evid
+        UPDATE TED.UGO_EVID
         SET
             id_sap_ugovor = :p1,
             id_ugo_org = :p2,
@@ -272,6 +272,7 @@ func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*mo
 		e.DatIzm = time.Now()
 	}
 
+	var createdAt sql.NullTime
 	result, err := r.DB.ExecContext(ctx, query,
 		sql.Named("p1", e.SapUgovor.ID),
 		sql.Named("p2", e.UgoOrg.ID),
@@ -282,7 +283,7 @@ func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*mo
 		sql.Named("p7", e.DatIzm),
 		sql.Named("p8", optionalID(e.UgoDobLice.ID)),
 		sql.Named("p9", e.ID),
-		sql.Named("out0", sql.Out{Dest: &e.DatPri}),
+		sql.Named("out0", sql.Out{Dest: &createdAt}),
 		sql.Named("out1", sql.Out{Dest: &e.DatIzm}),
 	)
 	if err == nil {
@@ -301,11 +302,12 @@ func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*mo
 		return nil, err
 	}
 
+	e.DatPri = createdAt.Time
 	return e, nil
 }
 
 func (r *OracleStore) DeleteUgoEvidById(ctx context.Context, id int) error {
-	query := `DELETE FROM ugo_evid WHERE id = :p1`
+	query := `DELETE FROM TED.UGO_EVID WHERE id = :p1`
 	cmdTag, err := r.DB.ExecContext(ctx, query, sql.Named("p1", id))
 	if err != nil {
 		return err

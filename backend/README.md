@@ -26,8 +26,10 @@ HTTP_SERVER_ADDRESS=0.0.0.0:8080
 ```
 
 `DB_SOURCE` sadrzi Oracle service name. Specijalne znakove u korisnickom imenu
-i lozinci URL-kodirati. DB nalog treba da vidi postojece tabele u svojoj semi
-ili kroz sinonime i ima odgovarajuce SELECT/INSERT/UPDATE/DELETE privilegije.
+i lozinci URL-kodirati. Upiti koriste eksplicitnu semu `TED`. DB nalogu treba
+SELECT nad `TED.SAP_UGOVORI`, `TED.SAP_DOBAVLJACI` i `TED.SAP_ODGLICA`.
+Nad UGO tabelama potrebne su privilegije za operacije koje aplikacija koristi.
+Backend nema INSERT/UPDATE/DELETE operacije nad SAP tabelama.
 Lozinka u ovom URL-u pripada tehnickom Oracle nalogu, a AD lozinka se salje
 samo pri prijavi korisnika.
 
@@ -50,8 +52,8 @@ ne kreira tabele i ne uvozi podatke automatski.
 ## AD korisnici
 
 Korisnik mora unapred postojati u `ugo_kor` i imati `status='A'` (ili vrednost
-iz ACTIVE_USER_STATUS). `sifra` je aplikaciono korisnicko ime, a `ad_sifra`
-identitet koji se proverava na AD-u. Prijava prihvata sifra ili tacnu ad_sifra,
+iz ACTIVE_USER_STATUS). `ad_sifra` je jedini korisnicki identitet u bazi.
+Prijava prihvata tacnu `ad_sifra`,
 bez razlikovanja velikih i malih slova. Ako postoji vise odgovarajucih zapisa,
 prijava se odbija. Kratkoj ad_sifra dodaje se LDAP_DOMAIN; UPN
 (`ime@domen`) i `DOMEN\ime` koriste se kako su upisani.
@@ -59,15 +61,14 @@ prijava se odbija. Kratkoj ad_sifra dodaje se LDAP_DOMAIN; UPN
 Primer provisioniranja u postojecoj semi sa automatskim ID-em:
 
 ```sql
-INSERT INTO ugo_kor (ad_sifra, sifra, lozinka, ime, status, datpri, datizm)
-VALUES ('ime.prezime', 'ime.prezime', RAWTOHEX(SYS_GUID()),
-        'Ime Prezime', 'A', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO TED.UGO_KOR (ad_sifra, ime, status, datpri, datizm)
+VALUES ('ime.prezime', 'Ime Prezime', 'A', SYSDATE, SYSDATE);
 COMMIT;
 ```
 
-Kolona `lozinka` iz originalne seme je NOT NULL UNIQUE, pa se upisuje jedinstvena
-nasumicna vrednost. Ne upisivati AD lozinku. Kolona se ne cita pri prijavi i ne
-vraca kroz JSON. Javno kreiranje naloga (`POST /users`) je uklonjeno; pristup
+`TED.UGO_KOR` nema kolone `SIFRA` ni `LOZINKA`. AD lozinka se ne cuva u bazi.
+JSON polje `username` i identitet u tokenima sadrze `AD_SIFRA`.
+Javno kreiranje naloga (`POST /users`) je uklonjeno; pristup
 aplikaciji dodeljuje administrator kroz bazu.
 
 ```http
@@ -88,17 +89,28 @@ ogranicavanje podataka po organizacijama nije uvedeno ovom konverzijom.
 
 ## Sema i postojeci podaci
 
-Nazivi tabela i kolona odgovaraju fajlovima u `../migrations`, ukljucujuci
-razliku `datzm` / `datizm`. SELECT upiti zadrzavaju postojece spojeve tabela;
-view `sap_ugovori_v` nije potreban tim endpointima.
+Merodavan model je dostavljeni Oracle DDL iz seme `TED`, a ne stare PostgreSQL
+migracije. `oracle/schema.sql` je citljiva referenca devet tabela, ogranicenja
+i trigera iz tog modela, bez fizickih storage podesavanja. Nije migracija za
+izvrsavanje nad bazom: definicije i pocetne vrednosti sekvenci nisu dostavljene.
+Postojeci trigeri koriste `TED.<TABELA>_SEQ` i popunjavaju ID; INSERT upiti
+izostavljaju ID i preuzimaju ga kroz `RETURNING ... INTO`.
+View `sap_ugovori_v` nije potreban endpointima niti je definisan u dostavljenom DDL-u.
 
-`oracle/schema.sql` je opciona Oracle varijanta svih devet tabela i view-a,
-iskljucivo za novu praznu semu. Postojecu bazu ne menjati tim fajlom.
-ID kolone moraju imati identity ili postojeci sequence/trigger koji popunjava
-ID pri INSERT-u; backend ne koristi `MAX(id)+1`.
+`UGO_DOB_LICA` nema `ID_UGO_ORG`: uklonjeni su spoj sa organizacijom,
+filtriranje po organizaciji i JSON polje `ugo_org` iz modela tog lica.
+POST/PUT za lice vise ne zahtevaju `id_ugo_org`. Organizacija ostaje deo
+`UGO_EVID` i `UGO_KOR_ROLE`, gde postoji u bazi.
+Datumi su nullable Oracle `DATE`; `DATZM` se koristi kod lica i njihovih rola,
+a `DATIZM` kod ostalih UGO tabela.
+
+PUT rute za lice, rolu lica i evidenciju koriste ID u putanji:
+`/ugo_dob_lica/:id`, `/ugo_dob_lica_rola/:id`, `/ugo_evid/:id`.
+SAP ugovori se citaju preko `GET /sapugovori`; dobavljaci i odgovorna lica
+citaju se u povezanim SELECT upitima. SAP podaci se ne menjaju kroz API.
 
 Originalni fajlovi u `../migrations` i `../tdi_evid_seed_data` su PostgreSQL
-skripte i nisu automatski izvrsivi na Oracle-u. Ako podaci vec postoje na
+skripte sa starim modelom i nisu uskladjene sa stvarnom TED semom. Ako podaci vec postoje na
 Oracle-u, nema potrebe za ponovnim uvozom. Kod novog uvoza sacuvati ID-eve i
 strane kljuceve, prilagoditi INSERT/date sintaksu i nakon uvoza uskladiti
 identity/sequence sa najvecim postojecim ID-em.

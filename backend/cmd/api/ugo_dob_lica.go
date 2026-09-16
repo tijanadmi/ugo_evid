@@ -10,7 +10,6 @@ import (
 
 type UgoDobLiceRequest struct {
 	IDSapDobavljac   int    `json:"id_sap_dobavljac" binding:"required"`
-	IDUgoOrg         int    `json:"id_ugo_org" binding:"required"`
 	Ime              string `json:"ime" binding:"required"`
 	RadnoMesto       string `json:"radno_mesto"`
 	Telefon          string `json:"telefon"`
@@ -94,7 +93,6 @@ func (server *Server) InsertUgoDobLice(ctx *gin.Context) {
 
 	lice := &models.UgoDobLice{
 		SapDobavljac: models.SapDobavljac{ID: req.IDSapDobavljac},
-		UgoOrg:       models.UgoOrg{ID: req.IDUgoOrg},
 		Ime:          req.Ime,
 		RadnoMesto:   req.RadnoMesto,
 		Telefon:      req.Telefon,
@@ -131,7 +129,6 @@ func (server *Server) UpdateUgoDobLice(ctx *gin.Context) {
 	lice := &models.UgoDobLice{
 		ID:           id,
 		SapDobavljac: models.SapDobavljac{ID: req.IDSapDobavljac},
-		UgoOrg:       models.UgoOrg{ID: req.IDUgoOrg},
 		Ime:          req.Ime,
 		RadnoMesto:   req.RadnoMesto,
 		Telefon:      req.Telefon,

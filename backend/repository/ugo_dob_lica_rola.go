@@ -17,7 +17,7 @@ naziv AS c1,
 status AS c2,
 datpri AS c3,
 datzm AS c4
- FROM ugo_dob_lica_role
+ FROM TED.UGO_DOB_LICA_ROLE
         WHERE id = :p1
     `
 
@@ -50,7 +50,7 @@ status AS c2,
 datpri AS c3,
 datzm AS c4,
 COUNT(*) OVER() AS c5
- FROM ugo_dob_lica_role
+ FROM TED.UGO_DOB_LICA_ROLE
         WHERE 1=1
     `
 
@@ -102,7 +102,7 @@ COUNT(*) OVER() AS c5
 
 func (r *OracleStore) InsertUgoDobLicaRole(ctx context.Context, m *models.UgoDobLicaRola) (*models.UgoDobLicaRola, error) {
 	query := `
-        INSERT INTO ugo_dob_lica_role 
+        INSERT INTO TED.UGO_DOB_LICA_ROLE
             (naziv, status, datpri, datzm)
         VALUES 
             (:p1, :p2, :p3, :p4)
@@ -144,7 +144,7 @@ func (r *OracleStore) InsertUgoDobLicaRole(ctx context.Context, m *models.UgoDob
 
 func (r *OracleStore) UpdateUgoDobLicaRole(ctx context.Context, m *models.UgoDobLicaRola) (*models.UgoDobLicaRola, error) {
 	query := `
-        UPDATE ugo_dob_lica_role
+        UPDATE TED.UGO_DOB_LICA_ROLE
         SET 
             naziv = :p1,
             status = :p2,
@@ -157,12 +157,13 @@ func (r *OracleStore) UpdateUgoDobLicaRole(ctx context.Context, m *models.UgoDob
 		m.DatZm = time.Now()
 	}
 
+	var createdAt sql.NullTime
 	result, err := r.DB.ExecContext(ctx, query,
 		sql.Named("p1", m.Naziv),
 		sql.Named("p2", m.Status),
 		sql.Named("p3", m.DatZm),
 		sql.Named("p4", m.ID),
-		sql.Named("out0", sql.Out{Dest: &m.DatPri}),
+		sql.Named("out0", sql.Out{Dest: &createdAt}),
 		sql.Named("out1", sql.Out{Dest: &m.DatZm}),
 	)
 	if err == nil {
@@ -181,11 +182,12 @@ func (r *OracleStore) UpdateUgoDobLicaRole(ctx context.Context, m *models.UgoDob
 		return nil, err
 	}
 
+	m.DatPri = createdAt.Time
 	return m, nil
 }
 
 func (r *OracleStore) DeleteUgoDobLicaRoleById(ctx context.Context, id int) error {
-	query := `DELETE FROM ugo_dob_lica_role WHERE id = :p1`
+	query := `DELETE FROM TED.UGO_DOB_LICA_ROLE WHERE id = :p1`
 
 	cmdTag, err := r.DB.ExecContext(ctx, query, sql.Named("p1", id))
 	if err != nil {

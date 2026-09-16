@@ -17,7 +17,7 @@ id_sap_ugovori AS c1,
 odg_zap AS c2,
 naziv_odg_zap AS c3,
 r_br AS c4
- FROM sap_odglica
+ FROM TED.SAP_ODGLICA
 		WHERE id_sap_ugovori = :p1
 		ORDER BY r_br
 	`
@@ -83,8 +83,8 @@ d.sifra AS c22,
 d.naziv AS c23,
 d.web_portal AS c24,
 COUNT(*) OVER() AS c25
- FROM sap_ugovori u
-        LEFT JOIN sap_dobavljaci d ON d.id = u.id_sap_dobavljac
+ FROM TED.SAP_UGOVORI u
+        LEFT JOIN TED.SAP_DOBAVLJACI d ON d.id = u.id_sap_dobavljac
         WHERE 1=1
     `
 

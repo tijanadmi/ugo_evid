@@ -73,7 +73,7 @@ func (server *Server) setupRouter() {
 	// CRUD
 	authRoutes.GET("/ugo_dob_lica_rola/:id", server.GetUgoDobLicaRolaById)   // Get po id (int)
 	authRoutes.POST("/ugo_dob_lica_rola", server.InsertUgoDobLicaRola)       // Insert
-	authRoutes.PUT("/ugo_dob_lica_rola", server.UpdateUgoDobLicaRola)        // Update
+	authRoutes.PUT("/ugo_dob_lica_rola/:id", server.UpdateUgoDobLicaRola)    // Update
 	authRoutes.DELETE("/ugo_dob_lica_rola/:id", server.DeleteUgoDobLicaRola) // Delete po id
 
 	// List sa filterom i paginacijom
@@ -82,7 +82,7 @@ func (server *Server) setupRouter() {
 	// CRUD
 	authRoutes.GET("/ugo_dob_lica/:id", server.GetUgoDobLice)       // Get po id (int)
 	authRoutes.POST("/ugo_dob_lica", server.InsertUgoDobLice)       // Insert
-	authRoutes.PUT("/ugo_dob_lica", server.UpdateUgoDobLice)        // Update
+	authRoutes.PUT("/ugo_dob_lica/:id", server.UpdateUgoDobLice)    // Update
 	authRoutes.DELETE("/ugo_dob_lica/:id", server.DeleteUgoDobLice) // Delete po id
 
 	// List sa filterom i paginacijom
@@ -93,7 +93,7 @@ func (server *Server) setupRouter() {
 	// CRUD
 	authRoutes.GET("/ugo_evid/:id", server.GetUgoEvid)       // Get po id (int)
 	authRoutes.POST("/ugo_evid", server.InsertUgoEvid)       // Insert
-	authRoutes.PUT("/ugo_evid", server.UpdateUgoEvid)        // Update
+	authRoutes.PUT("/ugo_evid/:id", server.UpdateUgoEvid)    // Update
 	authRoutes.DELETE("/ugo_evid/:id", server.DeleteUgoEvid) // Delete po id
 
 	// List sa filterom i paginacijom

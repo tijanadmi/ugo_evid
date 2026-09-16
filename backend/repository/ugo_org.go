@@ -20,7 +20,7 @@ naziv_cir AS c4,
 status AS c5,
 datpri AS c6,
 datizm AS c7
- FROM ugo_org
+ FROM TED.UGO_ORG
         WHERE id = :p1
     `
 
@@ -59,7 +59,7 @@ status AS c5,
 datpri AS c6,
 datizm AS c7,
 COUNT(*) OVER() AS c8
- FROM ugo_org
+ FROM TED.UGO_ORG
         WHERE 1=1
     `
 
@@ -114,7 +114,7 @@ COUNT(*) OVER() AS c8
 
 func (r *OracleStore) InsertUgoOrg(ctx context.Context, org *models.UgoOrg) (*models.UgoOrg, error) {
 	query := `
-        INSERT INTO ugo_org
+        INSERT INTO TED.UGO_ORG
             (sifra, sifra_cir, naziv, naziv_cir, status, datpri, datizm)
         VALUES
             (:p1, :p2, :p3, :p4, :p5, :p6, :p7)
@@ -159,7 +159,7 @@ func (r *OracleStore) InsertUgoOrg(ctx context.Context, org *models.UgoOrg) (*mo
 
 func (r *OracleStore) UpdateUgoOrg(ctx context.Context, org *models.UgoOrg) (*models.UgoOrg, error) {
 	query := `
-        UPDATE ugo_org
+        UPDATE TED.UGO_ORG
         SET 
             sifra_cir = :p1,
             naziv = :p2,
@@ -174,6 +174,7 @@ func (r *OracleStore) UpdateUgoOrg(ctx context.Context, org *models.UgoOrg) (*mo
 		org.DatIzm = time.Now()
 	}
 
+	var createdAt sql.NullTime
 	result, err := r.DB.ExecContext(ctx, query,
 		sql.Named("p1", org.SifraCir),
 		sql.Named("p2", org.Naziv),
@@ -182,7 +183,7 @@ func (r *OracleStore) UpdateUgoOrg(ctx context.Context, org *models.UgoOrg) (*mo
 		sql.Named("p5", org.DatIzm),
 		sql.Named("p6", org.Sifra),
 		sql.Named("out0", sql.Out{Dest: &org.ID}),
-		sql.Named("out1", sql.Out{Dest: &org.DatPri}),
+		sql.Named("out1", sql.Out{Dest: &createdAt}),
 		sql.Named("out2", sql.Out{Dest: &org.DatIzm}),
 	)
 	if err == nil {
@@ -201,11 +202,12 @@ func (r *OracleStore) UpdateUgoOrg(ctx context.Context, org *models.UgoOrg) (*mo
 		return nil, err
 	}
 
+	org.DatPri = createdAt.Time
 	return org, nil
 }
 
 func (r *OracleStore) DeleteUgoOrgById(ctx context.Context, id int) error {
-	query := `DELETE FROM ugo_org WHERE id = :p1`
+	query := `DELETE FROM TED.UGO_ORG WHERE id = :p1`
 	cmdTag, err := r.DB.ExecContext(ctx, query, sql.Named("p1", id))
 	if err != nil {
 		return err
