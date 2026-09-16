@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/tijanadmi/ugo_evid/models"
 	"github.com/tijanadmi/ugo_evid/util"
 )
@@ -49,12 +50,12 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	err = server.authenticateLDAP(util.LDAPConfig{
 		Servers: server.config.LDAPServers, Port: server.config.LDAPPort,
 		Domain: server.config.LDAPDomain, Timeout: server.config.LDAPTimeout,
-		Security: server.config.LDAPSecurity, CACert: server.config.LDAPCACert,
 	}, user.ADUsername, req.Password)
 	if err != nil {
 		status := http.StatusUnauthorized
 		message := "neuspesna prijava"
 		if errors.Is(err, util.ErrLDAPUnavailable) {
+			log.Error().Err(err).Msg("AD authentication service failed")
 			status = http.StatusServiceUnavailable
 			message = "AD servis trenutno nije dostupan"
 		}

@@ -1,94 +1,73 @@
 package util
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
-	"github.com/go-ldap/ldap/v3"
+	"fmt"
 	"net"
-	"os"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-ldap/ldap/v3"
 )
 
-var ErrInvalidCredentials = errors.New("invalid credentials")
-var ErrLDAPUnavailable = errors.New("LDAP unavailable")
-
 type LDAPConfig struct {
-	Servers  []string
-	Port     int
-	Domain   string
-	Timeout  time.Duration
-	Security string
-	CACert   string
+	Servers []string
+	Port    int
+	Domain  string
+	Timeout time.Duration
 }
 
-// LDAPPrincipal uses the AD identity stored in the application's user record.
-func LDAPPrincipal(username, domain string) (string, error) {
-	username = strings.TrimSpace(username)
-	if username == "" || strings.ContainsAny(username, "\x00\r\n") {
-		return "", ErrInvalidCredentials
-	}
-	if strings.Contains(username, "\\") || strings.Contains(username, "@") {
-		return username, nil
-	}
-	if domain == "" {
-		return "", ErrInvalidCredentials
-	}
-	return username + "@" + domain, nil
-}
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrLDAPUnavailable    = errors.New("ldap unavailable")
+)
 
 func AuthenticateLDAP(cfg LDAPConfig, username, password string) error {
-	if password == "" {
+
+	if username == "" || password == "" {
 		return ErrInvalidCredentials
 	}
-	principal, err := LDAPPrincipal(username, cfg.Domain)
-	if err != nil {
-		return err
-	}
-	if cfg.Timeout <= 0 || (cfg.Security != "ldaps" && cfg.Security != "starttls") {
-		return ErrLDAPUnavailable
-	}
-	roots, err := x509.SystemCertPool()
-	if err != nil {
-		roots = x509.NewCertPool()
-	}
-	if cfg.CACert != "" {
-		pem, err := os.ReadFile(cfg.CACert)
-		if err != nil || !roots.AppendCertsFromPEM(pem) {
-			return ErrLDAPUnavailable
-		}
-	}
-	for _, host := range cfg.Servers {
-		host = strings.TrimSpace(host)
-		if host == "" {
-			continue
-		}
-		tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12, ServerName: host, RootCAs: roots}
-		scheme := "ldaps"
-		if cfg.Security == "starttls" {
-			scheme = "ldap"
-		}
-		conn, err := ldap.DialURL(scheme+"://"+net.JoinHostPort(host, strconv.Itoa(cfg.Port)), ldap.DialWithDialer(&net.Dialer{Timeout: cfg.Timeout}), ldap.DialWithTLSConfig(tlsConfig))
+
+	login := fmt.Sprintf("%s@%s", username, cfg.Domain)
+
+	var lastErr error
+
+	for _, server := range cfg.Servers {
+
+		address := fmt.Sprintf("%s:%d", strings.TrimSpace(server), cfg.Port)
+
+		conn, err := ldap.DialURL(
+			"ldap://"+address,
+			ldap.DialWithDialer(&net.Dialer{
+				Timeout: cfg.Timeout,
+			}),
+		)
+
 		if err != nil {
+			lastErr = err
 			continue
 		}
+
 		conn.SetTimeout(cfg.Timeout)
-		if cfg.Security == "starttls" {
-			if err = conn.StartTLS(tlsConfig); err != nil {
-				conn.Close()
-				continue
-			}
-		}
-		err = conn.Bind(principal, password)
+
+		err = conn.Bind(login, password)
+
 		conn.Close()
+
 		if err == nil {
 			return nil
 		}
+
 		if ldap.IsErrorWithCode(err, ldap.LDAPResultInvalidCredentials) {
 			return ErrInvalidCredentials
 		}
+
+		lastErr = err
 	}
+
+	if lastErr != nil {
+		return ErrLDAPUnavailable
+	}
+
 	return ErrLDAPUnavailable
 }

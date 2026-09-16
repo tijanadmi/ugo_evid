@@ -14,10 +14,8 @@ DB_DRIVER=oracle
 DB_SOURCE=oracle://APP_USER:URL_ENCODED_PASSWORD@ORACLE_HOST:1521/SERVICE_NAME
 LDAP_SERVERS=dc1.example.local,dc2.example.local
 LDAP_DOMAIN=example.local
-LDAP_PORT=636
-LDAP_SECURITY=ldaps
+LDAP_PORT=389
 LDAP_TIMEOUT=5s
-LDAP_CA_CERT=
 ACTIVE_USER_STATUS=A
 TOKEN_SYMMETRIC_KEY=<nasumicni kljuc od tacno 32 bajta>
 ACCESS_TOKEN_DURATION=15m
@@ -33,10 +31,10 @@ Backend nema INSERT/UPDATE/DELETE operacije nad SAP tabelama.
 Lozinka u ovom URL-u pripada tehnickom Oracle nalogu, a AD lozinka se salje
 samo pri prijavi korisnika.
 
-LDAP_SERVERS je lista DNS imena bez protokola i porta. Za StartTLS postaviti
-`LDAP_SECURITY=starttls` i `LDAP_PORT=389`. Podrazumevano se koriste sistemski
-CA sertifikati; `LDAP_CA_CERT` moze biti putanja do dodatnog PEM CA lanca.
-Provera sertifikata ostaje ukljucena. API objaviti preko HTTPS-a.
+LDAP prijava koristi identican `util/ldap.go` kao projekat `ddn_rdc`: `ldap://`,
+port 389, Bind sa `username@LDAP_DOMAIN` i pokusaj sledeceg servera ako prethodni
+nije dostupan. LDAP_SERVERS je lista imena ili IP adresa bez protokola i porta.
+Kopirati LDAP_SERVERS i LDAP_DOMAIN iz konfiguracije koja radi u `ddn_rdc`.
 
 Iz foldera `backend`:
 
@@ -55,8 +53,8 @@ Korisnik mora unapred postojati u `ugo_kor` i imati `status='A'` (ili vrednost
 iz ACTIVE_USER_STATUS). `ad_sifra` je jedini korisnicki identitet u bazi.
 Prijava prihvata tacnu `ad_sifra`,
 bez razlikovanja velikih i malih slova. Ako postoji vise odgovarajucih zapisa,
-prijava se odbija. Kratkoj ad_sifra dodaje se LDAP_DOMAIN; UPN
-(`ime@domen`) i `DOMEN\ime` koriste se kako su upisani.
+prijava se odbija. U `AD_SIFRA` upisati kratko AD korisnicko ime bez domena;
+LDAP kod mu dodaje `@LDAP_DOMAIN`, identicno projektu `ddn_rdc`.
 
 Primer provisioniranja u postojecoj semi sa automatskim ID-em:
 
@@ -121,9 +119,20 @@ datum), radi kompatibilnosti JSON modela.
 
 ## Provera
 
+Ako prijava vrati `AD servis trenutno nije dostupan`, proveriti iste servere,
+port i domen koji se koriste u `ddn_rdc`. LDAP funkcija vraca istu genericku
+gresku kao referentni projekat. Sa racunara na kome radi backend proveriti:
+
+```powershell
+Test-NetConnection dc1.example.local -Port 389
+```
+
+Zameniti primer adresom AD servera. Promenljive okruzenja imaju prednost nad
+`app.env`. Nakon promene konfiguracije restartovati backend.
+
 Unit testovi pokrivaju AD tok prijave bez mreze, zastitu ruta, ucitavanje
 konfiguracije i citanje Oracle NULL vrednosti. Za proveru konkretne Oracle
-seme, RETURNING parametara, LDAP sertifikata i stvarnih AD naloga potrebno je
+seme, RETURNING parametara, stvarnih AD naloga potrebno je
 pokrenuti aplikaciju u ciljnom okruzenju i proveriti listanje i CRUD.
 
 Dokumentacija biblioteka:
