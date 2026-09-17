@@ -119,6 +119,37 @@ datum), radi kompatibilnosti JSON modela.
 
 ## Provera
 
+### Pregled otvorenih i zatvorenih ugovora
+
+Oba endpointa citaju postojeci `TED.UGO_EVID_PROSIRENI_V` i zahtevaju
+`Authorization: Bearer <access_token>`:
+
+```http
+GET /ugo_evid/otvoreni?page_id=1&page_size=20
+GET /ugo_evid/zatvoreni?page_id=1&page_size=20
+GET /ugo_evid/otvoreni?id_ugo_org=3&page_id=1&page_size=20
+GET /ugo_evid/zatvoreni?id_ugo_org=3&page_id=1&page_size=20
+```
+
+- Otvoreni: `OTVOREN_UG = 'X'`.
+- Zatvoreni: `OTVOREN_UG IS NULL`.
+- `OTVOREN_UG` ima samo vrednosti `X` ili NULL; liste se ne preklapaju.
+- Opcioni `id_ugo_org`: pozitivan ceo broj filtrira po organizacionoj jedinici.
+  Izostavljen parametar ili `id_ugo_org=0` prikazuje sve jedinice. Negativne
+  vrednosti i tekst (ukljucujuci `%`) vracaju HTTP 400.
+  Isti filter se primenjuje na `items` i `total`.
+- `page_id` je najmanje 1 (podrazumevano 1), `page_size` je 1–100 (podrazumevano 20).
+- Redosled: `ID_UGO_EVID DESC`. Odgovor je `{"total":123,"items":[...]}`.
+- Svaka stavka sadrzi sve 42 kolone pogleda, sa malim slovima u JSON nazivima.
+  `naziv` je naziv dobavljaca, a `sluzba` sifra organizacije.
+- NULL tekst je prazan string; nullable datumi, dobavljac ID i iznosi ostaju JSON `null`.
+  Prazna stranica vraca `items: []`, uz ukupan broj odgovarajucih zapisa.
+- Bez filtera pregled obuhvata evidencije iz pogleda za sve organizacije. Jedan ugovor moze
+  imati vise evidencija; `total` broji evidencije, ne razlicite SAP ugovore.
+
+DB nalogu potreban je SELECT nad `TED.UGO_EVID_PROSIRENI_V`.
+Backend ne kreira pogled automatski. Endpointi su samo za citanje.
+
 Ako prijava vrati `AD servis trenutno nije dostupan`, proveriti iste servere,
 port i domen koji se koriste u `ddn_rdc`. LDAP funkcija vraca istu genericku
 gresku kao referentni projekat. Sa racunara na kome radi backend proveriti:

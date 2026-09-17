@@ -60,6 +60,8 @@ func (server *Server) setupRouter() {
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 
 	authRoutes.GET("/sapugovori", server.GetSapUgovoriPaged)
+	authRoutes.GET("/ugo_evid/otvoreni", server.ListOtvoreniUgovori)
+	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
 
 	// CRUD
 	authRoutes.GET("/ugo_org/:id", server.GetUgoOrg)       // Get po id (int)
