@@ -147,6 +147,12 @@ test('mobile navigation and table stay inside viewport', async ({ page }) => {
   await page.getByRole('button', { name: 'Otvori meni' }).click();
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  const overflow = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+    elements: [...document.querySelectorAll('body *')].filter(el => !el.closest('.table-scroll') && el.getBoundingClientRect().right > window.innerWidth).map(el => `${el.tagName}.${el.className}: ${el.getBoundingClientRect().right}`),
+  }));
+  expect(overflow.width, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.viewport);
   await page.screenshot({ path: 'test-results/mobile.png', fullPage: true });
 });
