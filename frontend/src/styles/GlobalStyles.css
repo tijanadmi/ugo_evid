@@ -23,7 +23,7 @@
 .compact-contract-heading h1{font-size:23px;line-height:1.4;letter-spacing:-.4px;overflow-wrap:anywhere;max-width:1150px}
 .compact-contract-heading h1>span:first-child{color:#4f46e5;white-space:nowrap}
 .contract-title-divider{color:#bac4d2;font-weight:400}
-.contract-summary-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.contract-summary-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:stretch}
 .contract-card{background:white;border:1px solid var(--line);border-radius:10px;padding:18px 20px;min-width:0}
 .contract-card h2{font-size:14px;letter-spacing:0;color:#52617a;margin:0 0 16px}
 .contract-facts dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 20px;margin:0}
