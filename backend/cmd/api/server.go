@@ -62,6 +62,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/sapugovori", server.GetSapUgovoriPaged)
 	authRoutes.GET("/ugo_evid/otvoreni", server.ListOtvoreniUgovori)
 	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
+	authRoutes.GET("/ugo_evid/:id/detalji", server.GetUgoEvidProsireni)
 
 	// CRUD
 	authRoutes.GET("/ugo_org/:id", server.GetUgoOrg)       // Get po id (int)

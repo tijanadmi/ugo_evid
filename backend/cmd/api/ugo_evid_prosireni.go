@@ -1,12 +1,34 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"github.com/tijanadmi/ugo_evid/models"
 )
+
+func (server *Server) GetUgoEvidProsireni(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil || id < 1 {
+		ctx.JSON(http.StatusBadRequest, apiErrorResponse{Error: "neispravan ID evidencije"})
+		return
+	}
+	item, err := server.store.GetUgoEvidProsireniByID(ctx.Request.Context(), id)
+	if errors.Is(err, sql.ErrNoRows) {
+		ctx.JSON(http.StatusNotFound, apiErrorResponse{Error: "ugovor nije pronađen"})
+		return
+	}
+	if err != nil {
+		log.Error().Err(err).Msg("cannot get contract details")
+		ctx.JSON(http.StatusInternalServerError, apiErrorResponse{Error: "detalji ugovora trenutno nisu dostupni"})
+		return
+	}
+	ctx.JSON(http.StatusOK, item)
+}
 
 type listUgoEvidProsireniRequest struct {
 	OrgID    int   `form:"id_ugo_org,default=0" binding:"min=0"`

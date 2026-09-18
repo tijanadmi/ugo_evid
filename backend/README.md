@@ -1,5 +1,17 @@
 # UGO evidencija: Oracle i AD
 
+## Prošireni detalji ugovora
+
+`GET /ugo_evid/123/detalji` vraća svih 42 polja pogleda za ID evidencije 123,
+uz niz `lica_dobavljaca` (`ime`, `radno_mesto`, `telefon`, `email`, `rola_lica`).
+Zahteva Bearer token; nepostojeća evidencija vraća 404.
+I otvoreni i zatvoreni paginirani pregledi sada uključuju isti niz po ugovoru.
+Veza je `ID_SAP_DOBAVLJAC`, sa LEFT JOIN na `TED.UGO_DOB_LICA_ROLE`,
+sortirano po `r.id`, zatim `l.id`. Uključena su sva lica dobavljača.
+Za celu stranicu izvršava se jedan dodatni upit sa vezanim parametrima,
+posle zatvaranja kursora pogleda. Broj i paginacija evidencija ostaju isti.
+Ako nema dobavljača ili njegovih lica, vraća se `lica_dobavljaca: []`.
+
 Backend koristi `database/sql` i `github.com/sijms/go-ora/v2`, kao primer
 `ddn_rdc`. Nije potreban Oracle Instant Client. SQL upiti zahtevaju Oracle 12c+
 (paginacija `OFFSET ... FETCH NEXT`).

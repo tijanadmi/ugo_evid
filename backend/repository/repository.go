@@ -8,6 +8,7 @@ import (
 
 type Store interface {
 	GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error)
+	GetUgoEvidProsireniByID(ctx context.Context, id int) (models.UgoEvidProsireni, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	InsertUser(ctx context.Context, user *models.User) (*models.User, error)
 

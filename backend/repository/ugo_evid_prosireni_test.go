@@ -20,6 +20,13 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 			now := time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC)
 			store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 				calls++
+				if strings.Contains(q, "FROM TED.UGO_DOB_LICA l") {
+					checkBinds(t, q, args)
+					if len(args) != 1 || args[0].Value != 400 {
+						t.Fatalf("supplier binds: %v", args)
+					}
+					return &schemaRows{width: 6, values: [][]driver.Value{{int64(400), "SLM", nil, "011", "slm@example.test", "Service Level Manager"}}}, nil
+				}
 				predicate := "v.otvoren_ug = 'X'"
 				if !open {
 					predicate = "v.otvoren_ug IS NULL"
@@ -52,10 +59,13 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if calls != 2 || total != 12 || len(items) != 1 {
+			if calls != 3 || total != 12 || len(items) != 1 {
 				t.Fatalf("calls=%d total=%d items=%d", calls, total, len(items))
 			}
 			m := items[0]
+			if len(m.LicaDobavljaca) != 1 || m.LicaDobavljaca[0].RolaLica != "Service Level Manager" || m.LicaDobavljaca[0].RadnoMesto != "" {
+				t.Fatal("supplier contacts mapping")
+			}
 			if m.IDUgoEvid != 100 || m.IDUgoOrg != 2 || m.IDSapUgovor != 300 || m.IDSapDobavljac == nil || *m.IDSapDobavljac != 400 {
 				t.Fatal("ID mapping")
 			}

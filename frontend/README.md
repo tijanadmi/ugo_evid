@@ -55,7 +55,12 @@ jedinice** šalje `id_ugo_org=0`; ostale vrednosti dolaze iz paginiranog
 stranicu. Filter i stranica čuvaju se u URL-u.
 
 Tabela prikazuje glavne podatke ugovora. Klik na broj ugovora ili strelicu otvara
-detalje svih 42 polja pogleda, uključujući šest odgovornih lica. Broj rezultata
+stranicu `/ugovori/detalji/:id` sa svih 42 polja pogleda, uključujući šest odgovornih lica.
+Kolona Kontakt prikazuje ime, email i telefon. Detalji koriste
+`GET /ugo_evid/:id/detalji`, gde je `id` ID evidencije (`id_ugo_evid`).
+Na stranici se prikazuju i lica dobavljača: ime, radno mesto, telefon, email i rola.
+Detalji rade i pri direktnom otvaranju i osvežavanju; povratak iz pregleda čuva filter i stranicu.
+Broj rezultata
 predstavlja broj evidencija iz pogleda, ne broj različitih SAP ugovora.
 Frontend u ovoj fazi omogućava samo pregled.
 

@@ -39,6 +39,10 @@ async function mockAPI(page, options = {}) {
     expect(req.headers().authorization).toBe(`Bearer ${options.expired ? 'renewed' : 'access'}`);
     if (url.pathname === '/api/ugo_org') return json({ total: 2, items: [{ id: 3, sifra: 'CTKS', naziv: 'Centar za telekomunikacione sisteme' }, { id: 4, sifra: 'CITI', naziv: 'Centar za IT infrastrukturu' }] });
     if (url.pathname.startsWith('/api/ugo_evid/')) {
+      if (url.pathname.endsWith('/detalji')) {
+        if (options.detailError) return json({ error: 'Detalji nisu dostupni' }, options.detailError);
+        return json({ ...contract, id_ugo_evid: 2, br_ugovor: '4600099999', lica_dobavljaca: options.noContacts ? [] : [{ ime: 'Ana Anić', radno_mesto: 'Menadžer', telefon: '011 999', email: 'ana@example.test', rola_lica: 'Service Level Manager' }] });
+      }
       if (options.failContracts) return json({ error: 'pregled ugovora trenutno nije dostupan' }, 500);
       if (url.searchParams.get('id_ugo_org') === '4') return json({ total: 0, items: [] });
       if (url.searchParams.get('page_id') === '2') return json({ total: 21, items: [{ ...contract, id_ugo_evid: 2, br_ugovor: '4600099999' }] });
@@ -63,9 +67,14 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await page.screenshot({ path: 'test-results/portal.png', fullPage: true });
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
   await expect(page).toHaveURL(/\/ugovori\/otvoreni/);
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Odgovorna lica', exact: true })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Vrednost', exact: true })).toHaveCount(0);
+  const contactCell = page.locator('.contact-cell');
+  await expect(contactCell).toContainText('011 123 4567');
+  const emailBox = await contactCell.getByText('petar@example.test', { exact: true }).boundingBox();
+  const phoneBox = await contactCell.getByText('011 123 4567', { exact: true }).boundingBox();
+  expect(phoneBox.y).toBeGreaterThan(emailBox.y);
   const people = page.getByRole('list', { name: 'Odgovorna lica' }).getByRole('listitem');
   await expect(people).toHaveCount(6);
   await expect(people.first()).toHaveText('001 — Prvo odgovorno lice');
@@ -77,20 +86,43 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('3');
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/otvoreni') && url.searchParams.get('id_ugo_org') === '3')).toBeTruthy();
   await page.getByRole('button', { name: 'Sledeća stranica' }).click();
-  await expect(page.getByRole('button', { name: '4600099999', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '4600099999', exact: true }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByRole('dialog').getByText('Šesto odgovorno lice', { exact: true })).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '4600099999', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: '4600099999', exact: true }).click();
+  await expect(page).toHaveURL(/\/ugovori\/detalji\/2$/);
+  await expect(page.getByRole('heading', { name: 'Ugovor 4600099999' })).toBeVisible();
+  await expect(page.getByText('Šesto odgovorno lice', { exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Service Level Manager' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '011 999', exact: true })).toBeVisible();
+  await page.screenshot({ path: 'test-results/detalji.png', fullPage: true });
+  await page.reload();
+  await expect(page.getByRole('cell', { name: 'Ana Anić' })).toBeVisible();
+  await page.getByRole('link', { name: 'Povratak na pregled' }).click();
+  await expect(page).toHaveURL(/page_id=2.*id_ugo_org=3/);
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/zatvoreni'))).toBeTruthy();
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('4');
   await expect(page.getByRole('heading', { name: 'Nema ugovora za prikaz' })).toBeVisible();
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('0');
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
+});
+
+test('direct details handle empty contacts, missing contracts and retry', async ({ page }) => {
+  const options = { noContacts: true };
+  await mockAPI(page, options);
+  await login(page);
+  await page.goto('/ugovori/detalji/2');
+  await expect(page.getByText('Nema evidentiranih lica za ovog dobavljača.')).toBeVisible();
+  options.detailError = 404;
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Ugovor nije pronađen' })).toBeVisible();
+  options.detailError = 500;
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Detalji nisu dostupni' })).toBeVisible();
+  options.detailError = 0;
+  await page.getByRole('button', { name: 'Pokušaj ponovo' }).click();
+  await expect(page.getByRole('heading', { name: 'Ugovor 4600099999' })).toBeVisible();
 });
 
 test('protected routes, login error, session restoration and logout', async ({ page }) => {
@@ -116,7 +148,7 @@ test('expired access token is renewed once for concurrent requests', async ({ pa
   const mock = await mockAPI(page, { expired: true });
   await login(page);
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   expect(mock.renewals()).toBe(1);
 });
 
@@ -135,7 +167,7 @@ test('server error can be retried', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Pregled trenutno nije dostupan' })).toBeVisible();
   options.failContracts = false;
   await page.getByRole('button', { name: 'Pokušaj ponovo', exact: true }).click();
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
 });
 
 test('mobile navigation and table stay inside viewport', async ({ page }) => {
@@ -143,11 +175,11 @@ test('mobile navigation and table stay inside viewport', async ({ page }) => {
   await mockAPI(page);
   await login(page);
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Otvori meni' }).click();
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   const overflow = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     viewport: window.innerWidth,

@@ -8,6 +8,7 @@ import NotFound from './pages/PageNotFound';
 import Login from './pages/Login';
 import Portal from './pages/Portal';
 import Contracts from './pages/Contracts';
+import Contract from './pages/Contract';
 export default function App() { return (<QueryClientProvider client={queryClient}><BrowserRouter><AuthProvider>
   <a className="skip-link" href="#main-content">Pređi na sadržaj</a>
   <Routes>
@@ -15,6 +16,7 @@ export default function App() { return (<QueryClientProvider client={queryClient
     <Route element={<ProtectedRoute/>}>
       <Route element={<PortalLayout/>}><Route index element={<Portal/>}/></Route>
       <Route path="/ugovori" element={<WorkspaceLayout/>}>
+        <Route path="detalji/:id" element={<Contract/>}/>
         <Route index element={<Navigate to="otvoreni" replace/>}/>
         <Route path="otvoreni" element={<Contracts key="otvoreni" status="otvoreni"/>}/>
         <Route path="zatvoreni" element={<Contracts key="zatvoreni" status="zatvoreni"/>}/>
