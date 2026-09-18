@@ -41,7 +41,7 @@ async function mockAPI(page, options = {}) {
     if (url.pathname.startsWith('/api/ugo_evid/')) {
       if (url.pathname.endsWith('/detalji')) {
         if (options.detailError) return json({ error: 'Detalji nisu dostupni' }, options.detailError);
-        return json({ ...contract, id_ugo_evid: 2, br_ugovor: '4600099999', lica_dobavljaca: options.noContacts ? [] : [{ ime: 'Ana Anić', radno_mesto: 'Menadžer', telefon: '011 999', email: 'ana@example.test', rola_lica: 'Service Level Manager' }] });
+        return json({ ...contract, ...(options.noContacts ? { ime: '', telefon: '', email: '' } : {}), id_ugo_evid: 2, br_ugovor: '4600099999', lica_dobavljaca: options.noContacts ? [] : [{ id: 7, ime: 'Ana Anić', radno_mesto: 'Menadžer', telefon: '011 999', email: 'ana@example.test', rola_lica: 'Service Level Manager' }] });
       }
       if (options.failContracts) return json({ error: 'pregled ugovora trenutno nije dostupan' }, 500);
       if (url.searchParams.get('id_ugo_org') === '4') return json({ total: 0, items: [] });
@@ -92,6 +92,10 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await expect(page.getByRole('heading', { name: /4600099999.*Održavanje/ })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Odgovorna lica' }).getByText(/Šesto odgovorno lice/)).toBeVisible();
   await expect(page.getByText('Service Level Manager', { exact: true })).toBeVisible();
+  const supplierRows = page.getByRole('list', { name: 'Lica dobavljača' }).getByRole('listitem');
+  await expect(supplierRows).toHaveCount(2);
+  await expect(supplierRows.first()).toContainText('Kontakt za ovaj ugovor');
+  await expect(supplierRows.first()).toContainText('Petar Petrović');
   await expect(page.getByText('011 999', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/detalji.png', fullPage: true });
   await page.reload();

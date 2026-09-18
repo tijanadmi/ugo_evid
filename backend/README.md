@@ -2,6 +2,11 @@
 
 ## Prošireni detalji ugovora
 
+Odgovor uključuje nullable `id_ugo_dob_lica`, pročitan iz `TED.UGO_EVID`
+preko ID-a evidencije, i `id` za svako lice dobavljača. Postojeći pogled
+ne mora da se menja. Sačuvano ime, telefon i email ugovora se ne prepisuju.
+Backend vraća sva lica; uklanjanje duplog kontakta je samo pravilo prikaza.
+
 `GET /ugo_evid/123/detalji` vraća svih 42 polja pogleda za ID evidencije 123,
 uz niz `lica_dobavljaca` (`ime`, `radno_mesto`, `telefon`, `email`, `rola_lica`).
 Zahteva Bearer token; nepostojeća evidencija vraća 404.

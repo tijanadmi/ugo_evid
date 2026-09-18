@@ -48,7 +48,7 @@ func (r *OracleStore) loadProsireniContacts(ctx context.Context, items []models.
 	if len(args) == 0 {
 		return nil
 	}
-	rows, err := r.DB.QueryContext(ctx, `SELECT l.id_sap_dobavljac, l.ime, l.radno_mesto, l.telefon, l.email, r.naziv
+	rows, err := r.DB.QueryContext(ctx, `SELECT l.id_sap_dobavljac, l.ime, l.radno_mesto, l.telefon, l.email, r.naziv, l.id
  FROM TED.UGO_DOB_LICA l
  LEFT JOIN TED.UGO_DOB_LICA_ROLE r ON l.id_ugo_dob_lica_rola = r.id
  WHERE l.id_sap_dobavljac IN (`+strings.Join(binds, ",")+`)
@@ -60,7 +60,7 @@ func (r *OracleStore) loadProsireniContacts(ctx context.Context, items []models.
 	for rows.Next() {
 		var id int
 		var contact models.UgoDobLiceKontakt
-		if err := scanNullable(rows, &id, &contact.Ime, &contact.RadnoMesto, &contact.Telefon, &contact.Email, &contact.RolaLica); err != nil {
+		if err := scanNullable(rows, &id, &contact.Ime, &contact.RadnoMesto, &contact.Telefon, &contact.Email, &contact.RolaLica, &contact.ID); err != nil {
 			return err
 		}
 		bySupplier[id] = append(bySupplier[id], contact)
@@ -136,7 +136,8 @@ const prosireniSelect = `SELECT
  v.odg_zap_1, v.naziv_odg_zap_1, v.odg_zap_2, v.naziv_odg_zap_2,
  v.odg_zap_3, v.naziv_odg_zap_3, v.odg_zap_4, v.naziv_odg_zap_4,
  v.odg_zap_5, v.naziv_odg_zap_5, v.odg_zap_6, v.naziv_odg_zap_6,
- v.ime, v.telefon, v.email, v.status, v.datpri, v.datizm`
+ v.ime, v.telefon, v.email, v.status, v.datpri, v.datizm,
+ (SELECT e.id_ugo_dob_lica FROM TED.UGO_EVID e WHERE e.id = v.id_ugo_evid) AS id_ugo_dob_lica`
 
 func scanProsireni(rows interface{ Scan(...any) error }, m *models.UgoEvidProsireni) error {
 	return scanNullable(rows,
@@ -148,5 +149,5 @@ func scanProsireni(rows interface{ Scan(...any) error }, m *models.UgoEvidProsir
 		&m.OdgZap1, &m.NazivOdgZap1, &m.OdgZap2, &m.NazivOdgZap2,
 		&m.OdgZap3, &m.NazivOdgZap3, &m.OdgZap4, &m.NazivOdgZap4,
 		&m.OdgZap5, &m.NazivOdgZap5, &m.OdgZap6, &m.NazivOdgZap6,
-		&m.Ime, &m.Telefon, &m.Email, &m.Status, &m.DatPri, &m.DatIzm)
+		&m.Ime, &m.Telefon, &m.Email, &m.Status, &m.DatPri, &m.DatIzm, &m.IDUgoDobLica)
 }

@@ -4,6 +4,7 @@ import "time"
 
 // UgoEvidProsireni maps the columns of TED.UGO_EVID_PROSIRENI_V.
 type UgoEvidProsireni struct {
+	IDUgoDobLica   *int                `json:"id_ugo_dob_lica"`
 	LicaDobavljaca []UgoDobLiceKontakt `json:"lica_dobavljaca"`
 	IDUgoEvid      int                 `json:"id_ugo_evid"`
 	IDUgoOrg       int                 `json:"id_ugo_org"`
@@ -50,6 +51,7 @@ type UgoEvidProsireni struct {
 }
 
 type UgoDobLiceKontakt struct {
+	ID         int    `json:"id"`
 	Ime        string `json:"ime"`
 	RadnoMesto string `json:"radno_mesto"`
 	Telefon    string `json:"telefon"`

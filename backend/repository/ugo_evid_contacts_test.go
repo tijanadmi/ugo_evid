@@ -20,7 +20,7 @@ func TestContactsBatchMapping(t *testing.T) {
 		if len(args) != 3 || !strings.Contains(q, "ORDER BY r.id, l.id") {
 			t.Fatalf("query=%s args=%v", q, args)
 		}
-		return &schemaRows{width: 6, values: [][]driver.Value{{int64(20), "B", nil, nil, nil, nil}, {int64(10), "A1", "Manager", "123", "a@example.test", "SLM"}, {int64(10), "A2", nil, nil, nil, "Other"}}}, nil
+		return &schemaRows{width: 7, values: [][]driver.Value{{int64(20), "B", nil, nil, nil, nil, int64(21)}, {int64(10), "A1", "Manager", "123", "a@example.test", "SLM", int64(11)}, {int64(10), "A2", nil, nil, nil, "Other", int64(12)}}}, nil
 	}})
 	store.DB.SetMaxOpenConns(1)
 	if err := store.loadProsireniContacts(context.Background(), items); err != nil {
@@ -39,15 +39,15 @@ func TestProsireniDetailLookup(t *testing.T) {
 		if !strings.Contains(q, "v.id_ugo_evid = :id") || args[0].Value != 7 {
 			t.Fatal("wrong detail lookup")
 		}
-		row := make([]driver.Value, 42)
+		row := make([]driver.Value, 43)
 		row[0], row[1], row[2] = int64(7), int64(3), int64(99)
-		return &schemaRows{width: 42, values: [][]driver.Value{row}}, nil
+		return &schemaRows{width: 43, values: [][]driver.Value{row}}, nil
 	}})
 	item, err := store.GetUgoEvidProsireniByID(context.Background(), 7)
-	if err != nil || item.IDUgoEvid != 7 || item.LicaDobavljaca == nil {
+	if err != nil || item.IDUgoEvid != 7 || item.IDUgoDobLica != nil || item.LicaDobavljaca == nil {
 		t.Fatalf("item=%+v err=%v", item, err)
 	}
-	empty := testSchemaStore(t, &schemaConn{query: func(string, []driver.NamedValue) (driver.Rows, error) { return &schemaRows{width: 42}, nil }})
+	empty := testSchemaStore(t, &schemaConn{query: func(string, []driver.NamedValue) (driver.Rows, error) { return &schemaRows{width: 43}, nil }})
 	if _, err = empty.GetUgoEvidProsireniByID(context.Background(), 7); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("missing detail: %v", err)
 	}

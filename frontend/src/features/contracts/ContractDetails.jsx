@@ -1,5 +1,6 @@
 import { value } from '../../utils/contractFormatting';
 import ResponsiblePersons from './ResponsiblePersons';
+import { supplierContacts, isServiceLevelManager } from './supplierContacts';
 
 const fields = [
   ['godina', 'Godina'], ['jn', 'Broj nabavke'],
@@ -8,6 +9,7 @@ const fields = [
 ];
 
 export default function ContractDetails({ item }) {
+	const contacts = supplierContacts(item);
   return <div className="contract-summary-grid">
     <section className="contract-card contract-facts" aria-labelledby="contract-facts-title">
       <h2 id="contract-facts-title">O ugovoru</h2>
@@ -20,13 +22,13 @@ export default function ContractDetails({ item }) {
       <ResponsiblePersons item={item}/>
     </section>
     <section className="contract-card partner-card" aria-labelledby="partner-title">
-      <div className="partner-heading"><div><h2 id="partner-title">Podaci o partneru / dobavljaču</h2><p className="partner-name">{value(item, 'naziv')}</p></div><span className="partner-count">Lica: {item.lica_dobavljaca?.length || 0}</span></div>
-      {!item.lica_dobavljaca?.length ? <p className="compact-empty">Nema evidentiranih lica za ovog dobavljača.</p>
-        : <ul className="partner-people" aria-label="Lica dobavljača">{item.lica_dobavljaca.map((person, index) => {
-          const isSLM = person.rola_lica?.trim().toLowerCase() === 'service level manager';
+      <div className="partner-heading"><div><h2 id="partner-title">Podaci o partneru / dobavljaču</h2><p className="partner-name">{value(item, 'naziv')}</p></div><span className="partner-count">Kontakti: {contacts.length}</span></div>
+      {!contacts.length ? <p className="compact-empty">Nema evidentiranih lica za ovog dobavljača.</p>
+        : <ul className="partner-people" aria-label="Lica dobavljača">{contacts.map((person, index) => {
+          const isSLM = isServiceLevelManager(person);
           return <li key={index} className={isSLM ? 'partner-person partner-person-slm' : 'partner-person'}>
             <div className="partner-person-identity"><strong>{value(person, 'ime')}</strong><span>{value(person, 'radno_mesto')}</span></div>
-            <span className="partner-role">{value(person, 'rola_lica')}</span>
+            <div className="partner-role">{person.saved ? <strong>Kontakt za ovaj ugovor</strong> : <span className="contact-source">Trenutni podaci</span>}{person.rola_lica && <span className="contact-role-name">{person.rola_lica}</span>}</div>
             <div className="partner-person-contact"><span>{value(person, 'email')}</span><span>{value(person, 'telefon')}</span></div>
           </li>;
         })}</ul>}

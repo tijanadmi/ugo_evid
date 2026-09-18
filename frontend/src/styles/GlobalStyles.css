@@ -45,6 +45,8 @@
 .partner-person-identity strong{font-weight:550;font-size:13px}
 .partner-person-identity>span{color:#7b889a;font-size:11px}
 .partner-role{color:#69788d;font-size:11px}
+.contact-source,.contact-role-name{display:block}
+.contact-source{color:#7b889a;font-size:10px;font-weight:400}
 .partner-person-slm{background:#f0efff;border-color:#dcd8ff;border-left:3px solid #6960ce}
 .partner-person-slm .partner-person-identity strong,.partner-person-slm .partner-role{font-weight:750;color:#484094}
 .compact-empty{font-size:13px;color:#7b889a;padding:8px 0}

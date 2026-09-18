@@ -63,6 +63,15 @@ Kolona Kontakt prikazuje ime, email i telefon. Detalji koriste
 `GET /ugo_evid/:id/detalji`, gde je `id` ID evidencije (`id_ugo_evid`).
 Sekcija partnera prikazuje naziv dobavljača i njegova lica: ime, radno mesto,
 telefon, email i rolu. Service Level Manager je posebno istaknut.
+Kontakt sačuvan u `UGO_EVID` prikazuje se prvi kao „Kontakt za ovaj ugovor“.
+Aktuelni SLM se izostavlja samo kada je jedinstveno i pouzdano podudaranje:
+ako postoje oba ID-a moraju biti jednaka, uz iste normalizovane kontakt podatke.
+Bez oba ID-a potrebno je isto neprazno ime i bar isti email ili telefon;
+sva ostala polja takođe moraju biti jednaka. Različita ili nedostajuća polja
+čuvaju oba prikaza, kao i neodređena višestruka podudaranja.
+Poređenje zanemaruje veličinu slova, suvišne razmake i formatiranje telefona,
+ali ne pretpostavlja pozivni broj zemlje. Ostale role se ne uklanjaju.
+Ako nema sačuvanog kontakta, prikazuju se samo lica dobavljača.
 Detalji rade i pri direktnom otvaranju i osvežavanju; povratak iz pregleda čuva filter i stranicu.
 Broj rezultata
 predstavlja broj evidencija iz pogleda, ne broj različitih SAP ugovora.
