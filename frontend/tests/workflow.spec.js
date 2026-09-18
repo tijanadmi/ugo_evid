@@ -6,7 +6,13 @@ const contract = {
   naziv: 'Primer dobavljača d.o.o.', sluzba: 'CTKS', otvoren_ug: 'X',
   jn: 'JN-12/2026', pocetak_ug: '2026-01-15T00:00:00Z', kraj_ug: null,
   vrednost_ug: 1250000, valuta_ug: 'RSD', ime: 'Petar Petrović',
-  telefon: '011 123 4567', email: 'petar@example.test', naziv_odg_zap_6: 'Šesto odgovorno lice',
+  telefon: '011 123 4567', email: 'petar@example.test',
+  odg_zap_1: '001', naziv_odg_zap_1: 'Prvo odgovorno lice',
+  odg_zap_2: '002', naziv_odg_zap_2: 'Drugo odgovorno lice',
+  odg_zap_3: '003', naziv_odg_zap_3: 'Treće odgovorno lice',
+  odg_zap_4: '004', naziv_odg_zap_4: 'Četvrto odgovorno lice',
+  odg_zap_5: '005', naziv_odg_zap_5: 'Peto odgovorno lice',
+  odg_zap_6: '006', naziv_odg_zap_6: 'Šesto odgovorno lice',
 };
 const future = (minutes) => new Date(Date.now() + minutes * 60000).toISOString();
 
@@ -58,6 +64,15 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
   await expect(page).toHaveURL(/\/ugovori\/otvoreni/);
   await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Odgovorna lica', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Vrednost', exact: true })).toHaveCount(0);
+  const people = page.getByRole('list', { name: 'Odgovorna lica' }).getByRole('listitem');
+  await expect(people).toHaveCount(6);
+  await expect(people.first()).toHaveText('001 — Prvo odgovorno lice');
+  await expect(people.last()).toHaveText('006 — Šesto odgovorno lice');
+  const first = await people.first().boundingBox();
+  const second = await people.nth(1).boundingBox();
+  expect(second.y).toBeGreaterThan(first.y);
   await page.screenshot({ path: 'test-results/otvoreni.png', fullPage: true });
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('3');
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/otvoreni') && url.searchParams.get('id_ugo_org') === '3')).toBeTruthy();
@@ -65,11 +80,12 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await expect(page.getByRole('button', { name: '4600099999', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '4600099999', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.getByText('Šesto odgovorno lice', { exact: true })).toBeVisible();
+  await expect(page.getByRole('dialog').getByText('Šesto odgovorno lice', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '4600012345', exact: true })).toBeVisible();
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/zatvoreni'))).toBeTruthy();
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('4');
   await expect(page.getByRole('heading', { name: 'Nema ugovora za prikaz' })).toBeVisible();

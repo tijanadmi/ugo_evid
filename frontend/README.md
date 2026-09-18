@@ -4,6 +4,22 @@ React/Vite aplikacija u JavaScript/JSX-u, po uzoru na `C:\react_workspace\tis_fr
 portal sa karticama, tamnoplavi bočni meni i zajedničko zaglavlje. Za sada je jedna
 aplikacija, pa portal i pregled koriste isti projekat i jednu prijavu.
 
+## Struktura
+
+Organizacija koda prati `pgi_frontend`: `pages` su ulazne stranice,
+`features/contracts` sadrži tabelu, red, odgovorna lica, detalje i `useContracts`,
+`features/organizations` sadrži `useOrganizations`, a `features/authentication`
+formu prijave. Zajedničke komponente su u `ui`, HTTP pozivi u `services`,
+sesija u `context`, stilovi u `styles` i formatiranje u `utils`.
+
+`App.jsx` postavlja rute i React Query provider. React Query upravlja učitavanjem,
+greškama, ponovnim učitavanjem i kešom ugovora i organizacija. Ključ ugovora
+uključuje korisnika, status, organizaciju, stranicu i veličinu stranice.
+Keš se briše pri odjavi/promeni korisnika.
+
+Kolona **Odgovorna lica** prikazuje popunjene parove `odg_zap_1` / `naziv_odg_zap_1`
+do `odg_zap_6` / `naziv_odg_zap_6`, po jedno lice u redu. Vrednost je u detaljima.
+
 ## Pokretanje
 
 Potreban je Node.js 20 i npm. Iz foldera `frontend`:

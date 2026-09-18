@@ -1,5 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
-import { ApiError, request } from './api';
+import { ApiError, request } from '../services/apiClient';
 
 const AuthContext = createContext(null);
 const storageKey = 'ugo-evid-session';
@@ -15,17 +16,19 @@ function readSession() {
 }
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState(readSession);
   const current = useRef(session);
   const refreshPending = useRef(null);
   const save = useCallback((value) => {
+    if (!value || current.current?.user?.username !== value.user?.username) queryClient.clear();
     current.current = value;
     setSession(value);
     try {
       if (value) sessionStorage.setItem(storageKey, JSON.stringify(value));
       else sessionStorage.removeItem(storageKey);
     } catch { /* Session still works in this tab without persistence. */ }
-  }, []);
+  }, [queryClient]);
   const logout = useCallback(() => { save(null); }, [save]);
   const login = useCallback(async (username, password) => {
     const data = await request('/users/login', { method: 'POST', body: { username, password } });

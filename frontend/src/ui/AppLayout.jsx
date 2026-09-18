@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../auth';
+import { useAuth } from '../context/AuthContext';
 import Icon from './Icon';
 
 export function Brand() {

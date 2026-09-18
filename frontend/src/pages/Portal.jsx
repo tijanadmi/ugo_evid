@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import Icon from '../components/Icon';
+import Icon from '../ui/Icon';
 
 export default function Portal() {
   return <main className="portal-main" id="main-content">
