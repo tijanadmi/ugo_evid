@@ -1,13 +1,35 @@
 import { value } from '../../utils/contractFormatting';
-const detailGroups = [
-  ['Ugovor', [['br_ugovor', 'Broj ugovora'], ['godina', 'Godina'], ['ugovor_dms', 'DMS'], ['jn', 'Javna nabavka'], ['br_poz_plana', 'Pozicija plana'], ['predmet_ugovora', 'Predmet ugovora'], ['otvoren_ug', 'Oznaka otvorenog ugovora'], ['zzn', 'ZZN'], ['pocetak_ug', 'Početak'], ['kraj_ug', 'Završetak'], ['vrednost_ug', 'Vrednost'], ['valuta_ug', 'Valuta'], ['kurs_ug', 'Kurs']]],
-  ['Dobavljač i organizacija', [['naziv', 'Dobavljač'], ['sluzba', 'Služba'], ['kom_grupa', 'Komercijalna grupa'], ['m_br_komerc', 'Matični broj komercijaliste'], ['naz_komerc', 'Komercijalista'], ['naziv_gr_plan', 'Grupa plana'], ['vrs_pred', 'Vrsta predmeta']]],
-  ['Kontakt', [['ime', 'Ime'], ['telefon', 'Telefon'], ['email', 'Email']]],
-  ['Odgovorna lica', Array.from({ length: 6 }, (_, i) => [[`odg_zap_${i + 1}`, `Šifra lica ${i + 1}`], [`naziv_odg_zap_${i + 1}`, `Odgovorno lice ${i + 1}`]]).flat()],
-  ['Podaci evidencije', [['id_ugo_evid', 'ID evidencije'], ['id_ugo_org', 'ID organizacije'], ['id_sap_ugovor', 'ID ugovora'], ['id_sap_dobavljac', 'ID dobavljača'], ['status', 'Status evidencije'], ['datpri', 'Datum prijave'], ['datizm', 'Datum izmene']]],
+import ResponsiblePersons from './ResponsiblePersons';
+
+const fields = [
+  ['godina', 'Godina'], ['jn', 'Broj nabavke'],
+  ['br_poz_plana', 'Pozicija plana'], ['ugovor_dms', 'DMS broj'],
+  ['pocetak_ug', 'Važi od'], ['kraj_ug', 'Važi do'],
 ];
 
-
 export default function ContractDetails({ item }) {
-  return <div className="detail-body">{detailGroups.map(([title, fields]) => <section key={title}><h3>{title}</h3><dl>{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{value(item, key)}</dd></div>)}</dl></section>)}</div>;
+  return <div className="contract-summary-grid">
+    <section className="contract-card contract-facts" aria-labelledby="contract-facts-title">
+      <h2 id="contract-facts-title">O ugovoru</h2>
+      <dl>{fields.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{value(item, key)}</dd></div>)}
+        <div className="commercial-contact"><dt>Zaduženi komercijalista</dt><dd>{value(item, 'naz_komerc')}{item.m_br_komerc && <span className="commercial-code"> · {item.m_br_komerc}</span>}</dd></div>
+      </dl>
+    </section>
+    <section className="contract-card operational-contacts" aria-labelledby="operational-title">
+      <h2 id="operational-title">Lica za operativno praćenje ugovora</h2>
+      <ResponsiblePersons item={item}/>
+    </section>
+    <section className="contract-card partner-card" aria-labelledby="partner-title">
+      <div className="partner-heading"><div><h2 id="partner-title">Podaci o partneru / dobavljaču</h2><p className="partner-name">{value(item, 'naziv')}</p></div><span className="partner-count">Lica: {item.lica_dobavljaca?.length || 0}</span></div>
+      {!item.lica_dobavljaca?.length ? <p className="compact-empty">Nema evidentiranih lica za ovog dobavljača.</p>
+        : <ul className="partner-people" aria-label="Lica dobavljača">{item.lica_dobavljaca.map((person, index) => {
+          const isSLM = person.rola_lica?.trim().toLowerCase() === 'service level manager';
+          return <li key={index} className={isSLM ? 'partner-person partner-person-slm' : 'partner-person'}>
+            <div className="partner-person-identity"><strong>{value(person, 'ime')}</strong><span>{value(person, 'radno_mesto')}</span></div>
+            <span className="partner-role">{value(person, 'rola_lica')}</span>
+            <div className="partner-person-contact"><span>{value(person, 'email')}</span><span>{value(person, 'telefon')}</span></div>
+          </li>;
+        })}</ul>}
+    </section>
+  </div>;
 }

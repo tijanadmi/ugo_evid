@@ -89,13 +89,13 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await expect(page.getByRole('link', { name: '4600099999', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '4600099999', exact: true }).click();
   await expect(page).toHaveURL(/\/ugovori\/detalji\/2$/);
-  await expect(page.getByRole('heading', { name: 'Ugovor 4600099999' })).toBeVisible();
-  await expect(page.getByText('Šesto odgovorno lice', { exact: true })).toBeVisible();
-  await expect(page.getByRole('cell', { name: 'Service Level Manager' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: '011 999', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /4600099999.*Održavanje/ })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Odgovorna lica' }).getByText(/Šesto odgovorno lice/)).toBeVisible();
+  await expect(page.getByText('Service Level Manager', { exact: true })).toBeVisible();
+  await expect(page.getByText('011 999', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/detalji.png', fullPage: true });
   await page.reload();
-  await expect(page.getByRole('cell', { name: 'Ana Anić' })).toBeVisible();
+  await expect(page.getByText('Ana Anić', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Povratak na pregled' }).click();
   await expect(page).toHaveURL(/page_id=2.*id_ugo_org=3/);
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
@@ -122,7 +122,7 @@ test('direct details handle empty contacts, missing contracts and retry', async 
   await expect(page.getByRole('heading', { name: 'Detalji nisu dostupni' })).toBeVisible();
   options.detailError = 0;
   await page.getByRole('button', { name: 'Pokušaj ponovo' }).click();
-  await expect(page.getByRole('heading', { name: 'Ugovor 4600099999' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /4600099999.*Održavanje/ })).toBeVisible();
 });
 
 test('protected routes, login error, session restoration and logout', async ({ page }) => {

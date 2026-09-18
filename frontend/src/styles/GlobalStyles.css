@@ -17,6 +17,39 @@
 .responsible-persons li{overflow-wrap:anywhere}
 .person-code{color:#69788d;font-variant-numeric:tabular-nums}
 @media(max-width:760px){.sidebar:not(.is-open){visibility:hidden}.header-start{min-width:0}.header-start>span{overflow-wrap:anywhere}.user-menu{flex-shrink:0}.organization-filter select{min-width:0}}
+/* Compact contract details */
+.compact-contract-heading{margin:18px 0 20px}
+.contract-heading-meta{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:1px;color:#78889b;margin-bottom:9px}
+.compact-contract-heading h1{font-size:23px;line-height:1.4;letter-spacing:-.4px;overflow-wrap:anywhere;max-width:1150px}
+.compact-contract-heading h1>span:first-child{color:#4f46e5;white-space:nowrap}
+.contract-title-divider{color:#bac4d2;font-weight:400}
+.contract-summary-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+.contract-card{background:white;border:1px solid var(--line);border-radius:10px;padding:18px 20px;min-width:0}
+.contract-card h2{font-size:14px;letter-spacing:0;color:#52617a;margin:0 0 16px}
+.contract-facts dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 20px;margin:0}
+.contract-facts dt{font-size:11px;color:#7b889a;margin-bottom:4px}
+.contract-facts dd{font-size:13px;font-weight:550;margin:0;line-height:1.5;overflow-wrap:anywhere}
+.commercial-contact{grid-column:1/-1;border-top:1px solid #edf0f5;padding-top:12px}
+.commercial-code{font-weight:400;color:#7b889a}
+.operational-contacts .responsible-persons{gap:0;font-size:13px}
+.operational-contacts .responsible-persons li{padding:6px 0;border-bottom:1px solid #f0f2f6;line-height:1.45}
+.operational-contacts .responsible-persons li:last-child{border:0;padding-bottom:0}
+.partner-card{grid-column:1/-1}
+.partner-heading{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
+.partner-heading h2{margin-bottom:6px;font-size:12px;color:#7b889a}
+.partner-name{font-size:17px;font-weight:650;overflow-wrap:anywhere;line-height:1.4}
+.partner-count{font-size:11px;color:#7b889a;white-space:nowrap}
+.partner-people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.partner-person{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr);gap:16px;align-items:center;padding:10px 12px;background:#f8fafc;border:1px solid #edf0f5;border-radius:6px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.partner-person-identity,.partner-person-contact{display:flex;flex-direction:column;gap:2px;min-width:0}
+.partner-person-identity strong{font-weight:550;font-size:13px}
+.partner-person-identity>span{color:#7b889a;font-size:11px}
+.partner-role{color:#69788d;font-size:11px}
+.partner-person-slm{background:#f0efff;border-color:#dcd8ff;border-left:3px solid #6960ce}
+.partner-person-slm .partner-person-identity strong,.partner-person-slm .partner-role{font-weight:750;color:#484094}
+.compact-empty{font-size:13px;color:#7b889a;padding:8px 0}
+@media(max-width:1000px){.contract-facts dl{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.contract-summary-grid{grid-template-columns:minmax(0,1fr);gap:12px}.contract-card{padding:16px}.compact-contract-heading h1{font-size:20px}.partner-person{grid-template-columns:minmax(0,1fr);gap:5px}.partner-heading{align-items:flex-start}.partner-person-contact{margin-top:3px}.partner-name{font-size:16px}}
 /* Contract details */
 .detail-dialog{border:0;padding:0;border-radius:12px;width:min(800px,calc(100% - 32px));max-height:88dvh;color:#26364b;box-shadow:0 30px 100px #0f2a4440}.detail-dialog::backdrop{background:#081c36a6}.detail-header{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;border-bottom:1px solid var(--line);position:sticky;top:0;background:white;z-index:1}.detail-header .eyebrow{color:#8b95a6;font-size:9px;margin-bottom:8px}.detail-header h2{font-size:22px}.detail-body{padding:6px 28px 24px}.detail-body section{padding-top:24px}.detail-body h3{font-size:13px;color:#5559a1;padding-bottom:12px;border-bottom:1px solid var(--line)}.detail-body dl{display:grid;grid-template-columns:1fr 1fr;gap:20px 32px;margin:18px 0 0}.detail-body dl div{min-width:0}.detail-body dt{font-size:10px;color:#8794a6;margin-bottom:6px}.detail-body dd{margin:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere}.detail-footer{padding:16px 28px;background:#f8f9fc;text-align:right;border-top:1px solid var(--line)}.not-found{display:grid;place-items:center;align-content:center;gap:25px;min-height:100dvh;padding:24px}
 @media(min-width:1500px){.workspace-main{padding:32px 42px}.header{padding:0 42px}}
