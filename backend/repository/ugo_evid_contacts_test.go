@@ -39,15 +39,15 @@ func TestProsireniDetailLookup(t *testing.T) {
 		if !strings.Contains(q, "v.id_ugo_evid = :id") || args[0].Value != 7 {
 			t.Fatal("wrong detail lookup")
 		}
-		row := make([]driver.Value, 43)
+		row := make([]driver.Value, 45)
 		row[0], row[1], row[2] = int64(7), int64(3), int64(99)
-		return &schemaRows{width: 43, values: [][]driver.Value{row}}, nil
+		return &schemaRows{width: 45, values: [][]driver.Value{row}}, nil
 	}})
 	item, err := store.GetUgoEvidProsireniByID(context.Background(), 7)
-	if err != nil || item.IDUgoEvid != 7 || item.IDUgoDobLica != nil || item.LicaDobavljaca == nil {
+	if err != nil || item.IDUgoEvid != 7 || item.Adresa != "" || item.Grad != "" || item.IDUgoDobLica != nil || item.LicaDobavljaca == nil {
 		t.Fatalf("item=%+v err=%v", item, err)
 	}
-	empty := testSchemaStore(t, &schemaConn{query: func(string, []driver.NamedValue) (driver.Rows, error) { return &schemaRows{width: 43}, nil }})
+	empty := testSchemaStore(t, &schemaConn{query: func(string, []driver.NamedValue) (driver.Rows, error) { return &schemaRows{width: 45}, nil }})
 	if _, err = empty.GetUgoEvidProsireniByID(context.Background(), 7); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("missing detail: %v", err)
 	}

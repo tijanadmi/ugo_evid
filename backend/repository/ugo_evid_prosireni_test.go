@@ -48,12 +48,12 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 					int64(100), int64(2), int64(300), int64(400), "2026", "U-1", "DMS", "JN", "PLAN", "Predmet", "Dobavljac", "X", "Z",
 					now, nil, float64(125.5), "RSD", nil, "KG", "MB", "Komerc", "Grupa", "Vrsta", "SL",
 					"1", "Prvi", "2", "Drugi", "3", "Treci", "4", "Cetvrti", "5", "Peti", "6", "Sesti",
-					"Kontakt", nil, "kontakt@example.test", "A", now, nil, int64(81),
+					"Kontakt", nil, "kontakt@example.test", "A", now, nil, int64(81), "Ulica 12", "Beograd",
 				}
 				if !open {
 					row[11] = nil
 				}
-				return &schemaRows{width: 43, values: [][]driver.Value{row}}, nil
+				return &schemaRows{width: 45, values: [][]driver.Value{row}}, nil
 			}})
 			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 10, 5, 0)
 			if err != nil {
@@ -63,6 +63,9 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 				t.Fatalf("calls=%d total=%d items=%d", calls, total, len(items))
 			}
 			m := items[0]
+			if m.Adresa != "Ulica 12" || m.Grad != "Beograd" {
+				t.Fatal("supplier address mapping")
+			}
 			if m.IDUgoDobLica == nil || *m.IDUgoDobLica != 81 || m.LicaDobavljaca[0].ID != 81 {
 				t.Fatal("contact ID mapping")
 			}
@@ -93,7 +96,7 @@ func TestProsireniEmptyPageKeepsTotal(t *testing.T) {
 		if strings.HasPrefix(q, "SELECT COUNT(*)") {
 			return &schemaRows{width: 1, values: [][]driver.Value{{int64(3)}}}, nil
 		}
-		return &schemaRows{width: 43}, nil
+		return &schemaRows{width: 45}, nil
 	}})
 	items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), true, 100, 20, 0)
 	if err != nil || total != 3 || items == nil || len(items) != 0 {
@@ -126,7 +129,7 @@ func TestProsireniOrganizationFilter(t *testing.T) {
 				if strings.HasPrefix(q, "SELECT COUNT(*)") {
 					return &schemaRows{width: 1, values: [][]driver.Value{{int64(6)}}}, nil
 				}
-				return &schemaRows{width: 43}, nil
+				return &schemaRows{width: 45}, nil
 			}})
 			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 100, 20, orgID)
 			if err != nil || calls != 2 || total != 6 || len(items) != 0 {

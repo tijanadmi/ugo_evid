@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const contract = {
+  adresa: 'Ulica 12', grad: 'Beograd',
   id_ugo_evid: 1, id_ugo_org: 3, id_sap_ugovor: 101, id_sap_dobavljac: 20,
   br_ugovor: '4600012345', godina: '2026', predmet_ugovora: 'Održavanje telekomunikacione opreme i sistema',
   naziv: 'Primer dobavljača d.o.o.', sluzba: 'CTKS', otvoren_ug: 'X',
@@ -67,6 +68,7 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await page.screenshot({ path: 'test-results/portal.png', fullPage: true });
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
   await expect(page).toHaveURL(/\/ugovori\/otvoreni/);
+  await expect(page.locator('.supplier-cell .supplier-address')).toHaveText('Ulica 12, Beograd');
   await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Odgovorna lica', exact: true })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Vrednost', exact: true })).toHaveCount(0);
@@ -89,6 +91,7 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await expect(page.getByRole('link', { name: '4600099999', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '4600099999', exact: true }).click();
   await expect(page).toHaveURL(/\/ugovori\/detalji\/2$/);
+  await expect(page.locator('.partner-heading .supplier-address')).toHaveText('Ulica 12, Beograd');
   await expect(page.getByRole('heading', { name: /4600099999.*Održavanje/ })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Odgovorna lica' }).getByText(/Šesto odgovorno lice/)).toBeVisible();
   await expect(page.getByText('Service Level Manager', { exact: true })).toBeVisible();
@@ -104,6 +107,7 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await expect(page).toHaveURL(/page_id=2.*id_ugo_org=3/);
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
+  await expect(page.locator('.supplier-cell .supplier-address')).toHaveText('Ulica 12, Beograd');
   await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/zatvoreni'))).toBeTruthy();
   await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('4');

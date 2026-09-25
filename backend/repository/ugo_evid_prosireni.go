@@ -137,7 +137,8 @@ const prosireniSelect = `SELECT
  v.odg_zap_3, v.naziv_odg_zap_3, v.odg_zap_4, v.naziv_odg_zap_4,
  v.odg_zap_5, v.naziv_odg_zap_5, v.odg_zap_6, v.naziv_odg_zap_6,
  v.ime, v.telefon, v.email, v.status, v.datpri, v.datizm,
- (SELECT e.id_ugo_dob_lica FROM TED.UGO_EVID e WHERE e.id = v.id_ugo_evid) AS id_ugo_dob_lica`
+ (SELECT e.id_ugo_dob_lica FROM TED.UGO_EVID e WHERE e.id = v.id_ugo_evid) AS id_ugo_dob_lica,
+ v.adresa, v.grad`
 
 func scanProsireni(rows interface{ Scan(...any) error }, m *models.UgoEvidProsireni) error {
 	return scanNullable(rows,
@@ -149,5 +150,5 @@ func scanProsireni(rows interface{ Scan(...any) error }, m *models.UgoEvidProsir
 		&m.OdgZap1, &m.NazivOdgZap1, &m.OdgZap2, &m.NazivOdgZap2,
 		&m.OdgZap3, &m.NazivOdgZap3, &m.OdgZap4, &m.NazivOdgZap4,
 		&m.OdgZap5, &m.NazivOdgZap5, &m.OdgZap6, &m.NazivOdgZap6,
-		&m.Ime, &m.Telefon, &m.Email, &m.Status, &m.DatPri, &m.DatIzm, &m.IDUgoDobLica)
+		&m.Ime, &m.Telefon, &m.Email, &m.Status, &m.DatPri, &m.DatIzm, &m.IDUgoDobLica, &m.Adresa, &m.Grad)
 }

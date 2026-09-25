@@ -1,5 +1,6 @@
 import { value } from '../../utils/contractFormatting';
 import ResponsiblePersons from './ResponsiblePersons';
+import SupplierAddress from './SupplierAddress';
 import { supplierContacts, isServiceLevelManager } from './supplierContacts';
 
 const fields = [
@@ -22,7 +23,7 @@ export default function ContractDetails({ item }) {
       <ResponsiblePersons item={item}/>
     </section>
     <section className="contract-card partner-card" aria-labelledby="partner-title">
-      <div className="partner-heading"><div><h2 id="partner-title">Podaci o partneru / dobavljaču</h2><p className="partner-name">{value(item, 'naziv')}</p></div><span className="partner-count">Kontakti: {contacts.length}</span></div>
+      <div className="partner-heading"><div><h2 id="partner-title">Podaci o partneru / dobavljaču</h2><p className="partner-name">{value(item, 'naziv')}</p><SupplierAddress item={item}/></div><span className="partner-count">Kontakti: {contacts.length}</span></div>
       {!contacts.length ? <p className="compact-empty">Nema evidentiranih lica za ovog dobavljača.</p>
         : <ul className="partner-people" aria-label="Lica dobavljača">{contacts.map((person, index) => {
           const isSLM = isServiceLevelManager(person);
