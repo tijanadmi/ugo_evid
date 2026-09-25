@@ -39,6 +39,17 @@
 .partner-heading h2{margin-bottom:6px;font-size:12px;color:#7b889a}
 .partner-name{font-size:17px;font-weight:650;overflow-wrap:anywhere;line-height:1.4}
 .supplier-address{display:block;margin-top:4px;color:#7b889a;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.partners-table{min-width:0;table-layout:fixed}
+.partners-table th:first-child{width:42%;min-width:0}
+.partners-table th:last-child{width:56px}
+.partners-table td,.partners-table th{overflow-wrap:anywhere}
+.partner-filter{min-width:0;flex:1}
+.partner-filter label{display:block;font-size:12px;font-weight:600;color:#536276;margin-bottom:8px}
+.partner-filter-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.partner-filter input{width:310px;max-width:100%;min-width:0;border:1px solid #dce3ec;border-radius:6px;background:white;padding:10px 12px;font-size:13px}
+.partner-dialog{width:min(960px,calc(100% - 32px))}
+.partner-dialog>.contract-card{border:0;border-radius:0}
+@media(max-width:760px){.partners-table td,.partners-table th{padding:12px 10px}.partner-filter-controls input{width:100%}}
 .partners-list{display:flex;flex-direction:column;gap:16px}
 .partners-list .partner-heading h2{font-size:17px;color:#26364b}
 .partners-total{font-size:12px;margin-bottom:16px}

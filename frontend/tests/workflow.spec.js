@@ -41,7 +41,7 @@ async function mockAPI(page, options = {}) {
     if (url.pathname === '/api/moji_partneri') {
       expect(url.searchParams.has('id_ugo_org')).toBe(false);
       if (options.partnerError) return json({ error: 'Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica.' }, 403);
-      if (options.noPartners) return json({ items: [], total: 0, id_ugo_org: 3 });
+      if (options.noPartners || url.searchParams.get('naziv') === 'Nema') return json({ items: [], total: 0, id_ugo_org: 3 });
       return json({ total: 21, id_ugo_org: 3, items: [{ id: 20, naziv: url.searchParams.get('page_id') === '2' ? 'Drugi partner' : 'Moj partner', adresa: 'Ulica 12', grad: 'Beograd', lica_dobavljaca: [{ id: 7, ime: 'Ana Anić', rola_lica: 'Service Level Manager', telefon: '011 999', email: 'ana@example.test' }] }] });
     }
     if (url.pathname === '/api/ugo_org') return json({ total: 2, items: [{ id: 3, sifra: 'CTKS', naziv: 'Centar za telekomunikacione sisteme' }, { id: 4, sifra: 'CITI', naziv: 'Centar za IT infrastrukturu' }] });
@@ -70,19 +70,35 @@ async function login(page) {
 
 test('my partners navigation, contacts, pagination, empty and denied organization', async ({ page }) => {
   const options = {};
-  await mockAPI(page, options);
+  const { calls } = await mockAPI(page, options);
   await login(page);
   await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
   await page.getByRole('link', { name: 'Moji partneri', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Moji partneri', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Moj partner', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Moj partner', exact: true })).toBeVisible();
   await expect(page.getByText('Ulica 12, Beograd', { exact: true })).toBeVisible();
+  await expect(page.getByText('Ana Anić', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Moj partner', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.locator('.partner-person-slm')).toContainText('Ana Anić');
   await expect(page.locator('.partner-person-slm')).toContainText('011 999');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Sledeća stranica', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Drugi partner' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Drugi partner', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Drugi partner' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Drugi partner', exact: true })).toBeVisible();
+  await page.getByLabel('Naziv dobavljača', { exact: true }).fill('Moj');
+  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
+  await expect.poll(() => calls.some(url => url.pathname === '/api/moji_partneri' && url.searchParams.get('naziv') === 'Moj' && url.searchParams.get('page_id') === '1')).toBeTruthy();
+  await expect(page.getByRole('button', { name: 'Moj partner', exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Naziv dobavljača', { exact: true })).toHaveValue('Moj');
+  await page.getByLabel('Naziv dobavljača', { exact: true }).fill('Nema');
+  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Nema partnera za prikaz' })).toBeVisible();
+  await page.getByRole('button', { name: 'Poništi', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Moj partner', exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await page.screenshot({ path: 'test-results/partneri-mobile.png', fullPage: true });

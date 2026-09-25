@@ -2,7 +2,10 @@
 
 ## Moji partneri
 
-`GET /moji_partneri?page_id=1&page_size=20` zahteva Bearer token.
+`GET /moji_partneri?page_id=1&page_size=20&naziv=deo%20naziva` zahteva Bearer token.
+Opcioni `naziv` (do 200 znakova) pretražuje deo naziva, bez razlikovanja
+velikih i malih slova. Filter se primenjuje na broj rezultata i stranicu;
+SQL koristi vezani parametar, a `%` i `_` su obični znaci.
 Backend uzima username iz tokena, aktivnog korisnika iz `UGO_KOR` i jednu
 organizaciju iz `UGO_KOR_ROLE` sa `STATUS='A'`. Više rola iste organizacije
 ne pravi duplikate. Bez organizacije ili sa više različitih aktivnih organizacija

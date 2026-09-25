@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/tijanadmi/ugo_evid/models"
+	"strings"
 )
 
 var ErrUserOrganization = errors.New("user must have one active organization")
@@ -40,18 +41,24 @@ func (r *OracleStore) GetUserOrganization(ctx context.Context, username, activeS
 	return orgID, nil
 }
 
-func (r *OracleStore) GetPartnersPaged(ctx context.Context, orgID, offset, limit int) ([]models.Partner, int, error) {
+func (r *OracleStore) GetPartnersPaged(ctx context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error) {
 	if orgID < 1 || offset < 0 || limit < 1 || limit > 100 {
 		return nil, 0, fmt.Errorf("invalid partner filter or pagination")
 	}
-	const from = ` FROM TED.SAP_DOBAVLJACI d WHERE EXISTS (
+	from := ` FROM TED.SAP_DOBAVLJACI d WHERE EXISTS (
  SELECT 1 FROM TED.SAP_UGOVORI su JOIN TED.UGO_EVID e ON e.id_sap_ugovor = su.id
  WHERE su.id_sap_dobavljac = d.id AND e.id_ugo_org = :org_id)`
+	args := []any{sql.Named("org_id", orgID)}
+	if naziv = strings.TrimSpace(naziv); naziv != "" {
+		from += " AND INSTR(LOWER(d.naziv), LOWER(:naziv)) > 0"
+		args = append(args, sql.Named("naziv", naziv))
+	}
 	var total int
-	if err := r.DB.QueryRowContext(ctx, "SELECT COUNT(*)"+from, sql.Named("org_id", orgID)).Scan(&total); err != nil {
+	if err := r.DB.QueryRowContext(ctx, "SELECT COUNT(*)"+from, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := r.DB.QueryContext(ctx, `SELECT d.id,d.sifra,d.naziv,d.adresa,d.grad,d.web_portal`+from+` ORDER BY d.naziv,d.id OFFSET :page_offset ROWS FETCH NEXT :page_limit ROWS ONLY`, sql.Named("org_id", orgID), sql.Named("page_offset", offset), sql.Named("page_limit", limit))
+	args = append(args, sql.Named("page_offset", offset), sql.Named("page_limit", limit))
+	rows, err := r.DB.QueryContext(ctx, `SELECT d.id,d.sifra,d.naziv,d.adresa,d.grad,d.web_portal`+from+` ORDER BY d.naziv,d.id OFFSET :page_offset ROWS FETCH NEXT :page_limit ROWS ONLY`, args...)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -15,6 +15,7 @@ import (
 type partnerStore struct {
 	repository.Store
 	username          string
+	naziv             string
 	orgID             int
 	orgErr, errorList error
 }
@@ -23,8 +24,9 @@ func (s *partnerStore) GetUserOrganization(_ context.Context, username, status s
 	s.username = username
 	return 3, s.orgErr
 }
-func (s *partnerStore) GetPartnersPaged(_ context.Context, orgID, offset, limit int) ([]models.Partner, int, error) {
+func (s *partnerStore) GetPartnersPaged(_ context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error) {
 	s.orgID = orgID
+	s.naziv = naziv
 	return nil, 0, s.errorList
 }
 func TestMyPartnersScope(t *testing.T) {
@@ -34,7 +36,7 @@ func TestMyPartnersScope(t *testing.T) {
 		status          int
 		orgErr, listErr error
 	}{
-		{"/moji_partneri?id_ugo_org=99", true, 200, nil, nil},
+		{"/moji_partneri?id_ugo_org=99&naziv=ACME", true, 200, nil, nil},
 		{"/moji_partneri", false, 401, nil, nil},
 		{"/moji_partneri?page_size=101", true, 400, nil, nil},
 		{"/moji_partneri", true, 403, repository.ErrUserOrganization, nil},
@@ -58,7 +60,7 @@ func TestMyPartnersScope(t *testing.T) {
 		if rec.Code != tc.status {
 			t.Fatalf("%s: %d %s", tc.path, rec.Code, rec.Body.String())
 		}
-		if tc.status == 200 && (store.username != "ad.user" || store.orgID != 3 || !strings.Contains(rec.Body.String(), `"items":[]`)) {
+		if tc.status == 200 && (store.naziv != "ACME" || store.username != "ad.user" || store.orgID != 3 || !strings.Contains(rec.Body.String(), `"items":[]`)) {
 			t.Fatal("wrong scope or empty response")
 		}
 		if tc.status == 403 && store.orgID != 0 {

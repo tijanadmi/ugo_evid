@@ -12,11 +12,12 @@ import (
 
 func (server *Server) ListMyPartners(ctx *gin.Context) {
 	var req struct {
-		PageID   int32 `form:"page_id,default=1" binding:"min=1"`
-		PageSize int32 `form:"page_size,default=20" binding:"min=1,max=100"`
+		Naziv    string `form:"naziv" binding:"max=200"`
+		PageID   int32  `form:"page_id,default=1" binding:"min=1"`
+		PageSize int32  `form:"page_size,default=20" binding:"min=1,max=100"`
 	}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
-		ctx.JSON(400, apiErrorResponse{Error: "neispravna paginacija"})
+		ctx.JSON(400, apiErrorResponse{Error: "neispravna paginacija ili filter (najviše 200 znakova)"})
 		return
 	}
 	payload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
@@ -30,7 +31,7 @@ func (server *Server) ListMyPartners(ctx *gin.Context) {
 		ctx.JSON(500, apiErrorResponse{Error: "Pregled partnera trenutno nije dostupan."})
 		return
 	}
-	items, total, err := server.store.GetPartnersPaged(ctx.Request.Context(), orgID, (int(req.PageID)-1)*int(req.PageSize), int(req.PageSize))
+	items, total, err := server.store.GetPartnersPaged(ctx.Request.Context(), orgID, (int(req.PageID)-1)*int(req.PageSize), int(req.PageSize), req.Naziv)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot list partners")
 		ctx.JSON(500, apiErrorResponse{Error: "Pregled partnera trenutno nije dostupan."})

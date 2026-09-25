@@ -52,12 +52,31 @@ func TestPartnersScopedAndBatched(t *testing.T) {
 		return &schemaRows{width: 6, values: [][]driver.Value{{int64(20), "S1", "Partner 1", "Ulica", "Grad", nil}, {int64(21), "S2", "Partner 2", nil, nil, nil}}}, nil
 	}})
 	store.DB.SetMaxOpenConns(1)
-	items, total, err := store.GetPartnersPaged(context.Background(), 3, 0, 20)
+	items, total, err := store.GetPartnersPaged(context.Background(), 3, 0, 20, "")
 	if err != nil || total != 2 || len(items) != 2 || calls != 3 {
 		t.Fatalf("items=%v total=%d calls=%d err=%v", items, total, calls, err)
 	}
 	if len(items[0].LicaDobavljaca) != 1 || items[0].LicaDobavljaca[0].ID != 71 || items[1].LicaDobavljaca == nil || len(items[1].LicaDobavljaca) != 0 {
 		t.Fatal("contacts mapping")
+	}
+}
+
+func TestPartnersNameFilter(t *testing.T) {
+	calls := 0
+	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
+		calls++
+		checkBinds(t, q, args)
+		if !strings.Contains(q, "INSTR(LOWER(d.naziv), LOWER(:naziv)) > 0") || args[1].Name != "naziv" || args[1].Value != "ACME%_" {
+			t.Fatalf("incorrect name filter: %s %v", q, args)
+		}
+		if strings.HasPrefix(q, "SELECT COUNT(*)") {
+			return &schemaRows{width: 1, values: [][]driver.Value{{int64(5)}}}, nil
+		}
+		return &schemaRows{width: 6}, nil
+	}})
+	items, total, err := store.GetPartnersPaged(context.Background(), 3, 100, 20, "  ACME%_  ")
+	if err != nil || total != 5 || len(items) != 0 || calls != 2 {
+		t.Fatalf("total=%d calls=%d err=%v", total, calls, err)
 	}
 }
 
@@ -68,7 +87,7 @@ func TestPartnersEmptyPage(t *testing.T) {
 		}
 		return &schemaRows{width: 6}, nil
 	}})
-	items, total, err := store.GetPartnersPaged(context.Background(), 3, 100, 20)
+	items, total, err := store.GetPartnersPaged(context.Background(), 3, 100, 20, "")
 	if err != nil || total != 2 || items == nil || len(items) != 0 {
 		t.Fatalf("items=%v total=%d err=%v", items, total, err)
 	}
