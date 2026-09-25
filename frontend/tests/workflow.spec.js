@@ -38,6 +38,12 @@ async function mockAPI(page, options = {}) {
       return json({ access_token: 'renewed', access_token_expires_at: future(15) });
     }
     expect(req.headers().authorization).toBe(`Bearer ${options.expired ? 'renewed' : 'access'}`);
+    if (url.pathname === '/api/moji_partneri') {
+      expect(url.searchParams.has('id_ugo_org')).toBe(false);
+      if (options.partnerError) return json({ error: 'Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica.' }, 403);
+      if (options.noPartners) return json({ items: [], total: 0, id_ugo_org: 3 });
+      return json({ total: 21, id_ugo_org: 3, items: [{ id: 20, naziv: url.searchParams.get('page_id') === '2' ? 'Drugi partner' : 'Moj partner', adresa: 'Ulica 12', grad: 'Beograd', lica_dobavljaca: [{ id: 7, ime: 'Ana Anić', rola_lica: 'Service Level Manager', telefon: '011 999', email: 'ana@example.test' }] }] });
+    }
     if (url.pathname === '/api/ugo_org') return json({ total: 2, items: [{ id: 3, sifra: 'CTKS', naziv: 'Centar za telekomunikacione sisteme' }, { id: 4, sifra: 'CITI', naziv: 'Centar za IT infrastrukturu' }] });
     if (url.pathname.startsWith('/api/ugo_evid/')) {
       if (url.pathname.endsWith('/detalji')) {
@@ -61,6 +67,32 @@ async function login(page) {
   await page.getByRole('button', { name: 'Prijavi se', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Aplikacije', exact: true })).toBeVisible();
 }
+
+test('my partners navigation, contacts, pagination, empty and denied organization', async ({ page }) => {
+  const options = {};
+  await mockAPI(page, options);
+  await login(page);
+  await page.getByRole('link', { name: /Evidencija ugovora/ }).click();
+  await page.getByRole('link', { name: 'Moji partneri', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Moji partneri', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Moj partner', exact: true })).toBeVisible();
+  await expect(page.getByText('Ulica 12, Beograd', { exact: true })).toBeVisible();
+  await expect(page.locator('.partner-person-slm')).toContainText('Ana Anić');
+  await expect(page.locator('.partner-person-slm')).toContainText('011 999');
+  await page.getByRole('button', { name: 'Sledeća stranica', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Drugi partner' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Drugi partner' })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({ path: 'test-results/partneri-mobile.png', fullPage: true });
+  options.noPartners = true;
+  await page.goto('/ugovori/partneri');
+  await expect(page.getByRole('heading', { name: 'Nema partnera za prikaz' })).toBeVisible();
+  options.partnerError = true;
+  await page.reload();
+  await expect(page.getByRole('alert')).toContainText('jedna aktivna organizaciona jedinica');
+});
 
 test('login, portal, both lists, organization filter, pagination and details', async ({ page }) => {
   const { calls } = await mockAPI(page);

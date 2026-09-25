@@ -61,6 +61,7 @@ func (server *Server) setupRouter() {
 
 	authRoutes.GET("/sapugovori", server.GetSapUgovoriPaged)
 	authRoutes.GET("/ugo_evid/otvoreni", server.ListOtvoreniUgovori)
+	authRoutes.GET("/moji_partneri", server.ListMyPartners)
 	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
 	authRoutes.GET("/ugo_evid/:id/detalji", server.GetUgoEvidProsireni)
 

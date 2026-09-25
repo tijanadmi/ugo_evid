@@ -1,5 +1,20 @@
 # UGO evidencija: Oracle i AD
 
+## Moji partneri
+
+`GET /moji_partneri?page_id=1&page_size=20` zahteva Bearer token.
+Backend uzima username iz tokena, aktivnog korisnika iz `UGO_KOR` i jednu
+organizaciju iz `UGO_KOR_ROLE` sa `STATUS='A'`. Više rola iste organizacije
+ne pravi duplikate. Bez organizacije ili sa više različitih aktivnih organizacija
+vraća 403. Organizacija se ne preuzima iz parametra frontend-a.
+
+Odgovor je `{ "items": [...], "total": 0, "id_ugo_org": 3 }`.
+Partneri dolaze iz `SAP_DOBAVLJACI` preko `SAP_UGOVORI` i `UGO_EVID` za tu
+organizaciju, obuhvatajući otvorene i zatvorene ugovore. Svaki dobavljač se
+pojavljuje jednom. Stavke sadrže `id`, `sifra`, `naziv`, `adresa`, `grad`,
+`web_portal` i `lica_dobavljaca` sa aktuelnim kontaktima sortiranim po roli.
+`page_size` je 1–100; podrazumevana veličina je 20. Endpoint je samo za čitanje.
+
 ## Prošireni detalji ugovora
 
 Otvoreni i zatvoreni pregledi i detalji ugovora vraćaju i `adresa` i `grad`

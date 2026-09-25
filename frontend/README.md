@@ -43,6 +43,12 @@ U frontend konfiguraciju ne unositi Oracle lozinke niti ključ za tokene.
 
 ## Ekrani i API
 
+- `/ugovori/partneri` — **Moji partneri**, preko `GET /moji_partneri`.
+  Prikazuje jedinstvene dobavljače korisnikove organizacije iz svih ugovora,
+  adresu, grad i aktuelna kontakt lica, sa istaknutim Service Level Manager-om.
+  Organizaciju određuje backend iz korisnikovog naloga; stranica ima paginaciju.
+  Kontakt iz pojedinačnog ugovora ostaje na stranici detalja tog ugovora.
+
 - `/login` — AD prijava preko `POST /users/login`.
 - `/` — portal sa aplikacijom **Evidencija ugovora**.
 - `/ugovori` — preusmeravanje na otvorene ugovore.

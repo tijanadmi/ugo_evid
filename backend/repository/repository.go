@@ -7,6 +7,8 @@ import (
 )
 
 type Store interface {
+	GetUserOrganization(ctx context.Context, username, activeStatus string) (int, error)
+	GetPartnersPaged(ctx context.Context, orgID, offset, limit int) ([]models.Partner, int, error)
 	GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error)
 	GetUgoEvidProsireniByID(ctx context.Context, id int) (models.UgoEvidProsireni, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)

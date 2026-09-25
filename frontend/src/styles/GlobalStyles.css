@@ -39,6 +39,9 @@
 .partner-heading h2{margin-bottom:6px;font-size:12px;color:#7b889a}
 .partner-name{font-size:17px;font-weight:650;overflow-wrap:anywhere;line-height:1.4}
 .supplier-address{display:block;margin-top:4px;color:#7b889a;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.partners-list{display:flex;flex-direction:column;gap:16px}
+.partners-list .partner-heading h2{font-size:17px;color:#26364b}
+.partners-total{font-size:12px;margin-bottom:16px}
 .partner-count{font-size:11px;color:#7b889a;white-space:nowrap}
 .partner-people{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
 .partner-person{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr);gap:16px;align-items:center;padding:10px 12px;background:#f8fafc;border:1px solid #edf0f5;border-radius:6px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
