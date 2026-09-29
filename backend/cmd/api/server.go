@@ -84,6 +84,9 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/ugo_dob_lica_rola", server.ListUgoDobLicaRola)
 
 	// CRUD
+	authRoutes.POST("/ugo_dob_lica/:id/lock", server.ContactLock)
+	authRoutes.PUT("/ugo_dob_lica/:id/lock", server.ContactLock)
+	authRoutes.DELETE("/ugo_dob_lica/:id/lock", server.ContactLock)
 	authRoutes.GET("/ugo_dob_lica/:id", server.GetUgoDobLice)       // Get po id (int)
 	authRoutes.POST("/ugo_dob_lica", server.InsertUgoDobLice)       // Insert
 	authRoutes.PUT("/ugo_dob_lica/:id", server.UpdateUgoDobLice)    // Update

@@ -11,6 +11,15 @@ import (
 
 var ErrUserOrganization = errors.New("user must have one active organization")
 
+func (r *OracleStore) CanManagePartner(ctx context.Context, orgID, supplierID int) (bool, error) {
+	var count int
+	err := r.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM DUAL WHERE EXISTS (
+ SELECT 1 FROM TED.SAP_UGOVORI su JOIN TED.UGO_EVID e ON e.id_sap_ugovor = su.id
+ WHERE su.id_sap_dobavljac = :supplier_id AND e.id_ugo_org = :org_id)`,
+		sql.Named("supplier_id", supplierID), sql.Named("org_id", orgID)).Scan(&count)
+	return count > 0, err
+}
+
 func (r *OracleStore) GetUserOrganization(ctx context.Context, username, activeStatus string) (int, error) {
 	rows, err := r.DB.QueryContext(ctx, `SELECT DISTINCT kr.id_ugo_org
  FROM TED.UGO_KOR k JOIN TED.UGO_KOR_ROLE kr ON kr.id_ugo_kor = k.id

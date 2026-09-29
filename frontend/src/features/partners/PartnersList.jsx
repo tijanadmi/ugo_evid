@@ -48,6 +48,6 @@ export default function PartnersList() {
         : <div className="table-state"><h2>Nema partnera za prikaz</h2><p>{name ? 'Nema dobavljača koji odgovaraju unetom nazivu.' : 'Za vašu organizacionu jedinicu nema partnera na ovoj stranici.'}</p>{page > 1 && <button className="button" onClick={() => change(1)}>Prva stranica</button>}</div>}
       <div className="table-footer"><label className="page-size">Po stranici <select aria-label="Broj partnera po stranici" value={size} onChange={event => change(1, Number(event.target.value))}>{[...new Set([10,20,50,100,size])].sort((a,b)=>a-b).map(n => <option key={n}>{n}</option>)}</select></label><nav className="pagination" aria-label="Paginacija partnera"><span>Stranica {page} od {pages}</span><button className="icon-button" aria-label="Prethodna stranica" disabled={page <= 1 || isFetching} onClick={() => change(page-1)}>‹</button><button className="icon-button" aria-label="Sledeća stranica" disabled={page >= pages || isFetching || !!error} onClick={() => change(page+1)}>›</button></nav></div>
     </section>
-    {selected && selected.queryKey === queryKey && !isFetching && !error && <PartnerDetails partner={selected.partner} onClose={() => setSelected(null)}/>}
+    {selected && selected.queryKey === queryKey && <PartnerDetails partner={data?.items?.find(partner => partner.id === selected.partner.id) || selected.partner} onRefresh={refetch} onClose={() => setSelected(null)}/>}
   </>;
 }

@@ -22,14 +22,14 @@ func (s *contactStore) InsertUgoDobLice(_ context.Context, m *models.UgoDobLice)
 	m.ID = 12
 	return m, nil
 }
-func (s *contactStore) UpdateUgoDobLice(_ context.Context, m *models.UgoDobLice) (*models.UgoDobLice, error) {
+func (s *contactStore) UpdateUgoDobLice(_ context.Context, m *models.UgoDobLice, userID int, token string) (*models.UgoDobLice, error) {
 	s.saved = m
 	return m, nil
 }
 
-func TestContactAPIRequiresNoOrganization(t *testing.T) {
+func TestContactAPIUsesServerOrganization(t *testing.T) {
 	store := &contactStore{}
-	server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+	server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32), ActiveUserStatus: "A"}, store)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestContactAPIRequiresNoOrganization(t *testing.T) {
 		method, path string
 		wantID       int
 	}{{"POST", "/ugo_dob_lica", 12}, {"PUT", "/ugo_dob_lica/34", 34}} {
-		request := httptest.NewRequest(tc.method, tc.path, strings.NewReader(`{"id_sap_dobavljac":9,"ime":"Kontakt","status":"A"}`))
+		request := httptest.NewRequest(tc.method, tc.path, strings.NewReader(`{"id_sap_dobavljac":9,"ime":"Kontakt","status":"A","version":"1","lock_token":"`+strings.Repeat("a", 64)+`"}`))
 		request.Header.Set("Content-Type", "application/json")
 		request.Header.Set("Authorization", "Bearer "+access)
 		response := httptest.NewRecorder()
@@ -75,4 +75,15 @@ func TestSAPRoutesExposeOnlyGET(t *testing.T) {
 			t.Fatalf("unexpected SAP write route: %s %d", method, rec.Code)
 		}
 	}
+}
+
+func (s *contactStore) GetUserByUsername(context.Context, string) (*models.User, error) {
+	return &models.User{ID: 7, Status: "A"}, nil
+}
+func (s *contactStore) GetUserOrganization(context.Context, string, string) (int, error) {
+	return 3, nil
+}
+func (s *contactStore) CanManagePartner(context.Context, int, int) (bool, error) { return true, nil }
+func (s *contactStore) GetUgoDobLiceById(_ context.Context, id int) (*models.UgoDobLice, error) {
+	return &models.UgoDobLice{ID: id, Version: 1, SapDobavljac: models.SapDobavljac{ID: 9}}, nil
 }

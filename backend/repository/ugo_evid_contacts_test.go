@@ -20,7 +20,7 @@ func TestContactsBatchMapping(t *testing.T) {
 		if len(args) != 3 || !strings.Contains(q, "ORDER BY r.id, l.id") {
 			t.Fatalf("query=%s args=%v", q, args)
 		}
-		return &schemaRows{width: 7, values: [][]driver.Value{{int64(20), "B", nil, nil, nil, nil, int64(21)}, {int64(10), "A1", "Manager", "123", "a@example.test", "SLM", int64(11)}, {int64(10), "A2", nil, nil, nil, "Other", int64(12)}}}, nil
+		return &schemaRows{width: 8, values: [][]driver.Value{{int64(20), "B", nil, nil, nil, nil, int64(21), "A"}, {int64(10), "A1", "Manager", "123", "a@example.test", "SLM", int64(11), "A"}, {int64(10), "A2", nil, nil, nil, "Other", int64(12), "A"}}}, nil
 	}})
 	store.DB.SetMaxOpenConns(1)
 	if err := store.loadProsireniContacts(context.Background(), items); err != nil {

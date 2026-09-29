@@ -38,7 +38,7 @@ func TestPartnersScopedAndBatched(t *testing.T) {
 		calls++
 		checkBinds(t, q, args)
 		if strings.Contains(q, "FROM TED.UGO_DOB_LICA l") {
-			return &schemaRows{width: 7, values: [][]driver.Value{{int64(20), "Kontakt", nil, "011", nil, "Service Level Manager", int64(71)}}}, nil
+			return &schemaRows{width: 8, values: [][]driver.Value{{int64(20), "Kontakt", nil, "011", nil, "Service Level Manager", int64(71), "A"}}}, nil
 		}
 		if !strings.Contains(q, "WHERE EXISTS") || !strings.Contains(q, "e.id_ugo_org = :org_id") || args[0].Value != 3 || strings.Contains(q, "otvoren_ug") {
 			t.Fatalf("incorrect org scope: %s %v", q, args)

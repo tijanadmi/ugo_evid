@@ -5,6 +5,7 @@ import (
 )
 
 type UgoDobLice struct {
+	Version        int64          `json:"version,string"`
 	ID             int            `json:"id"`
 	SapDobavljac   SapDobavljac   `json:"sap_dobavljac"`
 	Ime            string         `json:"ime"`

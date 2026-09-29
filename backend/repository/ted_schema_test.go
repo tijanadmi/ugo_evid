@@ -27,13 +27,19 @@ type schemaDriver struct{}
 func (schemaDriver) Open(string) (driver.Conn, error) { return nil, fmt.Errorf("use connector") }
 
 type schemaConn struct {
+	begin func() (driver.Tx, error)
 	query func(string, []driver.NamedValue) (driver.Rows, error)
 	exec  func(string, []driver.NamedValue) (driver.Result, error)
 }
 
-func (*schemaConn) Prepare(string) (driver.Stmt, error)      { return nil, fmt.Errorf("unexpected prepare") }
-func (*schemaConn) Close() error                             { return nil }
-func (*schemaConn) Begin() (driver.Tx, error)                { return nil, fmt.Errorf("unexpected transaction") }
+func (*schemaConn) Prepare(string) (driver.Stmt, error) { return nil, fmt.Errorf("unexpected prepare") }
+func (*schemaConn) Close() error                        { return nil }
+func (c *schemaConn) Begin() (driver.Tx, error) {
+	if c.begin != nil {
+		return c.begin()
+	}
+	return nil, fmt.Errorf("unexpected transaction")
+}
 func (*schemaConn) CheckNamedValue(*driver.NamedValue) error { return nil }
 func (c *schemaConn) QueryContext(_ context.Context, q string, a []driver.NamedValue) (driver.Rows, error) {
 	return c.query(q, a)
@@ -142,7 +148,7 @@ func TestTEDContactReadsWithoutOrganization(t *testing.T) {
 				if !strings.Contains(q, "FROM TED.UGO_DOB_LICA") {
 					t.Fatal(q)
 				}
-				values := []driver.Value{int64(4), "Kontakt", nil, nil, nil, "A", nil, nil, int64(9), "D9", "Dobavljac", nil, nil, nil, nil}
+				values := []driver.Value{int64(4), "Kontakt", nil, nil, nil, "A", nil, nil, int64(1), int64(9), "D9", "Dobavljac", nil, nil, nil, nil}
 				if paged {
 					values = append(values, int64(1))
 				}
@@ -172,33 +178,26 @@ func TestTEDContactReadsWithoutOrganization(t *testing.T) {
 	}
 }
 
-func TestTEDContactWritesWithoutOrganization(t *testing.T) {
-	for _, update := range []bool{false, true} {
-		t.Run(fmt.Sprint(update), func(t *testing.T) {
-			store := testSchemaStore(t, &schemaConn{exec: func(q string, args []driver.NamedValue) (driver.Result, error) {
-				forbidColumns(t, q, "id_ugo_org")
-				checkBinds(t, q, args)
-				for _, a := range args {
-					if a.Name == "p6" && a.Value != nil {
-						t.Fatal("optional role must be NULL")
-					}
-					if a.Name == "out0" {
-						*a.Value.(sql.Out).Dest.(*int) = 8
-					}
-				}
-				return driver.RowsAffected(1), nil
-			}})
-			contact := &models.UgoDobLice{ID: 8, SapDobavljac: models.SapDobavljac{ID: 9}, Ime: "Kontakt"}
-			var err error
-			if update {
-				_, err = store.UpdateUgoDobLice(context.Background(), contact)
-			} else {
-				_, err = store.InsertUgoDobLice(context.Background(), contact)
+func TestTEDContactInsertWithoutOrganization(t *testing.T) {
+	store := testSchemaStore(t, &schemaConn{exec: func(q string, args []driver.NamedValue) (driver.Result, error) {
+		forbidColumns(t, q, "id_ugo_org")
+		checkBinds(t, q, args)
+		for _, a := range args {
+			if a.Name == "p6" && a.Value != nil {
+				t.Fatal("optional role must be NULL")
 			}
-			if err != nil {
-				t.Fatal(err)
+			if a.Name == "out0" {
+				*a.Value.(sql.Out).Dest.(*int) = 8
 			}
-		})
+		}
+		return driver.RowsAffected(1), nil
+	}})
+	contact, err := store.InsertUgoDobLice(context.Background(), &models.UgoDobLice{SapDobavljac: models.SapDobavljac{ID: 9}, Ime: "Kontakt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contact.ID != 8 || contact.Version != 1 {
+		t.Fatalf("unexpected contact: %+v", contact)
 	}
 }
 

@@ -25,7 +25,7 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 					if len(args) != 1 || args[0].Value != 400 {
 						t.Fatalf("supplier binds: %v", args)
 					}
-					return &schemaRows{width: 7, values: [][]driver.Value{{int64(400), "SLM", nil, "011", "slm@example.test", "Service Level Manager", int64(81)}}}, nil
+					return &schemaRows{width: 8, values: [][]driver.Value{{int64(400), "SLM", nil, "011", "slm@example.test", "Service Level Manager", int64(81), "A"}}}, nil
 				}
 				predicate := "v.otvoren_ug = 'X'"
 				if !open {

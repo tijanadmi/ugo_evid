@@ -9,6 +9,8 @@ import (
 type Store interface {
 	GetUserOrganization(ctx context.Context, username, activeStatus string) (int, error)
 	GetPartnersPaged(ctx context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error)
+	CanManagePartner(ctx context.Context, orgID, supplierID int) (bool, error)
+	ContactLock(ctx context.Context, id, userID int, action, token string) (*models.EditLock, error)
 	GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error)
 	GetUgoEvidProsireniByID(ctx context.Context, id int) (models.UgoEvidProsireni, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
@@ -32,8 +34,8 @@ type Store interface {
 	GetUgoDobLiceById(ctx context.Context, id int) (*models.UgoDobLice, error)
 	GetUgoDobLicePaged(ctx context.Context, offset, limit int, filter string) ([]*models.UgoDobLice, int, error)
 	InsertUgoDobLice(ctx context.Context, m *models.UgoDobLice) (*models.UgoDobLice, error)
-	UpdateUgoDobLice(ctx context.Context, m *models.UgoDobLice) (*models.UgoDobLice, error)
-	DeleteUgoDobLiceById(ctx context.Context, id int) error
+	UpdateUgoDobLice(ctx context.Context, m *models.UgoDobLice, userID int, token string) (*models.UgoDobLice, error)
+	DeleteUgoDobLiceById(ctx context.Context, id int, version int64, userID int, token string) error
 
 	GetUgoEvidById(ctx context.Context, id int) (*models.UgoEvid, error)
 	GetUgoEvidPaged(ctx context.Context, offset, limit int, filter string) ([]*models.UgoEvid, int, error)

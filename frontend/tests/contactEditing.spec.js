@@ -1,0 +1,146 @@
+import { test, expect } from '@playwright/test';
+
+async function setup(context) {
+  const state = { people: [{ id: 7, ime: 'Ana', radno_mesto: 'Menadžer', telefon: '011', email: 'ana@example.test', status: 'A', version: '1', sap_dobavljac: { id: 20 }, ugo_dob_lica_rola: { id: 1 } }], token: null, renewFail: false, conflict: false, linked: false, writes: [], releases: 0, acquisitions: 0 };
+  await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token: 'access', refresh_token: 'refresh', access_token_expires_at: new Date(Date.now() + 3600000).toISOString(), refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(), user: { username: 'test.user' } })));
+  await context.route('**/api/**', async route => {
+    const req = route.request();
+    const path = new URL(req.url()).pathname;
+    const method = req.method();
+    const body = req.postData() ? req.postDataJSON() : {};
+    const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
+    if (path === '/api/ugo_dob_lica_rola') return json({ total: 1, items: [{ id: 1, naziv: 'Kontakt', status: 'A' }] });
+    if (path.endsWith('/lock')) {
+      if (method === 'POST') {
+        if (state.token) return json({ error: 'Lice trenutno uređuje drugi korisnik ili drugi tab.' }, 423);
+        state.acquisitions++;
+        state.token = String(state.acquisitions).padStart(64, '0');
+        return json({ lock_token: state.token, expires_at: new Date(Date.now() + 120000).toISOString() });
+      }
+      if (method === 'DELETE') {
+        if (body.lock_token === state.token) { state.token = null; state.releases++; }
+        return json({});
+      }
+      if (state.renewFail || body.lock_token !== state.token) return json({ error: 'Pravo izmene je isteklo.' }, 409);
+      return json({ lock_token: state.token, expires_at: new Date(Date.now() + 120000).toISOString() });
+    }
+    if (path === '/api/ugo_dob_lica' && method === 'POST') {
+      state.writes.push(body);
+      const person = { ...body, id: 8, version: '1', sap_dobavljac: { id: 20 }, ugo_dob_lica_rola: { id: body.id_ugo_dob_lica_rola } };
+      state.people.push(person);
+      return json({ data: person });
+    }
+    if (/\/ugo_dob_lica\/\d+$/.test(path)) {
+      const id = Number(path.split('/').at(-1));
+      const person = state.people.find(person => person.id === id);
+      if (!person) return json({ error: 'Lice nije pronađeno.' }, 404);
+      if (method === 'GET') return json({ data: person });
+      if (body.lock_token !== state.token || state.conflict || body.version !== person.version) return json({ error: 'Podaci su promenjeni. Učitajte aktuelne podatke.' }, 409);
+      if (method === 'DELETE' && state.linked) return json({ error: 'Lice je povezano sa evidencijom ugovora. Umesto brisanja izaberite status Neaktivan.' }, 409);
+      state.writes.push(body);
+      state.token = null;
+      if (method === 'DELETE') { state.people = state.people.filter(person => person.id !== id); return json({ status: 'deleted' }); }
+      Object.assign(person, body, { version: String(Number(person.version) + 1), ugo_dob_lica_rola: { id: body.id_ugo_dob_lica_rola } });
+      return json({ data: person });
+    }
+    return json({ error: 'Unknown test route' }, 404);
+  });
+  return state;
+}
+async function openPartner(page) {
+  await page.goto('/ugovori/partneri');
+  await page.getByRole('button', { name: 'Moj partner', exact: true }).click();
+}
+
+test('add, edit, deactivate and delete a contact without closing partner details', async ({ context, page }) => {
+  const state = await setup(context);
+  await openPartner(page);
+  await page.getByRole('button', { name: '+ Dodaj lice', exact: true }).click();
+  await expect(page.getByLabel('Ime i prezime')).toBeEnabled();
+  await page.getByLabel('Ime i prezime').fill('Novi kontakt');
+  await page.getByLabel('Email', { exact: true }).fill('novi@example.test');
+  await page.getByRole('button', { name: 'Sačuvaj', exact: true }).click();
+  await expect(page.locator('.partner-person').filter({ hasText: 'Novi kontakt' })).toBeVisible();
+  expect(state.writes[0].id_sap_dobavljac).toBe(20);
+  const ana = page.locator('.partner-person').filter({ hasText: 'Ana' });
+  await ana.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
+  await page.getByLabel('Ime i prezime').fill('Ana izmenjena');
+  await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('N');
+  await page.getByRole('button', { name: 'Sačuvaj', exact: true }).click();
+  await expect(ana).toContainText('Ana izmenjena');
+  await expect(ana).toContainText('Neaktivan');
+  expect(state.writes[1].version).toBe('1');
+  expect(state.writes[1].lock_token).toHaveLength(64);
+  await page.locator('.partner-person').filter({ hasText: 'Novi kontakt' }).getByRole('button', { name: 'Obriši', exact: true }).click();
+  await expect(page.getByRole('form', { name: 'Brisanje lica' })).toContainText('Novi kontakt');
+  await page.getByRole('button', { name: 'Potvrdi brisanje' }).click();
+  await expect(page.locator('.partner-person')).toHaveCount(1);
+  await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('two tabs cannot edit the same contact; cancellation releases it', async ({ context, page }) => {
+  const state = await setup(context);
+  await openPartner(page);
+  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeEnabled();
+  const second = await context.newPage();
+  await openPartner(second);
+  await second.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await expect(second.getByRole('alert')).toContainText('drugi korisnik');
+  await expect(second.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: 'Odustani', exact: true }).click();
+  await expect.poll(() => state.token).toBe(null);
+  second.once('dialog', dialog => dialog.accept());
+  await second.getByRole('button', { name: 'Učitaj aktuelne podatke' }).click();
+  await expect(second.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeEnabled();
+  expect(state.acquisitions).toBe(2);
+  await second.getByRole('button', { name: 'Odustani', exact: true }).click();
+  await expect.poll(() => state.token).toBe(null);
+});
+
+test('lost renewal preserves draft and disables saving', async ({ context, page }) => {
+  const state = await setup(context);
+  await page.clock.install();
+  await openPartner(page);
+  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
+  await page.getByLabel('Ime i prezime').fill('Nezatvoren unos');
+  state.renewFail = true;
+  await page.clock.fastForward(31000);
+  await expect(page.getByRole('alert')).toContainText('isteklo');
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Nezatvoren unos');
+  await expect(page.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeDisabled();
+  expect(state.writes).toHaveLength(0);
+});
+
+test('version conflict preserves draft; explicit reload obtains new version', async ({ context, page }) => {
+  const state = await setup(context);
+  await openPartner(page);
+  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
+  await page.getByLabel('Ime i prezime').fill('Moj unos');
+  state.people[0].version = '2';
+  state.people[0].ime = 'Tuđa izmena';
+  await page.getByRole('button', { name: 'Sačuvaj', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Podaci su promenjeni');
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Moj unos');
+  await expect(page.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeDisabled();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Učitaj aktuelne podatke' }).click();
+  await expect(page.getByLabel('Ime i prezime')).toHaveValue('Tuđa izmena');
+  await expect(page.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeEnabled();
+});
+
+test('linked contact cannot be deleted and offers deactivation guidance', async ({ context, page }) => {
+  const state = await setup(context);
+  state.linked = true;
+  await openPartner(page);
+  await page.getByRole('button', { name: 'Obriši', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Potvrdi brisanje' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Potvrdi brisanje' }).click();
+  await expect(page.getByRole('alert')).toContainText('Neaktivan');
+  expect(state.people).toHaveLength(1);
+  expect(state.writes).toHaveLength(0);
+});

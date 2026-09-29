@@ -53,6 +53,7 @@ type UgoEvidProsireni struct {
 }
 
 type UgoDobLiceKontakt struct {
+	Status     string `json:"status"`
 	ID         int    `json:"id"`
 	Ime        string `json:"ime"`
 	RadnoMesto string `json:"radno_mesto"`

@@ -19,6 +19,7 @@ l.email AS c4,
 l.status AS c5,
 l.datpri AS contact_created,
 l.datzm AS contact_updated,
+l.version,
 s.id AS c6,
 s.sifra AS c7,
 s.naziv AS c8,
@@ -45,6 +46,7 @@ COALESCE(r.status, '') AS c18
 		&m.Status,
 		&m.DatPri,
 		&m.DatZm,
+		&m.Version,
 
 		&m.SapDobavljac.ID,
 		&m.SapDobavljac.Sifra,
@@ -77,6 +79,7 @@ l.email AS c4,
 l.status AS c5,
 l.datpri AS contact_created,
 l.datzm AS contact_updated,
+l.version,
 s.id AS c6,
 s.sifra AS c7,
 s.naziv AS c8,
@@ -139,6 +142,7 @@ COUNT(*) OVER() AS c19
 			&m.Status,
 			&m.DatPri,
 			&m.DatZm,
+			&m.Version,
 
 			&m.SapDobavljac.ID,
 			&m.SapDobavljac.Sifra,
@@ -195,73 +199,6 @@ func (r *OracleStore) InsertUgoDobLice(ctx context.Context, m *models.UgoDobLice
 		return nil, err
 	}
 
+	m.Version = 1
 	return m, nil
-}
-
-func (r *OracleStore) UpdateUgoDobLice(ctx context.Context, m *models.UgoDobLice) (*models.UgoDobLice, error) {
-	query := `
-        UPDATE TED.UGO_DOB_LICA
-        SET 
-            id_sap_dobavljac = :p1,
-
-            ime = :p2,
-            radno_mesto = :p3,
-            telefon = :p4,
-            email = :p5,
-            id_ugo_dob_lica_rola = :p6,
-            status = :p7,
-            datzm = SYSDATE
-        WHERE id = :p8
-        RETURNING id INTO :out0
-    `
-
-	var id int
-	result, err := r.DB.ExecContext(ctx, query,
-		sql.Named("p1", m.SapDobavljac.ID),
-
-		sql.Named("p2", m.Ime),
-		sql.Named("p3", m.RadnoMesto),
-		sql.Named("p4", m.Telefon),
-		sql.Named("p5", m.Email),
-		sql.Named("p6", optionalID(m.UgoDobLicaRola.ID)),
-		sql.Named("p7", m.Status),
-		sql.Named("p8", m.ID),
-		sql.Named("out0", sql.Out{Dest: &id}),
-	)
-	if err == nil {
-		affected, rowsErr := result.RowsAffected()
-		if rowsErr != nil {
-			err = rowsErr
-		} else if affected == 0 {
-			err = sql.ErrNoRows
-		}
-	}
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return m, nil
-}
-
-func (r *OracleStore) DeleteUgoDobLiceById(ctx context.Context, id int) error {
-	query := `DELETE FROM TED.UGO_DOB_LICA WHERE id = :p1`
-
-	cmdTag, err := r.DB.ExecContext(ctx, query, sql.Named("p1", id))
-	if err != nil {
-		return err
-	}
-
-	affected, err := cmdTag.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return nil
-	}
-
-	return nil
 }

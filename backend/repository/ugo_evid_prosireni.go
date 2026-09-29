@@ -48,7 +48,7 @@ func (r *OracleStore) loadProsireniContacts(ctx context.Context, items []models.
 	if len(args) == 0 {
 		return nil
 	}
-	rows, err := r.DB.QueryContext(ctx, `SELECT l.id_sap_dobavljac, l.ime, l.radno_mesto, l.telefon, l.email, r.naziv, l.id
+	rows, err := r.DB.QueryContext(ctx, `SELECT l.id_sap_dobavljac, l.ime, l.radno_mesto, l.telefon, l.email, r.naziv, l.id, l.status
  FROM TED.UGO_DOB_LICA l
  LEFT JOIN TED.UGO_DOB_LICA_ROLE r ON l.id_ugo_dob_lica_rola = r.id
  WHERE l.id_sap_dobavljac IN (`+strings.Join(binds, ",")+`)
@@ -60,7 +60,7 @@ func (r *OracleStore) loadProsireniContacts(ctx context.Context, items []models.
 	for rows.Next() {
 		var id int
 		var contact models.UgoDobLiceKontakt
-		if err := scanNullable(rows, &id, &contact.Ime, &contact.RadnoMesto, &contact.Telefon, &contact.Email, &contact.RolaLica, &contact.ID); err != nil {
+		if err := scanNullable(rows, &id, &contact.Ime, &contact.RadnoMesto, &contact.Telefon, &contact.Email, &contact.RolaLica, &contact.ID, &contact.Status); err != nil {
 			return err
 		}
 		bySupplier[id] = append(bySupplier[id], contact)

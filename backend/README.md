@@ -208,3 +208,54 @@ pokrenuti aplikaciju u ciljnom okruzenju i proveriti listanje i CRUD.
 Dokumentacija biblioteka:
 - https://github.com/sijms/go-ora
 - https://pkg.go.dev/github.com/go-ldap/ldap/v3
+
+## Uređivanje kontakt lica i distribuirano zaključavanje
+
+Preduslovi: `TED.UGO_EDIT_LOCK` prema definiciji u `oracle/schema.sql` i
+`TED.UGO_DOB_LICA.VERSION NUMBER(19,0) DEFAULT 1 NOT NULL`. Za postojeću bazu
+u kojoj su ovi objekti već dodati nije potrebno ponovo izvršavati DDL.
+Aplikacioni DB korisnik mora imati SELECT/INSERT/UPDATE/DELETE nad tabelom
+zaključavanja i odgovarajuća prava nad licima. Postojeći strani ključ
+`UGO_EVID.ID_UGO_DOB_LICA -> UGO_DOB_LICA.ID` mora ostati uključen.
+
+- `POST /ugo_dob_lica` dodaje lice partneru dostupnom organizaciji korisnika.
+- `POST /ugo_dob_lica/:id/lock` preuzima zaključavanje i vraća `lock_token` i
+  `expires_at`. Ako postoji aktivan vlasnik vraća HTTP 423. Različiti tabovi
+  istog korisnika takođe ne dele pravo uređivanja.
+- Posle preuzimanja, `GET /ugo_dob_lica/:id` učitava aktuelne podatke.
+- `PUT /ugo_dob_lica/:id/lock`, telo `{"lock_token":"..."}`, produžava važeće
+  zaključavanje. Isteklo zaključavanje se ne obnavlja.
+- `DELETE /ugo_dob_lica/:id/lock`, isto telo, oslobađa samo zaključavanje tog
+  korisnika i tokena. Stari token ne može obrisati novo zaključavanje.
+- `PUT /ugo_dob_lica/:id` zahteva kontakt polja, `version` kao string i
+  `lock_token`. Dobavljač postojećeg lica se ne može promeniti.
+- `DELETE /ugo_dob_lica/:id` zahteva `{"version":"1","lock_token":"..."}`.
+  Povezano lice vraća HTTP 409 i može se deaktivirati kroz PUT (`status: "N"`).
+  Aktivni status je `A`. Deaktivacija čuva postojeće veze i vidljiva je u spisku.
+
+ID korisnika se određuje na serveru iz prijavljenog AD naloga, a pravo pristupa
+prema aktivnoj organizacionoj jedinici i njenim partnerima, kao na pregledu
+„Moji partneri“. Klijent ne bira vlasnika, tip entiteta niti trajanje brave.
+Lica su zajednička na nivou dobavljača: izmena je vidljiva svim organizacijama
+koje koriste tog dobavljača. Zaključavanje i pisanje trenutno su implementirani
+za `UGO_DOB_LICA`; ostali entiteti kasnije mogu koristiti istu pomoćnu tabelu.
+
+Vreme se računa u Oracle-u (`SYSTIMESTAMP`). Trajanje je 2 minuta; frontend
+produžava svakih 30 sekundi. Preuzimanje, produžavanje, oslobađanje, izmena i
+brisanje prvo kratko zaključaju isti poslovni slog (`FOR UPDATE NOWAIT`).
+Unutar iste transakcije proveravaju se vlasnik, token, rok i verzija; uspešna
+izmena povećava verziju i uklanja zaključavanje. Transakcija nije otvorena dok
+korisnik popunjava formu. Istekla brava uklanja se pri narednom preuzimanju, pa
+periodični posao čišćenja nije uslov za rad. Druge aplikacije koje pišu u ovu
+tabelu takođe moraju poštovati protokol verzije i zaključavanja.
+
+Frontend pri gubitku zaključavanja zadržava unos, blokira čuvanje i nudi
+izričito ponovno učitavanje. Posle neizvesnog ishoda mrežnog zahteva nema
+automatskog ponavljanja upisa. Osvežavaju se partneri i keširani ugovori.
+
+Provere: `go test ./...` uključuje testove autorizacije, konflikata verzije,
+isteklih/tuđih tokena, zauzetih slogova, brisanja povezanog lica i transakcijskih
+grešaka. SQL testovi koriste test drajver; ne predstavljaju integracioni test
+sa Oracle serverom. Frontend Playwright testovi koriste simulirani API za
+CRUD, dva taba, gubitak obnavljanja, konflikt i zabranu brisanja povezanog lica.
+Pre produkcije proveriti ove tokove na test Oracle bazi sa dve API instance.
