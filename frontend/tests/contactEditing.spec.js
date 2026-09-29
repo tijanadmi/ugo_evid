@@ -10,7 +10,11 @@ async function setup(context) {
     const body = req.postData() ? req.postDataJSON() : {};
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
-    if (path === '/api/ugo_dob_lica_rola') return json({ total: 1, items: [{ id: 1, naziv: 'Kontakt', status: 'A' }] });
+    if (path === '/api/ugo_dob_lica_rola') {
+      const size = Number(new URL(req.url()).searchParams.get('page_size'));
+      if (!Number.isInteger(size) || size < 5 || size > 100) return json({ error: 'Invalid role page size' }, 400);
+      return json({ total: 1, items: [{ id: 1, naziv: 'Kontakt', status: 'A' }] });
+    }
     if (path.endsWith('/lock')) {
       if (method === 'POST') {
         if (state.token) return json({ error: 'Lice trenutno uređuje drugi korisnik ili drugi tab.' }, 423);
