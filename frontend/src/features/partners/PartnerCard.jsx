@@ -1,3 +1,4 @@
+import RowMenu from '../../ui/RowMenu';
 import SupplierAddress from '../contracts/SupplierAddress';
 import { isServiceLevelManager } from '../contracts/supplierContacts';
 import { value } from '../../utils/contractFormatting';
@@ -11,10 +12,10 @@ export default function PartnerCard({ partner, onEdit, onDelete }) {
         <div className="partner-person-identity"><strong>{value(person, 'ime')}</strong>{person.status === 'N' && <span>Neaktivan</span>}<span>{value(person, 'radno_mesto')}</span></div>
         <span className="partner-role">{value(person, 'rola_lica')}</span>
         <div className="partner-person-contact"><span>{value(person, 'email')}</span><span>{value(person, 'telefon')}</span></div>
-        {(onEdit || onDelete) && <div className="contact-actions">
-          {onEdit && <button className="button" onClick={() => onEdit(person)}>Izmeni</button>}
-          {onDelete && <button className="button danger" onClick={() => onDelete(person)}>Obriši</button>}
-        </div>}
+        {(onEdit || onDelete) && <RowMenu label={`Akcije za lice ${person.ime}`} actions={[
+          ...(onEdit ? [{ label: 'Izmeni', icon: 'edit', onClick: () => onEdit(person) }] : []),
+          ...(onDelete ? [{ label: 'Obriši', icon: 'trash', danger: true, onClick: () => onDelete(person) }] : []),
+        ]}/>}
       </li>)}
     </ul>}
   </article>;

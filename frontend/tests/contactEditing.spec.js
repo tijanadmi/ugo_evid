@@ -68,7 +68,8 @@ test('add, edit, deactivate and delete a contact without closing partner details
   await expect(page.locator('.partner-person').filter({ hasText: 'Novi kontakt' })).toBeVisible();
   expect(state.writes[0].id_sap_dobavljac).toBe(20);
   const ana = page.locator('.partner-person').filter({ hasText: 'Ana' });
-  await ana.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await ana.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
   await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
   await page.getByLabel('Ime i prezime').fill('Ana izmenjena');
   await page.getByRole('combobox', { name: 'Status', exact: true }).selectOption('N');
@@ -77,7 +78,8 @@ test('add, edit, deactivate and delete a contact without closing partner details
   await expect(ana).toContainText('Neaktivan');
   expect(state.writes[1].version).toBe('1');
   expect(state.writes[1].lock_token).toHaveLength(64);
-  await page.locator('.partner-person').filter({ hasText: 'Novi kontakt' }).getByRole('button', { name: 'Obriši', exact: true }).click();
+  await page.getByRole('button', { name: 'Akcije za lice Novi kontakt', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Obriši', exact: true }).click();
   await expect(page.getByRole('form', { name: 'Brisanje lica' })).toContainText('Novi kontakt');
   await page.getByRole('button', { name: 'Potvrdi brisanje' }).click();
   await expect(page.locator('.partner-person')).toHaveCount(1);
@@ -87,11 +89,13 @@ test('add, edit, deactivate and delete a contact without closing partner details
 test('two tabs cannot edit the same contact; cancellation releases it', async ({ context, page }) => {
   const state = await setup(context);
   await openPartner(page);
-  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await page.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeEnabled();
   const second = await context.newPage();
   await openPartner(second);
-  await second.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await second.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await second.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
   await expect(second.getByRole('alert')).toContainText('drugi korisnik');
   await expect(second.getByRole('button', { name: 'Sačuvaj', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Odustani', exact: true }).click();
@@ -108,7 +112,8 @@ test('lost renewal preserves draft and disables saving', async ({ context, page 
   const state = await setup(context);
   await page.clock.install();
   await openPartner(page);
-  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await page.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
   await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
   await page.getByLabel('Ime i prezime').fill('Nezatvoren unos');
   state.renewFail = true;
@@ -122,7 +127,8 @@ test('lost renewal preserves draft and disables saving', async ({ context, page 
 test('version conflict preserves draft; explicit reload obtains new version', async ({ context, page }) => {
   const state = await setup(context);
   await openPartner(page);
-  await page.getByRole('button', { name: 'Izmeni', exact: true }).click();
+  await page.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
   await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
   await page.getByLabel('Ime i prezime').fill('Moj unos');
   state.people[0].version = '2';
@@ -141,7 +147,8 @@ test('linked contact cannot be deleted and offers deactivation guidance', async 
   const state = await setup(context);
   state.linked = true;
   await openPartner(page);
-  await page.getByRole('button', { name: 'Obriši', exact: true }).click();
+  await page.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Obriši', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Potvrdi brisanje' })).toBeEnabled();
   await page.getByRole('button', { name: 'Potvrdi brisanje' }).click();
   await expect(page.getByRole('alert')).toContainText('Neaktivan');
