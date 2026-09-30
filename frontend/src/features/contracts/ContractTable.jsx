@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import ContractPicker from './ContractPicker';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import Icon from '../../ui/Icon';
 import { number } from '../../utils/contractFormatting';
@@ -11,6 +15,17 @@ function positive(value, fallback) {
 
 export default function ContractTable({ status }) {
   const [params, setParams] = useSearchParams();
+  const [picking, setPicking] = useState(false);
+  const [created, setCreated] = useState(null);
+  const queryClient = useQueryClient();
+  function registered(record) {
+    setPicking(false);
+    setCreated(record);
+    queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    queryClient.invalidateQueries({ queryKey: ['partners'] });
+    queryClient.invalidateQueries({ queryKey: ['unregistered-contracts'] });
+    setParams({ page_id: '1', page_size: String(pageSize), id_ugo_org: String(record.ugo_org.id) });
+  }
   const page = positive(params.get('page_id'), 1);
   const pageSize = Math.min(positive(params.get('page_size'), 20), 100);
   const orgID = positive(params.get('id_ugo_org'), 0);
@@ -31,7 +46,9 @@ export default function ContractTable({ status }) {
   const pages = Math.max(1, Math.ceil(data.total / pageSize));
   return <>
     <div className="breadcrumb">Evidencija ugovora <Icon name="chevron" width="14" height="14"/> <span>{title}</span></div>
-    <div className="page-heading"><div><div className="heading-row"><h1>{title}</h1><span className={`status-badge ${isOpen ? 'open' : 'closed'}`}><span/>{isOpen ? 'Otvoreni' : 'Zatvoreni'}</span></div><p>Pregled ugovora, dobavljača i odgovornih lica.</p></div><button className="button" onClick={() => contractsQuery.refetch()} disabled={loading}><Icon name="refresh"/>Osveži</button></div>
+    <div className="page-heading"><div><div className="heading-row"><h1>{title}</h1><span className={`status-badge ${isOpen ? 'open' : 'closed'}`}><span/>{isOpen ? 'Otvoreni' : 'Zatvoreni'}</span></div><p>Pregled ugovora, dobavljača i odgovornih lica.</p></div><div className="contract-heading-actions">{isOpen && <button className="button primary" onClick={() => setPicking(true)}>Izaberi ugovor</button>}<button className="button" onClick={() => contractsQuery.refetch()} disabled={loading}><Icon name="refresh"/>Osveži</button></div></div>
+    {created && <p className="registration-success" role="status">Ugovor je evidentiran. <Link to={`/ugovori/detalji/${created.id}`}>Otvori detalje ugovora</Link></p>}
+    {picking && <ContractPicker organizations={organizations} onClose={() => setPicking(false)} onCreated={registered}/>}
     <section className="contracts-panel" aria-label={title}>
       <div className="table-toolbar"><div className="organization-filter"><label htmlFor="organization">Organizaciona jedinica</label><select id="organization" value={orgID} disabled={orgLoading} onChange={e => change({ id_ugo_org: e.target.value })}>
         <option value="0">{orgLoading ? 'Učitavanje jedinica…' : 'Sve organizacione jedinice'}</option>

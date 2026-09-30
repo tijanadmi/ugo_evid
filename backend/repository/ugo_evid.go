@@ -203,60 +203,11 @@ COUNT(*) OVER() AS c26
 	return list, total, rows.Err()
 }
 
-func (r *OracleStore) InsertUgoEvid(ctx context.Context, e *models.UgoEvid) (*models.UgoEvid, error) {
-
-	query := `
-        INSERT INTO TED.UGO_EVID
-            (id_sap_ugovor, id_ugo_org, ime, telefon, email, status, datpri, datizm, id_ugo_dob_lica)
-        VALUES
-            (:p1, :p2, :p3, :p4, :p5, :p6, :p7, :p8, :p9)
-        RETURNING id, datpri, datizm INTO :out0, :out1, :out2
-    `
-
-	now := time.Now()
-	if e.DatPri.IsZero() {
-		e.DatPri = now
-	}
-	if e.DatIzm.IsZero() {
-		e.DatIzm = now
-	}
-
-	result, err := r.DB.ExecContext(ctx, query,
-		sql.Named("p1", e.SapUgovor.ID),
-		sql.Named("p2", e.UgoOrg.ID),
-		sql.Named("p3", e.Ime),
-		sql.Named("p4", e.Telefon),
-		sql.Named("p5", e.Email),
-		sql.Named("p6", e.Status),
-		sql.Named("p7", e.DatPri),
-		sql.Named("p8", e.DatIzm),
-		sql.Named("p9", optionalID(e.UgoDobLice.ID)),
-		sql.Named("out0", sql.Out{Dest: &e.ID}),
-		sql.Named("out1", sql.Out{Dest: &e.DatPri}),
-		sql.Named("out2", sql.Out{Dest: &e.DatIzm}),
-	)
-	if err == nil {
-		affected, rowsErr := result.RowsAffected()
-		if rowsErr != nil {
-			err = rowsErr
-		} else if affected == 0 {
-			err = sql.ErrNoRows
-		}
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return e, nil
-}
-
 func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*models.UgoEvid, error) {
 
 	query := `
         UPDATE TED.UGO_EVID
         SET
-            id_sap_ugovor = :p1,
             id_ugo_org = :p2,
             ime = :p3,
             telefon = :p4,
@@ -264,7 +215,7 @@ func (r *OracleStore) UpdateUgoEvid(ctx context.Context, e *models.UgoEvid) (*mo
             status = :p6,
             datizm = :p7,
             id_ugo_dob_lica = :p8
-        WHERE id = :p9
+        WHERE id = :p9 AND id_sap_ugovor = :p1
         RETURNING datpri, datizm INTO :out0, :out1
     `
 

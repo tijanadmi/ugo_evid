@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -16,6 +17,8 @@ import (
 func contactError(ctx *gin.Context, err error) {
 	status, message := 500, "Operacija nad licem trenutno nije dostupna."
 	switch {
+	case strings.Contains(err.Error(), "ORA-00001") && strings.Contains(strings.ToUpper(err.Error()), "UQ_UGO_DOB_LICA_SLM_A"):
+		status, message = 409, "Dobavljač već ima aktivno lice sa rolom 1."
 	case errors.Is(err, sql.ErrNoRows):
 		status, message = 404, "Lice nije pronađeno."
 	case errors.Is(err, repository.ErrUserOrganization):

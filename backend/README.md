@@ -259,3 +259,67 @@ grešaka. SQL testovi koriste test drajver; ne predstavljaju integracioni test
 sa Oracle serverom. Frontend Playwright testovi koriste simulirani API za
 CRUD, dva taba, gubitak obnavljanja, konflikt i zabranu brisanja povezanog lica.
 Pre produkcije proveriti ove tokove na test Oracle bazi sa dve API instance.
+
+## Unos ugovora iz SAP izbora
+
+Na „Otvoreni ugovori“ dugme „Izaberi ugovor“ otvara tabelu SAP ugovora koji
+nisu evidentirani u `UGO_EVID`, sa filterom po broju, predmetu i dobavljaču.
+Izbor uključuje i zatvorene SAP ugovore; njihov status je vidljiv, a nakon
+upisa pripadaju zatvorenim ugovorima. Jedinicu unosa određuje prijavljeni
+korisnik, nezavisno od filtera organizacije na pregledu.
+
+Rute:
+- `GET /sapugovori/neevidentirani?page_id=1&page_size=20&filter=...`
+- `GET /sapugovori/:id/priprema` vraća ugovor, kontakt (ili null) i `id_ugo_org`.
+- `POST /ugo_evid` koristi novi zahtev ispod. Stari proizvoljni unos preko
+  `sap_ugovor_id`, `ugo_org_id` i kopiranih kontakt polja više nije podržan.
+  PUT postojeće evidencije ne dozvoljava prevezivanje na drugi SAP ugovor.
+
+Postojeće lice:
+```json
+{"id_sap_ugovor":101,"id_ugo_dob_lica":7,"contact_version":"2"}
+```
+Novo lice:
+```json
+{"id_sap_ugovor":101,"novo_lice":{"ime":"Ana","radno_mesto":"","telefon":"011123456","email":"ana@example.test"}}
+```
+
+Traži se tačno jedno lice dobavljača sa `STATUS='A'` i
+`ID_UGO_DOB_LICA_ROLA=1`; neaktivna lica ne učestvuju u izboru. Ako postoji
+jedno, server kopira njegovo ime, telefon i email iz baze. Ako ne postoji,
+server pravi novo lice sa rolom 1, statusom A, pa evidenciju. Ime, telefon i
+email su obavezni za novo lice, radno mesto opciono. Više aktivnih lica sa
+rolom 1 je konflikt podataka (409), bez automatskog izbora.
+
+Oba inserta su u jednoj transakciji. Server ponovo učitava SAP dobavljača,
+proverava neevidentiranost i stanje kontakta. Privremeni slogovi u postojećoj
+`UGO_EDIT_LOCK` (`UGO_EVID_CREATE` po SAP ugovoru, zatim `UGO_SLM_CREATE` po
+dobavljaču) serijalizuju konkurentne unose preko jedinstvenog ključa tabele.
+Ovi slogovi se kreiraju i brišu u istoj transakciji; nema zaključavanja tokom
+popunjavanja forme. Drugi zahtev čeka završetak prvog (rok zahteva 15 sekundi),
+a zatim ponovo proverava stanje. Rollback uklanja i privremene brave.
+Postojeće lice se kratko zaključava `FOR UPDATE NOWAIT`, proverava se verzija
+i odsustvo aktivne brave uređivanja lica. Ako ga neko uređuje, unos se odbija
+sa 423. SAP tabele se samo čitaju.
+
+Pre puštanja primeniti `oracle/contract_registration.sql`: globalno UNIQUE
+ograničenje nad `UGO_EVID.ID_SAP_UGOVOR` i jedinstveni funkcijski indeks za
+aktivno lice sa rolom 1 po dobavljaču. Skript prvo prikazuje/proverava postojeće
+duplikate i ništa ne briše. Postojeća šema dozvoljava isti SAP ugovor u
+različitim organizacijama kroz UNIQUE `(ID_SAP_UGOVOR, ID_UGO_ORG)`; novo
+pravilo je globalno, prema zahtevu da ugovor uopšte ne postoji u evidenciji.
+Ova bazna ograničenja štite i od drugih aplikacija/direktnih upisa. SQL nije
+automatski izvršen i namenjen je jednokratnom pokretanju.
+
+`VERSION` u `UGO_EVID` je preporučen za buduće izmene/brisanja, ali nije uslov
+za ovaj unos. Opcioni ALTER je u skriptu kao komentar; sama kolona još ne
+uvodi optimistic locking za stare PUT/DELETE rute evidencije.
+Za pregled se koristi `NOT EXISTS` i paginacija u Oracle-u. Običan view nije
+potreban. UNIQUE indeks za SAP ugovor podržava proveru neevidentiranosti;
+stvarne performanse proveriti planom izvršavanja na poslovnim podacima.
+
+Backend testovi proveravaju filter aktivne role 1, odbijanje duplikata i
+promenjenih/zaključanih kontakata, server-side organizaciju i rollback oba
+inserta. Playwright proverava postojeće/novo lice, filter, paginaciju i dva
+taba. To su testovi sa simuliranim DB/API; realnu Oracle konkurentnost treba
+proveriti na test bazi pre produkcije.

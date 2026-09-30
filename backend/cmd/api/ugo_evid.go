@@ -85,32 +85,6 @@ func (server *Server) ListUgoEvid(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, rsp)
 }
 
-func (server *Server) InsertUgoEvid(ctx *gin.Context) {
-	var req UgoEvidRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	evid := &models.UgoEvid{
-		SapUgovor:  models.SapUgovor{ID: req.SapUgovorID},
-		UgoOrg:     models.UgoOrg{ID: req.UgoOrgID},
-		Ime:        req.Ime,
-		Telefon:    req.Telefon,
-		Email:      req.Email,
-		Status:     req.Status,
-		UgoDobLice: models.UgoDobLice{ID: req.UgoDobLiceID},
-	}
-
-	evid, err := server.store.InsertUgoEvid(ctx, evid)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, UgoEvidResponse{Data: evid})
-}
-
 func (server *Server) UpdateUgoEvid(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	if idStr == "" {

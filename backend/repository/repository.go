@@ -7,6 +7,9 @@ import (
 )
 
 type Store interface {
+	GetUnregisteredContracts(ctx context.Context, offset, limit int, filter string) ([]models.ContractChoice, int, error)
+	PrepareContractRegistration(ctx context.Context, id int) (*models.ContractPreparation, error)
+	RegisterContract(ctx context.Context, req models.RegisterContract, orgID, userID int) (*models.UgoEvid, error)
 	GetUserOrganization(ctx context.Context, username, activeStatus string) (int, error)
 	GetPartnersPaged(ctx context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error)
 	CanManagePartner(ctx context.Context, orgID, supplierID int) (bool, error)
@@ -39,7 +42,6 @@ type Store interface {
 
 	GetUgoEvidById(ctx context.Context, id int) (*models.UgoEvid, error)
 	GetUgoEvidPaged(ctx context.Context, offset, limit int, filter string) ([]*models.UgoEvid, int, error)
-	InsertUgoEvid(ctx context.Context, m *models.UgoEvid) (*models.UgoEvid, error)
 	UpdateUgoEvid(ctx context.Context, m *models.UgoEvid) (*models.UgoEvid, error)
 	DeleteUgoEvidById(ctx context.Context, id int) error
 }

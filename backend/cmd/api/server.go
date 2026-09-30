@@ -60,6 +60,8 @@ func (server *Server) setupRouter() {
 	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
 
 	authRoutes.GET("/sapugovori", server.GetSapUgovoriPaged)
+	authRoutes.GET("/sapugovori/neevidentirani", server.ListUnregisteredContracts)
+	authRoutes.GET("/sapugovori/:id/priprema", server.PrepareContractRegistration)
 	authRoutes.GET("/ugo_evid/otvoreni", server.ListOtvoreniUgovori)
 	authRoutes.GET("/moji_partneri", server.ListMyPartners)
 	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
