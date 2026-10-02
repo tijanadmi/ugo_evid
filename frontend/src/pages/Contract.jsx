@@ -15,7 +15,7 @@ export default function Contract() {
   return <>
     <Link className="button" to={back}>← Povratak na pregled</Link>
     {!valid ? <div className="table-state" role="alert">Neispravan ID evidencije.</div>
-      : error ? <div className="table-state" role="alert"><h1>{error.status === 404 ? 'Ugovor nije pronađen' : 'Detalji nisu dostupni'}</h1><p>{error.message}</p>{error.status !== 404 && <button className="button" onClick={() => refetch()}>Pokušaj ponovo</button>}</div>
+      : error ? <div className="table-state"><h1>{error.status === 404 ? 'Ugovor nije pronađen' : 'Detalji nisu dostupni'}</h1>{error.status !== 404 && <button className="button" onClick={() => refetch()}>Pokušaj ponovo</button>}</div>
       : isPending ? <div className="table-state" role="status">Učitavanje detalja ugovora…</div>
       : <>
         <div className="compact-contract-heading">

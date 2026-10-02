@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import toast from 'react-hot-toast';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { usePartners } from './usePartners';
 import PartnerDetails from './PartnerDetails';
@@ -26,6 +27,21 @@ export default function PartnersList() {
   const [selected, setSelected] = useState(null);
   const pages = Math.max(1, Math.ceil((data?.total || 0) / size));
   const queryKey = params.toString();
+  const opening = useRef(false);
+  const currentQuery = useRef(queryKey);
+  currentQuery.current = queryKey;
+  async function openPartner(partner) {
+    if (opening.current) return;
+    opening.current = true;
+    try {
+      const result = await refetch();
+      if (currentQuery.current !== queryKey) return;
+      if (result.isError) { toast.error(result.error.message, { id: 'operation-error' }); return; }
+      const fresh = result.data?.items?.find(item => item.id === partner.id);
+      if (!fresh) { toast.error('Partner više nije dostupan u ovom pregledu.'); return; }
+      setSelected({ partner: fresh, queryKey });
+    } finally { opening.current = false; }
+  }
   function change(pageID, pageSize = size, naziv = name) {
     setSelected(null);
     setParams({ page_id: String(pageID), page_size: String(pageSize), ...(naziv ? { naziv } : {}) });
@@ -36,13 +52,13 @@ export default function PartnersList() {
     <section className="contracts-panel" aria-label="Pregled partnera">
       <div className="table-toolbar"><NameFilter key={name} name={name} onSearch={naziv => change(1, size, naziv)}/><div className="results-total" aria-live="polite">{isFetching ? 'Učitavanje…' : error ? 'Pregled nije dostupan' : <><strong>{data?.total || 0}</strong> partnera</>}</div></div>
       {isFetching ? <div className="table-state" role="status">Učitavanje partnera…</div>
-        : error ? <div className="table-state" role="alert"><h2>Pregled partnera nije dostupan</h2><p>{error.message}</p><button className="button" onClick={() => refetch()}>Pokušaj ponovo</button></div>
+        : error ? <div className="table-state"><h2>Pregled partnera nije dostupan</h2><button className="button" onClick={() => refetch()}>Pokušaj ponovo</button></div>
         : data?.items?.length ? <div className="table-scroll" tabIndex="0" aria-label="Tabela partnera"><table className="partners-table">
           <thead><tr><th scope="col">Naziv partnera</th><th scope="col">Adresa i grad</th><th scope="col"><span className="sr-only">Detalji</span></th></tr></thead>
           <tbody>{data.items.map(partner => <tr key={partner.id}>
-            <th scope="row"><button className="contract-link" onClick={() => setSelected({ partner, queryKey })}>{partner.naziv || '—'}</button></th>
+            <th scope="row"><button className="contract-link" onClick={() => openPartner(partner)}>{partner.naziv || '—'}</button></th>
             <td>{address(partner)}</td>
-            <td><button className="icon-button" aria-label={`Detalji partnera ${partner.naziv}`} onClick={() => setSelected({ partner, queryKey })}><Icon name="chevron"/></button></td>
+            <td><button className="icon-button" aria-label={`Detalji partnera ${partner.naziv}`} onClick={() => openPartner(partner)}><Icon name="chevron"/></button></td>
           </tr>)}</tbody>
         </table></div>
         : <div className="table-state"><h2>Nema partnera za prikaz</h2><p>{name ? 'Nema dobavljača koji odgovaraju unetom nazivu.' : 'Za vašu organizacionu jedinicu nema partnera na ovoj stranici.'}</p>{page > 1 && <button className="button" onClick={() => change(1)}>Prva stranica</button>}</div>}

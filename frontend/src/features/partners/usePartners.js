@@ -8,5 +8,7 @@ export function usePartners(page, pageSize, naziv) {
     queryKey: ['partners', user?.username, page, pageSize, naziv],
     queryFn: ({ signal }) => getMyPartners(api, page, pageSize, naziv, signal),
     enabled: !!user,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000,
   });
 }

@@ -195,3 +195,37 @@ func TestContactWriteFailureRollsBackWithoutRelease(t *testing.T) {
 		t.Fatal("failed mutation must rollback")
 	}
 }
+
+func TestDeleteCannotUseAnotherEditSessionsLease(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		user  int
+		token string
+	}{
+		{"another user", 8, strings.Repeat("a", 64)},
+		{"another tab of same user", 7, strings.Repeat("b", 64)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
+				if strings.Contains(q, "FOR UPDATE NOWAIT") {
+					return editRows(int64(3), int64(9)), nil
+				}
+				if !strings.Contains(q, "user_id = :user_id") || !strings.Contains(q, "lock_token = :token") || !strings.Contains(q, "expires_at > SYSTIMESTAMP") {
+					t.Fatal("missing ownership predicate")
+				}
+				count := int64(0)
+				if a[1].Value == 7 && a[2].Value == strings.Repeat("a", 64) {
+					count = 1
+				}
+				return editRows(count), nil
+			}, func(q string, a []driver.NamedValue) (driver.Result, error) {
+				t.Fatal("must not delete contact or edit lease")
+				return nil, nil
+			})
+			err := store.DeleteUgoDobLiceById(context.Background(), 8, 3, tc.user, tc.token)
+			if !errors.Is(err, ErrContactLease) || tx.committed || !tx.rolledBack {
+				t.Fatalf("err=%v committed=%v", err, tx.committed)
+			}
+		})
+	}
+}

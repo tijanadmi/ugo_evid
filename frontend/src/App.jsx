@@ -1,3 +1,5 @@
+import AppToaster from './ui/AppToaster';
+import DataSync from './services/DataSync';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './services/queryClient';
@@ -11,6 +13,7 @@ import Contracts from './pages/Contracts';
 import Contract from './pages/Contract';
 import Partners from './pages/Partners';
 export default function App() { return (<QueryClientProvider client={queryClient}><BrowserRouter><AuthProvider>
+  <AppToaster/><DataSync/>
   <a className="skip-link" href="#main-content">Pređi na sadržaj</a>
   <Routes>
     <Route path="/login" element={<Login/>}/>

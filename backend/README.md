@@ -323,3 +323,36 @@ promenjenih/zaključanih kontakata, server-side organizaciju i rollback oba
 inserta. Playwright proverava postojeće/novo lice, filter, paginaciju i dva
 taba. To su testovi sa simuliranim DB/API; realnu Oracle konkurentnost treba
 proveriti na test bazi pre produkcije.
+
+## Kontakt lica: provera pre otvaranja, obaveštenja i osvežavanje sesija
+
+Izmena i brisanje prvo preuzimaju istu bravu za lice, pa tek onda otvaraju
+formu ili `ConfirmDelete`. HTTP 423/404 i druge neuspešne provere daju toast;
+korisnik ostaje u detaljima partnera. Bravu poseduje `useContactSession` u
+roditeljskom dijalogu. Osvežavanje podataka ili ponovno prikazivanje forme ne
+oslobađa bravu. Oslobađanje sledi po odustajanju/zatvaranju, a uspešna mutacija
+oslobađa bravu u backend transakciji. Pre upisa dodatno se potvrđuje pravo
+izmene produženjem brave. Backend i dalje proverava korisnika, token, rok i
+verziju i za DELETE, nezavisno od prikaza na frontendu.
+
+Lease i dalje traje dva minuta i produžava se na 30 sekundi, kao i pri povratku
+u tab. Ako pregledač prestane da šalje zahteve ili mreža nestane, lease može
+isteći; povratak ne oživljava staro pravo izmene. Unos ostaje u formi, a korisnik
+mora izričito ponovo učitati podatke. Potvrda brisanja takođe zadržava lease
+sve do potvrde ili odustajanja.
+
+Detalji partnera se otvaraju tek nakon novog čitanja liste. Pregled partnera
+se osvežava pri povratku u tab i periodično na 30 sekundi dok je vidljiv.
+Posle upisa/brisanja `DataSync` šalje samo signal promene kroz browser storage,
+bez ličnih podataka i tokena. Drugi tabovi istog origin-a osvežavaju svoj keš.
+Nezavisni browser profili/uređaji koriste novo čitanje pri otvaranju, focus i
+periodično osvežavanje; ovo nije serverski push/WebSocket.
+
+Globalni `AppToaster` koristi `react-hot-toast` i prikazuje i API/query greške.
+Portal je u aktivnom native dijalogu da toast ne bi ostao iza modalnog sloja.
+Success traje 3 s, error 5 s; pozicija je top-center. Potvrde radnji i stanja
+učitavanja ostaju u komponentama. `ConfirmDelete` koristi postojeće CSS/button
+stilove, bez nove zavisnosti od styled-components.
+
+Za deployment preneti frontend promene zajedno sa package.json/package-lock.json
+pa instalirati zavisnosti (`npm ci`) i uraditi build. Nema nove DB migracije.

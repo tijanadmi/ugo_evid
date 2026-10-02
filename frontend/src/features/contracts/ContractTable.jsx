@@ -1,3 +1,5 @@
+import toast from 'react-hot-toast';
+import { announceBusinessChange } from '../../services/DataSync';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -21,6 +23,8 @@ export default function ContractTable({ status }) {
   function registered(record) {
     setPicking(false);
     setCreated(record);
+    toast.success('Ugovor je evidentiran.');
+    announceBusinessChange(queryClient);
     queryClient.invalidateQueries({ queryKey: ['contracts'] });
     queryClient.invalidateQueries({ queryKey: ['partners'] });
     queryClient.invalidateQueries({ queryKey: ['unregistered-contracts'] });
@@ -47,7 +51,7 @@ export default function ContractTable({ status }) {
   return <>
     <div className="breadcrumb">Evidencija ugovora <Icon name="chevron" width="14" height="14"/> <span>{title}</span></div>
     <div className="page-heading"><div><div className="heading-row"><h1>{title}</h1><span className={`status-badge ${isOpen ? 'open' : 'closed'}`}><span/>{isOpen ? 'Otvoreni' : 'Zatvoreni'}</span></div><p>Pregled ugovora, dobavljača i odgovornih lica.</p></div><div className="contract-heading-actions">{isOpen && <button className="button primary" onClick={() => setPicking(true)}>Izaberi ugovor</button>}<button className="button" onClick={() => contractsQuery.refetch()} disabled={loading}><Icon name="refresh"/>Osveži</button></div></div>
-    {created && <p className="registration-success" role="status">Ugovor je evidentiran. <Link to={`/ugovori/detalji/${created.id}`}>Otvori detalje ugovora</Link></p>}
+    {created && <p className="registration-success" ><Link to={`/ugovori/detalji/${created.id}`}>Otvori detalje ugovora</Link></p>}
     {picking && <ContractPicker organizations={organizations} onClose={() => setPicking(false)} onCreated={registered}/>}
     <section className="contracts-panel" aria-label={title}>
       <div className="table-toolbar"><div className="organization-filter"><label htmlFor="organization">Organizaciona jedinica</label><select id="organization" value={orgID} disabled={orgLoading} onChange={e => change({ id_ugo_org: e.target.value })}>
@@ -55,8 +59,8 @@ export default function ContractTable({ status }) {
         {orgID > 0 && !organizations.some(org => org.id === orgID) && <option value={orgID}>Organizaciona jedinica {orgID}</option>}
         {organizations.map(org => <option key={org.id} value={org.id}>{org.sifra} — {org.naziv}</option>)}
       </select></div><div className="results-total" aria-live="polite">{loading ? 'Učitavanje…' : error ? 'Pregled nije dostupan' : <><strong>{number.format(data.total)}</strong> evidencija</>}</div></div>
-      {orgError && <div className="alert warning" role="alert">Lista organizacionih jedinica nije učitana. {orgError} <button className="text-button" onClick={() => organizationsQuery.refetch()}>Pokušaj ponovo</button></div>}
-      {loading ? <div className="table-state" role="status"><span className="spinner"/>Učitavanje ugovora…</div> : error ? <div className="table-state"><Icon name="file" width="36" height="36"/><h3>Pregled trenutno nije dostupan</h3><p role="alert">{error}</p><button className="button" onClick={() => contractsQuery.refetch()}>Pokušaj ponovo</button></div> : data.items.length === 0 ? <div className="table-state"><span className="empty-icon"><Icon name={isOpen ? 'open' : 'closed'} width="32" height="32"/></span><h3>Nema ugovora za prikaz</h3><p>{page > 1 ? 'Na ovoj stranici nema rezultata.' : 'Za izabranu organizacionu jedinicu nema odgovarajućih evidencija.'}</p>{page > 1 && <button className="button" onClick={() => change({ page_id: '1' })}>Prva stranica</button>}</div> : <div className="table-scroll" tabIndex="0" aria-label="Tabela ugovora, horizontalno pomeranje"><table>
+      {orgError && <div className="alert warning">Lista organizacionih jedinica nije učitana. <button className="text-button" onClick={() => organizationsQuery.refetch()}>Pokušaj ponovo</button></div>}
+      {loading ? <div className="table-state" role="status"><span className="spinner"/>Učitavanje ugovora…</div> : error ? <div className="table-state"><Icon name="file" width="36" height="36"/><h3>Pregled trenutno nije dostupan</h3><button className="button" onClick={() => contractsQuery.refetch()}>Pokušaj ponovo</button></div> : data.items.length === 0 ? <div className="table-state"><span className="empty-icon"><Icon name={isOpen ? 'open' : 'closed'} width="32" height="32"/></span><h3>Nema ugovora za prikaz</h3><p>{page > 1 ? 'Na ovoj stranici nema rezultata.' : 'Za izabranu organizacionu jedinicu nema odgovarajućih evidencija.'}</p>{page > 1 && <button className="button" onClick={() => change({ page_id: '1' })}>Prva stranica</button>}</div> : <div className="table-scroll" tabIndex="0" aria-label="Tabela ugovora, horizontalno pomeranje"><table>
         <caption className="sr-only">{title} — stranica {page}</caption><thead><tr><th scope="col">Broj ugovora</th><th scope="col">Predmet ugovora</th><th scope="col">Dobavljač</th><th scope="col">Služba</th><th scope="col">Početak</th><th scope="col">Završetak</th><th scope="col">Odgovorna lica</th><th scope="col">Kontakt</th><th scope="col"><span className="sr-only">Detalji</span></th></tr></thead>
         <tbody>{data.items.map(item => <ContractRow key={item.id_ugo_evid} item={item} returnTo={location.pathname + location.search}/>)}</tbody>
       </table></div>}
