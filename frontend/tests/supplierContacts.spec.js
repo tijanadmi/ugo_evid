@@ -34,3 +34,12 @@ test('empty snapshots do not hide current contacts; saved-only contacts remain',
   expect(list({}, [])).toHaveLength(1);
   expect(list({ ime: '', email: '', telefon: '' }, [])).toHaveLength(0);
 });
+
+
+test('editable legacy contacts stay visible without guessing an ID from snapshot text', () => {
+  const legacy = supplierContacts({ ...saved, lica_dobavljaca: [person] }, { requireLinkedID: true });
+  expect(legacy).toHaveLength(2);
+  expect(legacy[1].id).toBe(7);
+  const linked = supplierContacts({ ...saved, id_ugo_dob_lica: 7, lica_dobavljaca: [person] }, { requireLinkedID: true });
+  expect(linked).toHaveLength(1);
+});

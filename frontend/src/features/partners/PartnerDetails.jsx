@@ -7,6 +7,7 @@ import { announceBusinessChange } from '../../services/DataSync';
 import { useContactSession } from './useContactSession';
 import PartnerCard from './PartnerCard';
 import ContactEditor from './ContactEditor';
+import ConfirmAction from '../../ui/ConfirmAction';
 import ConfirmDelete from '../../ui/ConfirmDelete';
 import Icon from '../../ui/Icon';
 
@@ -15,6 +16,7 @@ export default function PartnerDetails({ partner, onClose, onRefresh }) {
   const ref = useRef(null);
   const actionPending = useRef(false);
   const [editor, setEditor] = useState(null);
+  const [confirmation, setConfirmation] = useState(null);
   const [busy, setBusy] = useState(false);
   const [deleteBlocked, setDeleteBlocked] = useState(false);
   const client = useQueryClient();
@@ -26,7 +28,7 @@ export default function PartnerDetails({ partner, onClose, onRefresh }) {
   }, []);
   function close() {
     if (busy || actionPending.current) return;
-    if (editor?.mode === 'edit' && !window.confirm('Odustati od uređivanja lica?')) return;
+    if (editor && editor.mode !== 'delete') { setConfirmation('close'); return; }
     onClose();
   }
   async function open(person, mode) {
@@ -61,10 +63,15 @@ export default function PartnerDetails({ partner, onClose, onRefresh }) {
   return <dialog className="detail-dialog partner-dialog" ref={ref} aria-labelledby="partner-detail-title" onCancel={event => { event.preventDefault(); close(); }} onClick={event => { if (event.target === ref.current) close(); }}>
     <div className="detail-header"><h2 id="partner-detail-title">Detalji partnera</h2><button className="icon-button" disabled={busy} aria-label="Zatvori detalje partnera" onClick={close}><Icon name="close"/></button></div>
     {editor?.mode === 'delete' ? <ConfirmDelete resourceName={`lice ${owner.session?.person.ime || ''}`} onConfirm={remove} disabled={busy} blocked={deleteBlocked || owner.lost || !owner.session} onCloseModal={cancel}/> : editor ?
-      <ContactEditor supplierID={partner.id} personID={editor.id} session={owner.session} leaseLost={owner.lost} beforeWrite={owner.renew} onReload={async () => { await owner.release(); await owner.acquire(editor.id, 'edit'); }} onBusy={setBusy} onCancel={cancel} onSaved={() => saved()}/> : <>
+      <ContactEditor supplierID={partner.id} personID={editor.id} session={owner.session} leaseLost={owner.lost} beforeWrite={owner.renew} onReload={async () => { await owner.release(); await owner.acquire(editor.id, 'edit'); }} onBusy={setBusy} onCancel={() => setConfirmation('cancel')} onSaved={() => saved()}/> : <>
         <div className="partner-add"><button className="button primary" disabled={busy} onClick={() => setEditor({ mode: 'add' })}>+ Dodaj lice</button></div>
         <PartnerCard partner={partner} onEdit={person => open(person, 'edit')} onDelete={person => open(person, 'delete')}/>
       </>}
+    {confirmation && <ConfirmAction modal title="Odustati od uređivanja lica?" disabled={busy}
+      onCancel={() => setConfirmation(null)} onConfirm={async () => {
+        if (confirmation === 'close') onClose();
+        else { await cancel(); setConfirmation(null); }
+      }}><p>Nesačuvane izmene biće izgubljene.</p></ConfirmAction>}
     <div className="detail-footer"><button className="button" disabled={busy} onClick={close}>Zatvori</button></div>
   </dialog>;
 }

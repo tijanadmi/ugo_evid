@@ -16,13 +16,13 @@ export function isSameSavedContact(saved, person) {
   return !!pairs[0][0] && (!!pairs[1][0] || !!pairs[2][0]);
 }
 
-export function supplierContacts(item) {
+export function supplierContacts(item, { requireLinkedID = false } = {}) {
   const people = item.lica_dobavljaca || [];
   const hasSaved = [item.ime, item.email, item.telefon].some(value => text(value));
   if (!hasSaved) return people.map(person => ({ ...person, saved: false }));
   const matches = people.filter(person => isServiceLevelManager(person) && isSameSavedContact(item, person));
   // Ambiguous matches remain visible; no arbitrary first-person selection.
-  const duplicate = matches.length === 1 ? matches[0] : null;
+  const duplicate = matches.length === 1 && (!requireLinkedID || id(item.id_ugo_dob_lica)) ? matches[0] : null;
   return [
     { ime: item.ime, email: item.email, telefon: item.telefon, saved: true,
       radno_mesto: duplicate?.radno_mesto, rola_lica: duplicate?.rola_lica },

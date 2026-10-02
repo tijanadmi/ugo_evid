@@ -1,3 +1,4 @@
+import ConfirmAction from '../../ui/ConfirmAction';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +13,7 @@ export default function ContactEditor({ supplierID, personID, session, leaseLost
   const [roles, setRoles] = useState([]);
   const [ready, setReady] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const [confirmReload, setConfirmReload] = useState(false);
   const [busy, setBusy] = useState(false);
   const working = useRef(false);
   const lost = blocked || leaseLost || (personID && !session);
@@ -37,11 +39,14 @@ export default function ContactEditor({ supplierID, personID, session, leaseLost
     } finally { working.current = false; setBusy(false); onBusy(false); }
   }
   async function reload() {
-    if (!window.confirm('Učitavanje će zameniti unos u formi aktuelnim podacima. Nastaviti?')) return;
+
     setBusy(true); onBusy(true);
-    try { await onReload(); } finally { setBusy(false); onBusy(false); }
+    try { await onReload(); } finally { setBusy(false); onBusy(false); setConfirmReload(false); }
   }
   return <form className="contact-editor" onSubmit={submit} aria-label={personID ? 'Izmena lica' : 'Dodavanje lica'}>
+    {confirmReload && <ConfirmAction modal title="Učitati aktuelne podatke?" disabled={busy} onCancel={() => setConfirmReload(false)} onConfirm={reload}>
+      <p>Učitavanje će zameniti unos u formi aktuelnim podacima. Nastaviti?</p>
+    </ConfirmAction>}
     <h3>{personID ? 'Izmeni lice' : 'Dodaj lice'}</h3>
     {!ready && <p role="status">Učitavanje podataka…</p>}
     <fieldset disabled={!ready || busy}>
@@ -54,7 +59,7 @@ export default function ContactEditor({ supplierID, personID, session, leaseLost
       </select></label>
       <label>Status<select value={draft.status} onChange={e => setDraft({ ...draft, status: e.target.value })}><option value="A">Aktivan</option><option value="N">Neaktivan</option>{!['A', 'N'].includes(draft.status) && <option value={draft.status}>{draft.status}</option>}</select></label>
     </fieldset>
-    {lost && personID && <button className="button" type="button" disabled={busy} onClick={reload}>Učitaj aktuelne podatke</button>}
+    {lost && personID && <button className="button" type="button" disabled={busy} onClick={() => setConfirmReload(true)}>Učitaj aktuelne podatke</button>}
     <div className="contact-actions"><button className="button" type="button" disabled={busy} onClick={onCancel}>Odustani</button><button className="button primary" type="submit" disabled={!ready || lost || busy}>{busy ? 'Obrada…' : 'Sačuvaj'}</button></div>
   </form>;
 }

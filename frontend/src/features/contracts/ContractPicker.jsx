@@ -1,3 +1,4 @@
+import ConfirmAction from '../../ui/ConfirmAction';
 import toast from 'react-hot-toast';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -62,16 +63,20 @@ export default function ContractPicker({ organizations, onClose, onCreated }) {
   const [filter, setFilter] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [busy, setBusy] = useState(false);
   const query = useQuery({ queryKey: ['unregistered-contracts', user.username, page, filter], queryFn: ({ signal }) => getUnregisteredContracts(api, page, filter, signal), enabled: !selected, retry: false });
   useEffect(() => { const element = dialog.current; element.showModal(); return () => element.close(); }, []);
   function close() {
     if (busy) return;
-    if (selected && !window.confirm('Odustati od unosa ugovora?')) return;
+    if (selected) { setConfirmClose(true); return; }
     onClose();
   }
   const pages = Math.max(1, Math.ceil((query.data?.total || 0) / 20));
   return <dialog ref={dialog} className="detail-dialog contract-picker" aria-labelledby="contract-picker-title" onCancel={event => { event.preventDefault(); close(); }} onClick={event => { if (event.target === dialog.current) close(); }}>
+    {confirmClose && <ConfirmAction modal title="Odustati od unosa ugovora?" onCancel={() => setConfirmClose(false)} onConfirm={onClose}>
+      <p>Nesačuvani podaci biće izgubljeni.</p>
+    </ConfirmAction>}
     <div className="detail-header"><h2 id="contract-picker-title">Izaberi ugovor</h2><button type="button" className="icon-button" disabled={busy} aria-label="Zatvori izbor ugovora" onClick={close}><Icon name="close"/></button></div>
     {selected ? <RegistrationForm key={selected.id} contract={selected} organizations={organizations} onBusy={setBusy} onCreated={onCreated} onBack={() => { setSelected(null); query.refetch(); }}/> : <div className="contract-picker-body">
       <form className="partner-filter" onSubmit={event => { event.preventDefault(); setFilter(draftFilter.trim()); setPage(1); }}>
