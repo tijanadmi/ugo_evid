@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
-export default function DocumentForm({ types, initial, upload, maxBytes, onSave, onCancel, busy, blocked }) {
+export default function DocumentForm({ fixedType, types, initial, upload, maxBytes, onSave, onCancel, busy, blocked }) {
  const fileHelp = useId();
  const [draft, setDraft] = useState(() => ({ id_tip_doc: initial.id_tip_doc || types[0]?.id || 0, naziv: initial.naziv || '', broj_dokumenta: initial.broj_dokumenta || '', datum_dokumenta: initial.datum_dokumenta || '', napomena: initial.napomena || '' }));
  const [file, setFile] = useState(null);
@@ -17,11 +17,11 @@ export default function DocumentForm({ types, initial, upload, maxBytes, onSave,
  }
  return <form className="contact-editor" aria-label={upload ? 'Dodavanje dokumenta' : 'Izmena dokumenta'} onSubmit={submit}>
    <fieldset disabled={busy || blocked}>
-     <label>Tip dokumenta<select required value={draft.id_tip_doc} onChange={event => change('id_tip_doc', Number(event.target.value))}>
+     <label>Tip dokumenta{fixedType ? <input readOnly value={fixedType.naziv}/> : <select required value={draft.id_tip_doc} onChange={event => change('id_tip_doc', Number(event.target.value))}>
        <option value={0} disabled>Izaberite tip</option>
        {draft.id_tip_doc > 0 && !types.some(type => type.id === draft.id_tip_doc) && <option value={draft.id_tip_doc}>Trenutni tip (neaktivan)</option>}
        {types.map(type => <option key={type.id} value={type.id}>{type.naziv}</option>)}
-     </select></label>
+     </select>}</label>
      {upload && <label>Fajl<input type="file" aria-label="Fajl" aria-describedby={fileHelp} required accept=".pdf,.docx,.jpg,.jpeg,.png" onChange={event => { const next = event.target.files[0] || null; setFile(next); if (next && !draft.naziv) change('naziv', next.name.slice(0, 200)); }}/><small id={fileHelp}>PDF, DOCX, JPG ili PNG, do {Math.round(maxBytes / 1024 / 1024)} MB.</small></label>}
      <label>Naziv dokumenta<input required maxLength={200} value={draft.naziv} onChange={event => change('naziv', event.target.value)}/></label>
      <label>Broj dokumenta<input maxLength={100} value={draft.broj_dokumenta} onChange={event => change('broj_dokumenta', event.target.value)}/></label>

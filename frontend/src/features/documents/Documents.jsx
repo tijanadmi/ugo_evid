@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { announceBusinessChange } from '../../services/DataSync';
 import { useContactSession } from '../partners/useContactSession';
 import { documentSessionService, uploadDocument } from './documentAPI';
@@ -30,10 +30,11 @@ export default function Documents({ item, children }) {
  });
  const data = query.data;
  const canWrite = item.otvoren_ug === 'X' && data && !data.forbidden && !query.error;
- function upload(code = 'UGOVOR') {
+ function upload(code) {
    if (!canWrite || busy || pending.current || editor) return;
    const type = data.types?.find(type => type.sifra === code);
-   setBlocked(false); setEditor({ mode: 'add', initial: { id_tip_doc: type?.id || data.types?.[0]?.id || 0 } });
+   if ((code && !type) || !data.types?.length) { toast.error(code ? `Tip dokumenta ${code} nije dostupan. Proverite aktivne tipove dokumenata u bazi.` : 'Nema aktivnih tipova dokumenata u bazi.'); return; }
+   setBlocked(false); setEditor({ mode: 'add', fixedType: type, initial: { id_tip_doc: type?.id || data.types[0].id } });
  }
  async function open(doc, mode) {
    if (!canWrite || busy || pending.current || editor) return;
@@ -99,7 +100,7 @@ export default function Documents({ item, children }) {
    {editor && <DocumentDialog title={editor.mode === 'add' ? 'Dodaj dokument' : editor.mode === 'edit' ? 'Izmeni dokument' : 'Obriši dokument'} busy={busy} onClose={close}>
      {editor.mode === 'delete' ? <ConfirmAction title={`Obriši ${editor.initial.naziv}?`} onConfirm={() => save()} onCancel={cancel} disabled={busy} blocked={blocked || owner.lost} variation="danger" confirmLabel="Potvrdi brisanje" cancelLabel="Odustani">
        <p>Dokument će biti uklonjen iz aktivnog prikaza. Fajl i evidencija o unosu ostaju sačuvani.</p>
-     </ConfirmAction> : <DocumentForm types={data?.types || []} initial={editor.initial} upload={editor.mode === 'add'} maxBytes={data?.max_bytes || 25 * 1024 * 1024}
+     </ConfirmAction> : <DocumentForm fixedType={editor.fixedType} types={data?.types || []} initial={editor.initial} upload={editor.mode === 'add'} maxBytes={data?.max_bytes || 25 * 1024 * 1024}
        busy={busy} blocked={blocked || (editor.mode !== 'add' && owner.lost)} onSave={save} onCancel={close}/>}
      {confirmClose && <ConfirmAction modal title="Odustati od unosa dokumenta?" disabled={busy} onConfirm={cancel} onCancel={() => setConfirmClose(false)}><p>Nesačuvane izmene biće izgubljene.</p></ConfirmAction>}
    </DocumentDialog>}

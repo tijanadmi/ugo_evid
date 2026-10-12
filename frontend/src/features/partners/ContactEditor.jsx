@@ -1,7 +1,7 @@
 import ConfirmAction from '../../ui/ConfirmAction';
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { getContactRoles, saveContact } from '../../services/apiContacts';
 
 const empty = { ime: '', radno_mesto: '', telefon: '', email: '', id_ugo_dob_lica_rola: 0, status: 'A' };

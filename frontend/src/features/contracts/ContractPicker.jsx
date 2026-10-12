@@ -2,7 +2,7 @@ import ConfirmAction from '../../ui/ConfirmAction';
 import toast from 'react-hot-toast';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import Icon from '../../ui/Icon';
 import { getUnregisteredContracts, prepareContract, registerContract } from '../../services/apiContractRegistration';
 

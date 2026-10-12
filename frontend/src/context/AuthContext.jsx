@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ApiError, request } from '../services/apiClient';
 
-const AuthContext = createContext(null);
+import { AuthContext } from './authContextStore';
 const storageKey = 'ugo-evid-session';
 
 function readSession() {
@@ -87,5 +87,3 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={{ user: session?.user, login, logout, api }}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() { return useContext(AuthContext); }

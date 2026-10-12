@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { deleteContact } from '../../services/apiContacts';
 import { announceBusinessChange } from '../../services/DataSync';
 import { useContactSession } from './useContactSession';

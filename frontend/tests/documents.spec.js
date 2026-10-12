@@ -14,7 +14,7 @@ function samplePDF() {
 
 const types = [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }, { id: 2, sifra: 'RESENJE', naziv: 'Rešenje za operativno praćenje' }, { id: 3, sifra: 'DODATNO_RESENJE', naziv: 'Dodatno rešenje' }, { id: 4, sifra: 'ZAPISNIK', naziv: 'Zapisnik' }];
 async function setup(context, overrides = {}) {
- const state = { docs: [{ id: 11, id_ugo_evid: 9, id_tip_doc: 1, tip_naziv: 'Ugovor', naziv: 'Potpisani ugovor', originalni_naziv: 'ugovor.pdf', mime_tip: 'application/pdf', velicina_bajt: 100, version: '1' }], token: null, uploads: [], writes: [], closed: false, forbidden: false, expired: false, ...overrides };
+ const state = { docs: [{ id: 11, id_ugo_evid: 9, id_tip_doc: 1, tip_naziv: 'Ugovor', naziv: 'Potpisani ugovor', originalni_naziv: 'ugovor.pdf', mime_tip: 'application/pdf', velicina_bajt: 100, version: '1' }], token: null, uploads: [], writes: [], closed: false, forbidden: false, expired: false, types, ...overrides };
  await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token: 'access', refresh_token: 'refresh', access_token_expires_at: new Date(Date.now() + 3600000).toISOString(), refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(), user: { username: 'test.user' } })));
  await context.route('**/api/**', async route => {
   const req = route.request(), url = new URL(req.url()), method = req.method();
@@ -22,7 +22,7 @@ async function setup(context, overrides = {}) {
   if (url.pathname.endsWith('/detalji')) return json({ id_ugo_evid: 9, id_ugo_org: 3, id_sap_dobavljac: 20, br_ugovor: '460', predmet_ugovora: 'Oprema', naziv: 'Partner', otvoren_ug: state.closed ? '' : 'X', lica_dobavljaca: [] });
   if (state.forbidden) return json({ error: 'Zabranjen pristup' }, 403);
   if (url.pathname.endsWith('/dokumenti')) {
-   if (method === 'GET') return json({ items: state.docs, types, max_bytes: 1024 });
+   if (method === 'GET') return json({ items: state.docs, types: state.types, max_bytes: 1024 });
    expect(req.headers()['content-type']).toContain('multipart/form-data; boundary=');
    const raw = req.postDataBuffer().toString();
    const metadata = JSON.parse(raw.match(/name="metadata"\r\n\r\n([^\r]+)/)[1]);
@@ -59,11 +59,11 @@ async function edit(page) { await page.getByRole('button', { name: 'Akcije za do
 test('upload entry points preselect document types and refresh the list', async ({ context, page }) => {
  const state = await setup(context); await open(page);
  await page.getByRole('button', { name: 'Dodaj ugovor', exact: true }).click();
- await expect(page.getByLabel('Tip dokumenta')).toHaveValue('1');
+ await expect(page.getByLabel('Tip dokumenta')).toHaveValue('Ugovor');
  await page.getByRole('button', { name: 'Odustani', exact: true }).click();
  await page.getByRole('button', { name: 'OK', exact: true }).click();
  await page.getByRole('button', { name: 'Dodaj rešenje', exact: true }).click();
- await expect(page.getByLabel('Tip dokumenta')).toHaveValue('2');
+ await expect(page.getByLabel('Tip dokumenta')).toHaveValue('Rešenje za operativno praćenje');
  await page.getByLabel('Fajl', { exact: true }).setInputFiles({ name: 'novi.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
  await page.getByLabel('Naziv dokumenta', { exact: true }).fill('Resenje 2026');
  await page.getByLabel('Datum dokumenta', { exact: true }).fill('2026-10-11');
@@ -72,7 +72,7 @@ test('upload entry points preselect document types and refresh the list', async 
  await expect(page.getByRole('region', { name: 'Dokumenta ugovora' })).toContainText('Resenje 2026');
  expect(state.uploads[0]).toMatchObject({ id_tip_doc: 2, naziv: 'Resenje 2026', datum_dokumenta: '2026-10-11' });
  await page.getByRole('button', { name: 'Dodaj zapisnik', exact: true }).click();
- await expect(page.getByLabel('Tip dokumenta')).toHaveValue('4');
+ await expect(page.getByLabel('Tip dokumenta')).toHaveValue('Zapisnik');
 });
 
 test('editing holds lease across cancellation; another tab cannot delete until save', async ({ context, page }) => {
@@ -137,4 +137,12 @@ test('oversize upload remains in the form without sending file', async ({ contex
  await expect(page.getByRole('alert')).toContainText('Izaberite fajl');
  expect(state.uploads).toHaveLength(0);
  await expect(page.getByRole('form', { name: 'Dodavanje dokumenta' })).toBeVisible();
+});
+
+test('missing contract type shows a toast instead of uploading under another type', async ({ context, page }) => {
+ const state = await setup(context, { types: types.slice(1) }); await open(page);
+ await page.getByRole('button', { name: 'Dodaj ugovor', exact: true }).click();
+ await expect(page.getByRole('alert')).toContainText('Tip dokumenta UGOVOR nije dostupan');
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(state.uploads).toHaveLength(0);
 });

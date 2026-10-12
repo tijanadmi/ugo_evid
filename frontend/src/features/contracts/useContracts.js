@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { getContracts } from '../../services/apiContracts';
 
 export function useContracts({ status, page, pageSize, orgID, supplier }) {
