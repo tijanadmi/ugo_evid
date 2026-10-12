@@ -99,3 +99,18 @@
 .document-preview .document-frame{flex:1;min-height:0;height:auto}
 .document-image-viewport{flex:1;min-height:0;overflow:auto;padding:12px}
 .document-image-viewport .document-image{max-width:none;max-height:none;height:auto;margin:0 auto}
+
+.contract-picker[open]{display:flex;flex-direction:column;width:min(1400px,calc(100vw - 24px));height:90dvh;max-height:calc(100dvh - 24px);overflow:hidden}
+.contract-picker>.detail-header{flex-shrink:0;position:static;padding:16px 24px;gap:12px}
+.contract-picker-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:16px 24px}
+.contract-picker-body>.partner-filter,.contract-picker-body>p,.contract-picker-body>.pagination{flex-shrink:0;margin:0}
+.contract-picker-body>.pagination{flex-wrap:wrap;margin-top:auto}
+.contract-picker-scroll{flex:1;min-height:0;overflow:auto;isolation:isolate;border:1px solid var(--line);border-radius:6px}
+.contract-picker-table{table-layout:fixed;min-width:660px}
+.contract-picker-table .picker-action-column{width:100px}.contract-picker-table .picker-number-column{width:130px}.contract-picker-table .picker-status-column{width:90px}.contract-picker-table .picker-subject-column{width:45%}
+.contract-picker-table th,.contract-picker-table td{white-space:normal;overflow-wrap:anywhere;padding:10px;line-height:1.5}
+.contract-picker-table thead th{position:sticky;top:0;z-index:2;background:#f3f5f9}
+.contract-picker-table tr>:first-child{position:sticky;left:0;z-index:1;background:white;box-shadow:1px 0 0 var(--line)}
+.contract-picker-table thead tr>:first-child{z-index:3;background:#f3f5f9}
+.contract-picker>.contract-registration-form{overflow:auto;min-height:0;flex:1}
+@media(max-width:760px){.contract-picker-body{padding:12px;gap:10px}.contract-picker>.detail-header{padding:12px}.contract-picker-table .picker-subject-column{width:220px}}

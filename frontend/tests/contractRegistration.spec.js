@@ -118,3 +118,30 @@ test('active contact edit blocks registration and closed list has no picker', as
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Izaberi ugovor', exact: true })).toHaveCount(0);
 });
+
+test('picker keeps actions, filter and pagination accessible with long rows on desktop and mobile', async ({ context, page }) => {
+ await setup(context);
+ await context.route('**/api/sapugovori/neevidentirani?**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ total: 20, items: Array.from({ length: 20 }, (_, i) => ({ id: 101 + i, br_ugovor: String(460001 + i), godina: '2026', predmet_ugovora: 'Dug predmet ugovora za odrzavanje opreme i nabavku rezervnih delova '.repeat(5), dobavljac: 'Dobavljac sa dugim poslovnim imenom '.repeat(3), otvoren_ug: 'X' })) }) }));
+ await page.setViewportSize({ width: 1366, height: 768 });
+ await openPicker(page);
+ const region = page.getByRole('region', { name: 'Ugovori za izbor' });
+ await expect(region.locator('tbody tr')).toHaveCount(20);
+ await expect(region.locator('tbody tr').first().locator('td').first().getByRole('button')).toHaveText('Izaberi');
+ expect(await region.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+ expect(await region.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+ const nav = page.getByRole('navigation', { name: 'Stranice izbora ugovora' });
+ const before = await nav.boundingBox();
+ await region.evaluate(node => { node.scrollTop = node.scrollHeight; });
+ expect((await nav.boundingBox()).y).toBe(before.y);
+ expect(before.y + before.height).toBeLessThan(768);
+ await page.setViewportSize({ width: 390, height: 844 });
+ await region.evaluate(node => { node.scrollTop = 0; node.scrollLeft = node.scrollWidth; });
+ const action = region.getByRole('button', { name: 'Izaberi ugovor 460001', exact: true });
+ const buttonBounds = await action.boundingBox();
+ const regionBounds = await region.boundingBox();
+ expect(buttonBounds.x).toBeGreaterThanOrEqual(regionBounds.x);
+ expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(regionBounds.x + regionBounds.width);
+ expect((await nav.boundingBox()).y + (await nav.boundingBox()).height).toBeLessThan(844);
+ await action.click();
+ await expect(page.getByRole('form', { name: 'Unos ugovora' })).toBeVisible();
+});
