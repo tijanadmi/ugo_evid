@@ -9,6 +9,7 @@ async function setup(context, sharedState) {
     const method = req.method();
     const body = req.postData() ? req.postDataJSON() : {};
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (new URL(req.url()).pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
     if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
     if (path === '/api/ugo_dob_lica_rola') {
       const size = Number(new URL(req.url()).searchParams.get('page_size'));

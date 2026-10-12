@@ -160,6 +160,16 @@ datum), radi kompatibilnosti JSON modela.
 
 ### Pregled otvorenih i zatvorenih ugovora
 
+Filter `dobavljac` prihvata do 200 znakova i pretražuje deo naziva dobavljača,
+bez razlikovanja velikih i malih slova. Primenjuje se u bazi pre paginacije,
+na rezultate i ukupan broj evidencija; `%`, `_` i `!` se traže kao obični znakovi.
+Primer: `GET /ugo_evid/otvoreni?dobavljac=Primer&page_id=1&page_size=20`.
+Isti filter podržava `/ugo_evid/zatvoreni`.
+
+U interfejsu je izbor organizacione jedinice privremeno sakriven; pregledi
+šalju `id_ugo_org=0`. API podrška za taj parametar ostaje dostupna.
+
+
 Oba endpointa citaju postojeci `TED.UGO_EVID_PROSIRENI_V` i zahtevaju
 `Authorization: Bearer <access_token>`:
 
@@ -356,3 +366,106 @@ stilove, bez nove zavisnosti od styled-components.
 
 Za deployment preneti frontend promene zajedno sa package.json/package-lock.json
 pa instalirati zavisnosti (`npm ci`) i uraditi build. Nema nove DB migracije.
+
+
+### Dokumenta ugovora
+
+SQL migracija: `oracle/documents.sql`. Pokrenuti jednom u TED šemi pre korišćenja
+novih ekrana. Skripta kreira `UGO_TIP_DOC`, `UGO_DOC`, četiri tipa dokumenata i
+kolonu `UGO_EVID.DOC_FOLDER`. Oracle DDL implicitno potvrđuje transakcije; skripta
+nije namenjena ponovnom pokretanju preko već napravljenih objekata. Postojeća
+`UGO_EDIT_LOCK` iz `schema.sql` već podržava oznaku `UGO_DOC` bez promene strukture.
+Skripta nije automatski pokrenuta protiv poslovne baze.
+
+Konfiguracija backend procesa (`app.env` ili promenljive okruženja):
+
+```dotenv
+DOCUMENT_ROOT=D:\UGO_DATA\documents
+DOCUMENT_MAX_BYTES=26214400
+```
+
+Podrazumevana putanja je `./doc`, relativno prema direktorijumu iz koga je
+pokrenut backend, a granica 25 MiB. Za produkciju zadati apsolutnu putanju.
+Servisni nalog mora imati pravo čitanja i pisanja u taj direktorijum. Ne sme se
+izložiti kao IIS/nginx/Gin statika. Sve backend instance moraju koristiti isti
+fizički direktorijum ili isti mrežni share. Backup obuhvata i bazu i ceo direktorijum;
+`DOCUMENT_ROOT` ostaje isti prilikom objavljivanja nove verzije aplikacije.
+Reverse proxy mora dozvoliti veličinu fajla plus multipart zaglavlja (najmanje
+26 MiB za podrazumevanu granicu); aplikacija zasebno proverava veličinu fajla.
+
+Veza dokumenta je ka konkretnom `UGO_EVID.ID`. Folder ima oblik
+`<id_evidencije>_<sap_broj>_<skracen_predmet>` i trajno se upisuje pod kratkim
+Oracle zaključavanjem reda. Istovremeni prvi uploadi dobijaju isti folder.
+Promena predmeta kasnije ne preimenuje folder. Fajlovi imaju nasumično ime;
+originalni naziv se čuva u bazi i koristi pri preuzimanju.
+
+Dozvoljeni su PDF, DOCX bez VBA makroa, JPG/JPEG i PNG. Proveravaju se veličina,
+ekstenzija i prepoznatljiv sadržaj; kod DOCX i struktura ZIP paketa. Ovo nije
+antivirusno skeniranje niti kompletna validacija PDF/Office formata. Ako poslovna
+infrastruktura zahteva antivirus, skeniranje treba integrisati pre aktiviranja
+fajla. DOCX se preuzima; PDF koristi ugrađeni preglednik browsera, a slike se prikazuju u prozoru aplikacije.
+Pregled prihvata isključivo PDF/JPEG/PNG MIME tip iz autentifikovanog odgovora;
+HTML, SVG i Office fajlovi se ne ubacuju u okvir za pregled.
+
+Pristup svim operacijama, uključujući preuzimanje, zahteva aktivnog prijavljenog
+korisnika i njegovu aktivnu organizacionu jedinicu koja odgovara ugovoru.
+Dokumenta zatvorenog ugovora mogu se čitati, ali ne dodavati, menjati niti brisati.
+Audit korisnik se uvek određuje iz serverske sesije, nikada iz upload forme.
+
+API (iza postojećeg `/api` proxy prefiksa u frontend aplikaciji):
+
+- `GET /ugo_evid/:id/dokumenti`: aktivna dokumenta, aktivni tipovi, limit fajla.
+- `POST /ugo_evid/:id/dokumenti`: multipart sa jednim `file` i JSON poljem `metadata`.
+- `GET /ugo_doc/:id`: aktuelni metapodaci dokumenta.
+- `GET /ugo_doc/:id/sadrzaj`: autentifikovano preuzimanje; `?preview=1` za PDF/slike.
+- `POST/PUT/DELETE /ugo_doc/:id/lock`: preuzimanje/obnova/oslobađanje zaključavanja.
+- `PUT /ugo_doc/:id`: promena metapodataka uz `version` (string) i `lock_token`.
+- `DELETE /ugo_doc/:id`: logičko brisanje uz `version` i `lock_token`.
+
+Primer `metadata`:
+
+```json
+{"id_tip_doc":1,"naziv":"Potpisani ugovor","broj_dokumenta":"123/2026","datum_dokumenta":"2026-10-11","napomena":""}
+```
+
+Isti tip se može ponavljati na jednom ugovoru. Izmena menja samo metapodatke,
+nikada bajtove postojećeg fajla. Nova verzija fajla dodaje se kao novi dokument,
+a prethodni se po potrebi logički briše. `VERSION` kontroliše konkurentne izmene
+metapodataka; nije broj poslovne revizije fajla. Brisanje postavlja `STATUS='D'`,
+beleži korisnika i vreme i uklanja dokument iz API prikaza/preuzimanja. Fizički
+fajl se zadržava. Politika trajnog brisanja/retencije nije automatski uvedena.
+
+Zaključavanje koristi `UGO_EDIT_LOCK` sa `ENTITY_TYPE='UGO_DOC'`, trajanjem dva
+minuta i obnavljanjem na 30 sekundi. Backend proverava korisnika, token, rok i
+verziju pod zaključavanjem reda dokumenta. Različiti uploadi istog ugovora se ne
+zaključavaju za vreme rada sa formom.
+
+#### Nedovršeni uploadi i oporavak
+
+Baza i disk nisu jedna transakcija. Upload ide u privatni `.staging`, zatim se
+u bazi rezerviše `STATUS='P'`, fajl se objavljuje bez prepisivanja postojećeg i
+tek nakon završetka se dokument aktivira (`A`). Pending dokumenta nisu dostupna
+korisniku. Pri nejasnom odgovoru baze finalni fajl se zadržava; ne briše se fajl
+koji je baza možda već potvrdila. Posle greške frontend traži osvežavanje pre
+ponavljanja. Ne radi automatski retry uploada nakon mrežne/server greške.
+
+Alat za operatera, iz direktorijuma `backend`, sa istom konfiguracijom:
+
+```powershell
+go run ./cmd/doc-reconcile
+go run ./cmd/doc-reconcile -apply
+```
+
+Prva komanda samo izveštava; druga aktivira isključivo pending dokumenta starija
+od jednog sata sa potpunim fajlom, odgovarajućom veličinom i SHA-256. Pokretati
+uz zaustavljene uploade na svim instancama. Ne briše niti prepisuje fajlove.
+Nedostajuće/nepotpune fajlove i preostale `.staging` fajlove posle pada procesa
+operater pregleda uz backup; oni se ne aktiviraju automatski. Ako je upload
+neuspešan, korisnik može ponovo dodati izvorni dokument, a operater zatvoriti
+stari pending zapis nakon provere. Ne raditi masovno brisanje po starosti bez
+provere referenci baze.
+
+Validacija u razvoju: Go testovi koriste privremeni disk i simulirani store/SQL
+driver; Playwright koristi simulirani API. Pre produkcije proveriti migraciju,
+Oracle identity/RETURNING, prava servisnog naloga, stvarni mrežni share, backup i
+paralelni rad dve backend instance na testnoj Oracle bazi.

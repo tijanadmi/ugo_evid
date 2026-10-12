@@ -1,3 +1,5 @@
 app.env
 logs/
 ugo_evid
+/doc/
+/backend/doc/

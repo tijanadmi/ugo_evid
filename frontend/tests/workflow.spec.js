@@ -25,6 +25,7 @@ async function mockAPI(page, options = {}) {
     const url = new URL(req.url());
     calls.push(url);
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (new URL(req.url()).pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
     if (url.pathname === '/api/users/login') {
       if (req.postDataJSON().password === 'wrong') return json({ error: 'neuspesna prijava' }, 401);
       expect(req.postDataJSON()).toEqual({ username: 'test.user', password: 'test-password' });
@@ -51,7 +52,7 @@ async function mockAPI(page, options = {}) {
         return json({ ...contract, ...(options.noContacts ? { ime: '', telefon: '', email: '' } : {}), id_ugo_evid: 2, br_ugovor: '4600099999', lica_dobavljaca: options.noContacts ? [] : [{ id: 7, ime: 'Ana Anić', radno_mesto: 'Menadžer', telefon: '011 999', email: 'ana@example.test', rola_lica: 'Service Level Manager' }] });
       }
       if (options.failContracts) return json({ error: 'pregled ugovora trenutno nije dostupan' }, 500);
-      if (url.searchParams.get('id_ugo_org') === '4') return json({ total: 0, items: [] });
+      if (url.searchParams.get('dobavljac') === 'Nema') return json({ total: 0, items: [] });
       if (url.searchParams.get('page_id') === '2') return json({ total: 21, items: [{ ...contract, id_ugo_evid: 2, br_ugovor: '4600099999' }] });
       return json({ total: 21, items: [{ ...contract, otvoren_ug: url.pathname.endsWith('/zatvoreni') ? '' : 'X' }] });
     }
@@ -110,7 +111,7 @@ test('my partners navigation, contacts, pagination, empty and denied organizatio
   await expect(page.getByRole('alert')).toContainText('jedna aktivna organizaciona jedinica');
 });
 
-test('login, portal, both lists, organization filter, pagination and details', async ({ page }) => {
+test('login, portal, both lists, supplier filter, pagination and details', async ({ page }) => {
   const { calls } = await mockAPI(page);
   await login(page);
   await page.screenshot({ path: 'test-results/portal.png', fullPage: true });
@@ -133,8 +134,10 @@ test('login, portal, both lists, organization filter, pagination and details', a
   const second = await people.nth(1).boundingBox();
   expect(second.y).toBeGreaterThan(first.y);
   await page.screenshot({ path: 'test-results/otvoreni.png', fullPage: true });
-  await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('3');
-  await expect.poll(() => calls.some(url => url.pathname.endsWith('/otvoreni') && url.searchParams.get('id_ugo_org') === '3')).toBeTruthy();
+  await expect(page.getByLabel('Organizaciona jedinica', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Dobavljač', { exact: true }).fill('Primer');
+  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
+  await expect.poll(() => calls.some(url => url.pathname.endsWith('/otvoreni') && url.searchParams.get('dobavljac') === 'Primer')).toBeTruthy();
   await page.getByRole('button', { name: 'Sledeća stranica' }).click();
   await expect(page.getByRole('link', { name: '4600099999', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '4600099999', exact: true }).click();
@@ -152,15 +155,17 @@ test('login, portal, both lists, organization filter, pagination and details', a
   await page.reload();
   await expect(page.getByText('Ana Anić', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Povratak na pregled' }).click();
-  await expect(page).toHaveURL(/page_id=2.*id_ugo_org=3/);
+  await expect(page).toHaveURL(/page_id=2.*dobavljac=Primer/);
   await page.getByRole('link', { name: 'Zatvoreni ugovori', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
   await expect(page.locator('.supplier-cell .supplier-address')).toHaveText('Ulica 12, Beograd');
   await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
   await expect.poll(() => calls.some(url => url.pathname.endsWith('/zatvoreni'))).toBeTruthy();
-  await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('4');
+  await expect(page.getByLabel('Organizaciona jedinica', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Dobavljač', { exact: true }).fill('Nema');
+  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Nema ugovora za prikaz' })).toBeVisible();
-  await page.getByLabel('Organizaciona jedinica', { exact: true }).selectOption('0');
+  await page.getByRole('button', { name: 'Poništi filter', exact: true }).click();
   await expect(page.getByRole('link', { name: '4600012345', exact: true })).toBeVisible();
 });
 

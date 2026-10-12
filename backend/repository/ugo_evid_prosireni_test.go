@@ -55,7 +55,7 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 				}
 				return &schemaRows{width: 45, values: [][]driver.Value{row}}, nil
 			}})
-			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 10, 5, 0)
+			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 10, 5, 0, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,7 +98,7 @@ func TestProsireniEmptyPageKeepsTotal(t *testing.T) {
 		}
 		return &schemaRows{width: 45}, nil
 	}})
-	items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), true, 100, 20, 0)
+	items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), true, 100, 20, 0, "")
 	if err != nil || total != 3 || items == nil || len(items) != 0 {
 		t.Fatalf("items=%v total=%d err=%v", items, total, err)
 	}
@@ -107,7 +107,7 @@ func TestProsireniEmptyPageKeepsTotal(t *testing.T) {
 func TestProsireniDatabaseFailure(t *testing.T) {
 	want := errors.New("view unavailable")
 	store := testSchemaStore(t, &schemaConn{query: func(string, []driver.NamedValue) (driver.Rows, error) { return nil, want }})
-	if _, _, err := store.GetUgoEvidProsireniPaged(context.Background(), false, 0, 20, 0); !errors.Is(err, want) {
+	if _, _, err := store.GetUgoEvidProsireniPaged(context.Background(), false, 0, 20, 0, ""); !errors.Is(err, want) {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -131,10 +131,34 @@ func TestProsireniOrganizationFilter(t *testing.T) {
 				}
 				return &schemaRows{width: 45}, nil
 			}})
-			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 100, 20, orgID)
+			items, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 100, 20, orgID, "")
 			if err != nil || calls != 2 || total != 6 || len(items) != 0 {
 				t.Fatalf("calls=%d total=%d err=%v", calls, total, err)
 			}
+		}
+	}
+}
+
+func TestProsireniSupplierFilter(t *testing.T) {
+	for _, open := range []bool{true, false} {
+		calls := 0
+		store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
+			calls++
+			checkBinds(t, q, args)
+			if !strings.Contains(q, "UPPER(v.naziv) LIKE UPPER(:supplier_name) ESCAPE '!'") || strings.Contains(q, "Firma") {
+				t.Fatalf("missing bound supplier filter: %s", q)
+			}
+			if args[0].Name != "supplier_name" || args[0].Value != "%Firma!_!%!!'%" {
+				t.Fatalf("incorrect literal search: %v", args)
+			}
+			if strings.HasPrefix(q, "SELECT COUNT(*)") {
+				return &schemaRows{width: 1, values: [][]driver.Value{{int64(2)}}}, nil
+			}
+			return &schemaRows{width: 45}, nil
+		}})
+		_, total, err := store.GetUgoEvidProsireniPaged(context.Background(), open, 0, 20, 0, "  Firma_%!'  ")
+		if err != nil || total != 2 || calls != 2 {
+			t.Fatalf("calls=%d total=%d err=%v", calls, total, err)
 		}
 	}
 }

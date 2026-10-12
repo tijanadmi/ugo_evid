@@ -77,7 +77,7 @@ func (r *OracleStore) loadProsireniContacts(ctx context.Context, items []models.
 }
 
 // GetUgoEvidProsireniPaged reads the existing view; it never modifies SAP or UGO data.
-func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error) {
+func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int, supplier string) ([]models.UgoEvidProsireni, int, error) {
 	if offset < 0 || limit < 1 || limit > 100 {
 		return nil, 0, fmt.Errorf("invalid pagination")
 	}
@@ -93,6 +93,12 @@ func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, o
 	if orgID > 0 {
 		from += " AND v.id_ugo_org = :org_id"
 		args = append(args, sql.Named("org_id", orgID))
+	}
+	supplier = strings.TrimSpace(supplier)
+	if supplier != "" {
+		from += " AND UPPER(v.naziv) LIKE UPPER(:supplier_name) ESCAPE '!'"
+		pattern := strings.NewReplacer("!", "!!", "%", "!%", "_", "!_").Replace(supplier)
+		args = append(args, sql.Named("supplier_name", "%"+pattern+"%"))
 	}
 	// Separate count also returns the correct total for an empty/out-of-range page.
 	var total int

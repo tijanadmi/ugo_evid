@@ -1,3 +1,4 @@
+import Icon from '../../ui/Icon';
 import RowMenu from '../../ui/RowMenu';
 import { useContactActions } from '../partners/useContactActions';
 import { useState } from 'react';
@@ -13,7 +14,7 @@ const fields = [
   ['pocetak_ug', 'Važi od'], ['kraj_ug', 'Važi do'],
 ];
 
-export default function ContractDetails({ item }) {
+export default function ContractDetails({ item, onUploadResolution }) {
   const [addingContact, setAddingContact] = useState(false);
   const actions = useContactActions(item.id_sap_dobavljac);
   const contacts = supplierContacts(item, { requireLinkedID: item.otvoren_ug === 'X' });
@@ -25,7 +26,7 @@ export default function ContractDetails({ item }) {
       </dl>
     </section>
     <section className="contract-card operational-contacts" aria-labelledby="operational-title">
-      <h2 id="operational-title">Lica za operativno praćenje ugovora</h2>
+      <h2 id="operational-title">Lica za operativno praćenje ugovora{onUploadResolution && <button className="icon-button" aria-label="Dodaj rešenje" title="Dodaj rešenje" onClick={onUploadResolution}><Icon name="upload"/></button>}</h2>
       <ResponsiblePersons item={item}/>
     </section>
     <section className="contract-card partner-card" aria-labelledby="partner-title">

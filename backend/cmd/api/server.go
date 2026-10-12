@@ -67,6 +67,17 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
 	authRoutes.GET("/ugo_evid/:id/detalji", server.GetUgoEvidProsireni)
 
+	// Documents are served through authenticated endpoints, never static files.
+	authRoutes.GET("/ugo_evid/:id/dokumenti", server.ListDocuments)
+	authRoutes.POST("/ugo_evid/:id/dokumenti", server.UploadDocument)
+	authRoutes.GET("/ugo_doc/:id", server.GetDocument)
+	authRoutes.GET("/ugo_doc/:id/sadrzaj", server.DocumentContent)
+	authRoutes.PUT("/ugo_doc/:id", server.ChangeDocument)
+	authRoutes.DELETE("/ugo_doc/:id", server.ChangeDocument)
+	authRoutes.POST("/ugo_doc/:id/lock", server.DocumentLock)
+	authRoutes.PUT("/ugo_doc/:id/lock", server.DocumentLock)
+	authRoutes.DELETE("/ugo_doc/:id/lock", server.DocumentLock)
+
 	// CRUD
 	authRoutes.GET("/ugo_org/:id", server.GetUgoOrg)       // Get po id (int)
 	authRoutes.POST("/ugo_org", server.InsertUgoOrg)       // Insert

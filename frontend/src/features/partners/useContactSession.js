@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { acquireContact, renewContact, releaseContact, getContact } from '../../services/apiContacts';
 
+const contactService = { acquireContact, renewContact, releaseContact, getContact };
+
 // One owner for the whole edit/delete session. Child form remounts or query
 // refreshes must never release a lease that is still being used.
-export function useContactSession(api) {
+export function useContactSession(api, service = contactService) {
+  const { acquireContact, renewContact, releaseContact, getContact } = service;
   const current = useRef(null);
   const mounted = useRef(true);
   const pending = useRef(false);
@@ -18,7 +21,7 @@ export function useContactSession(api) {
     setLost(false);
     if (renewal.current) await renewal.current;
     if (previous) await releaseContact(api, previous.person.id, previous.token).catch(() => {});
-  }, [api]);
+  }, [api, service]);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -27,7 +30,7 @@ export function useContactSession(api) {
       current.current = null;
       if (previous) Promise.resolve(renewal.current).then(() => releaseContact(api, previous.person.id, previous.token)).catch(() => {});
     };
-  }, [api]);
+  }, [api, service]);
   const acquire = useCallback(async (id, mode) => {
     if (pending.current) return null;
     pending.current = true;
@@ -47,7 +50,7 @@ export function useContactSession(api) {
       if (mounted.current) toast.error(error.message, { id: 'operation-error' });
       return null;
     } finally { pending.current = false; }
-  }, [api]);
+  }, [api, service]);
   const renew = useCallback(async () => {
     const owner = current.current;
     if (!owner) return false;
@@ -66,7 +69,7 @@ export function useContactSession(api) {
     })();
     renewal.current = task;
     try { return await task; } finally { renewal.current = null; }
-  }, [api]);
+  }, [api, service]);
   useEffect(() => {
     if (!session || lost) return;
     const timer = setInterval(renew, 30000);

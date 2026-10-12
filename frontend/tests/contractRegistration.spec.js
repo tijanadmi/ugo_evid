@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 async function setup(context, options = {}) {
   const state = { bodies: [], filters: [], registered: false, ...options };
@@ -9,6 +9,7 @@ async function setup(context, options = {}) {
     const request = route.request();
     const url = new URL(request.url());
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (url.pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
     if (url.pathname === '/api/ugo_org') return json({ total: 1, items: [{ id: 3, sifra: 'CTKS', naziv: 'Moja organizacija' }] });
     if (url.pathname === '/api/ugo_evid/otvoreni' || url.pathname === '/api/ugo_evid/zatvoreni') return json({ total: 0, items: [] });
     if (url.pathname === '/api/sapugovori/neevidentirani') {
@@ -49,10 +50,10 @@ test('filter, pagination and register using existing active role-1 contact', asy
   const state = await setup(context);
   await openPicker(page);
   await page.getByLabel('Broj ugovora, predmet ili dobavljač').fill('Nema');
-  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Izaberi ugovor', exact: true }).getByRole('button', { name: 'Pretraži', exact: true }).click();
   await expect(page.getByText('Nema neevidentiranih ugovora za izabrani filter.')).toBeVisible();
   await page.getByLabel('Broj ugovora, predmet ili dobavljač').fill('Oprema');
-  await page.getByRole('button', { name: 'Pretraži', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Izaberi ugovor', exact: true }).getByRole('button', { name: 'Pretraži', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Sledeća', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Sledeća', exact: true }).click();
   await expect(page.getByRole('navigation', { name: 'Stranice izbora ugovora' })).toContainText('Stranica 2 od 2');

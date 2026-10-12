@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 const eventKey = 'ugo-evid-data-changed';
 export function invalidateBusinessData(client) {
   client.invalidateQueries({ queryKey: ['contract-preparation'], refetchType: 'none' });
-  return Promise.all(['partners', 'contracts', 'contract', 'unregistered-contracts'].map(key => client.invalidateQueries({ queryKey: [key] })));
+  return Promise.all(['partners', 'contracts', 'contract', 'unregistered-contracts', 'documents'].map(key => client.invalidateQueries({ queryKey: [key] })));
 }
 export function announceBusinessChange(client) {
   invalidateBusinessData(client);

@@ -7,6 +7,15 @@ import (
 )
 
 type Store interface {
+	ListDocumentTypes(ctx context.Context) ([]models.DocumentType, error)
+	ListDocuments(ctx context.Context, contractID int) ([]models.Document, error)
+	GetDocument(ctx context.Context, id int) (*models.Document, error)
+	DocumentFolder(ctx context.Context, contractID int, proposed string) (string, error)
+	ReserveDocument(ctx context.Context, doc *models.Document) error
+	FinalizeDocument(ctx context.Context, id int) error
+	DocumentLock(ctx context.Context, id, userID int, action, token string) (*models.EditLock, error)
+	ChangeDocument(ctx context.Context, doc *models.Document, userID int, token string, remove bool) error
+
 	GetUnregisteredContracts(ctx context.Context, offset, limit int, filter string) ([]models.ContractChoice, int, error)
 	PrepareContractRegistration(ctx context.Context, id int) (*models.ContractPreparation, error)
 	RegisterContract(ctx context.Context, req models.RegisterContract, orgID, userID int) (*models.UgoEvid, error)
@@ -14,7 +23,7 @@ type Store interface {
 	GetPartnersPaged(ctx context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error)
 	CanManagePartner(ctx context.Context, orgID, supplierID int) (bool, error)
 	ContactLock(ctx context.Context, id, userID int, action, token string) (*models.EditLock, error)
-	GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error)
+	GetUgoEvidProsireniPaged(ctx context.Context, open bool, offset, limit, orgID int, supplier string) ([]models.UgoEvidProsireni, int, error)
 	GetUgoEvidProsireniByID(ctx context.Context, id int) (models.UgoEvidProsireni, error)
 	GetUserByUsername(ctx context.Context, username string) (*models.User, error)
 	InsertUser(ctx context.Context, user *models.User) (*models.User, error)

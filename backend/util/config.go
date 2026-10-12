@@ -10,6 +10,8 @@ import (
 )
 
 type Config struct {
+	DocumentRoot         string        `mapstructure:"DOCUMENT_ROOT"`
+	DocumentMaxBytes     int64         `mapstructure:"DOCUMENT_MAX_BYTES"`
 	Environment          string        `mapstructure:"ENVIRONMENT"`
 	DBDriver             string        `mapstructure:"DB_DRIVER"`
 	DBSource             string        `mapstructure:"DB_SOURCE"`
@@ -29,6 +31,8 @@ func LoadConfig(path string) (config Config, err error) {
 	v.AddConfigPath(path)
 	v.SetConfigName("app")
 	v.SetConfigType("env")
+	v.SetDefault("DOCUMENT_ROOT", "./doc")
+	v.SetDefault("DOCUMENT_MAX_BYTES", 25*1024*1024)
 	v.SetDefault("DB_DRIVER", "oracle")
 	v.SetDefault("HTTP_SERVER_ADDRESS", ":8080")
 	v.SetDefault("ACCESS_TOKEN_DURATION", "15m")
@@ -51,6 +55,9 @@ func LoadConfig(path string) (config Config, err error) {
 	}
 	if err = v.Unmarshal(&config); err != nil {
 		return
+	}
+	if config.DocumentMaxBytes < 1 || config.DocumentMaxBytes > 1024*1024*1024 {
+		return config, fmt.Errorf("DOCUMENT_MAX_BYTES must be between 1 and 1073741824")
 	}
 	config.LDAPServers = strings.FieldsFunc(v.GetString("LDAP_SERVERS"), func(r rune) bool { return r == ',' || r == ';' || r == ' ' })
 	if config.DBDriver != "oracle" || !strings.HasPrefix(config.DBSource, "oracle://") {

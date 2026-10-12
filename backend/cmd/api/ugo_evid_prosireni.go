@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -31,9 +32,10 @@ func (server *Server) GetUgoEvidProsireni(ctx *gin.Context) {
 }
 
 type listUgoEvidProsireniRequest struct {
-	OrgID    int   `form:"id_ugo_org,default=0" binding:"min=0"`
-	PageID   int32 `form:"page_id,default=1" binding:"min=1"`
-	PageSize int32 `form:"page_size,default=20" binding:"min=1,max=100"`
+	Supplier string `form:"dobavljac" binding:"max=200"`
+	OrgID    int    `form:"id_ugo_org,default=0" binding:"min=0"`
+	PageID   int32  `form:"page_id,default=1" binding:"min=1"`
+	PageSize int32  `form:"page_size,default=20" binding:"min=1,max=100"`
 }
 
 type listUgoEvidProsireniResponse struct {
@@ -51,7 +53,7 @@ func (server *Server) listEvidProsireni(ctx *gin.Context, open bool) {
 		return
 	}
 	offset := (int(req.PageID) - 1) * int(req.PageSize)
-	items, total, err := server.store.GetUgoEvidProsireniPaged(ctx.Request.Context(), open, offset, int(req.PageSize), req.OrgID)
+	items, total, err := server.store.GetUgoEvidProsireniPaged(ctx.Request.Context(), open, offset, int(req.PageSize), req.OrgID, strings.TrimSpace(req.Supplier))
 	if err != nil {
 		log.Error().Err(err).Msg("cannot list UGO_EVID_PROSIRENI_V")
 		ctx.JSON(http.StatusInternalServerError, apiErrorResponse{Error: "pregled ugovora trenutno nije dostupan"})

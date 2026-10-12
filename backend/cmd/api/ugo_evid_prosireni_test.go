@@ -17,15 +17,17 @@ type prosireniStore struct {
 	repository.Store
 	called        bool
 	open          bool
+	supplier      string
 	orgID         int
 	offset, limit int
 	err           error
 }
 
-func (s *prosireniStore) GetUgoEvidProsireniPaged(_ context.Context, open bool, offset, limit, orgID int) ([]models.UgoEvidProsireni, int, error) {
+func (s *prosireniStore) GetUgoEvidProsireniPaged(_ context.Context, open bool, offset, limit, orgID int, supplier string) ([]models.UgoEvidProsireni, int, error) {
 	s.called = true
 	s.open = open
 	s.orgID = orgID
+	s.supplier = supplier
 	s.offset = offset
 	s.limit = limit
 	return nil, 0, s.err
@@ -115,6 +117,41 @@ func TestProsireniOrganizationParameter(t *testing.T) {
 			}
 			if tc.status == 400 && store.called {
 				t.Fatal("invalid parameter reached repository")
+			}
+		}
+	}
+}
+
+func TestProsireniSupplierParameter(t *testing.T) {
+	for _, path := range []string{"/ugo_evid/otvoreni", "/ugo_evid/zatvoreni"} {
+		for _, long := range []bool{false, true} {
+			store := &prosireniStore{}
+			server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+			if err != nil {
+				t.Fatal(err)
+			}
+			access, _, err := server.tokenMaker.CreateToken("ad.account", "user", time.Minute)
+			if err != nil {
+				t.Fatal(err)
+			}
+			query := "?dobavljac=++Primer++"
+			want := 200
+			if long {
+				query = "?dobavljac=" + strings.Repeat("a", 201)
+				want = 400
+			}
+			req := httptest.NewRequest("GET", path+query, nil)
+			req.Header.Set("Authorization", "Bearer "+access)
+			rec := httptest.NewRecorder()
+			server.router.ServeHTTP(rec, req)
+			if rec.Code != want {
+				t.Fatalf("status=%d: %s", rec.Code, rec.Body.String())
+			}
+			if !long && (!store.called || store.supplier != "Primer") {
+				t.Fatalf("wrong supplier: %+v", store)
+			}
+			if long && store.called {
+				t.Fatal("invalid filter reached database")
 			}
 		}
 	}
