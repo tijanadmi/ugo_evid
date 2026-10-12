@@ -1,3 +1,4 @@
+import { value } from '../../utils/contractFormatting';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -20,6 +21,7 @@ export default function Documents({ item, children }) {
  const [blocked, setBlocked] = useState(false);
  const [confirmClose, setConfirmClose] = useState(false);
  const [preview, setPreview] = useState(null);
+ const [imageZoom, setImageZoom] = useState(100);
  const pending = useRef(false);
  const mounted = useRef(true);
  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -74,7 +76,7 @@ export default function Documents({ item, children }) {
      if (!mounted.current) return;
      if (showPreview && !['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0])) throw new Error('Format nije podržan za pregled. Preuzmite dokument.');
      const url = URL.createObjectURL(blob);
-     if (showPreview) setPreview({ url, doc });
+     if (showPreview) { setImageZoom(100); setPreview({ url, doc }); }
      else { const a = document.createElement('a'); a.href = url; a.download = doc.originalni_naziv; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
    } catch (error) { toast.error(error.message, { id: 'operation-error' }); }
    finally { pending.current = false; if (mounted.current) setBusy(false); }
@@ -88,7 +90,7 @@ export default function Documents({ item, children }) {
      </div></div>
      {query.isPending ? <p role="status">Učitavanje dokumenata…</p> : data?.forbidden ? <p>Dokumenta su dostupna korisnicima organizacione jedinice ugovora.</p> : query.error ? <p>Dokumenta trenutno nisu dostupna.</p> : !data?.items?.length ? <p>Nema dodatih dokumenata.</p> :
        <ul className="document-list">{data.items.map(doc => <li key={doc.id}>
-         <div><strong>{doc.naziv}</strong><span>{doc.tip_naziv}{doc.broj_dokumenta && ` · ${doc.broj_dokumenta}`}{doc.datum_dokumenta && ` · ${doc.datum_dokumenta}`}</span>
+         <div><strong>{doc.naziv}</strong><span>{doc.tip_naziv}{doc.broj_dokumenta && ` · ${doc.broj_dokumenta}`}{doc.datpri && ` · Datum unosa: ${value(doc, 'datpri')}`}</span>
            <small>{doc.originalni_naziv} · {Math.ceil(doc.velicina_bajt / 1024)} KB</small>{doc.napomena && <p>{doc.napomena}</p>}</div>
          <div className="document-buttons">
            {['application/pdf', 'image/jpeg', 'image/png'].includes(doc.mime_tip) && <button className="button" disabled={busy} onClick={() => content(doc, true)}>Pregled</button>}
@@ -105,8 +107,15 @@ export default function Documents({ item, children }) {
      {confirmClose && <ConfirmAction modal title="Odustati od unosa dokumenta?" disabled={busy} onConfirm={cancel} onCancel={() => setConfirmClose(false)}><p>Nesačuvane izmene biće izgubljene.</p></ConfirmAction>}
    </DocumentDialog>}
    {preview && <DocumentDialog wide title={preview.doc.naziv} onClose={() => setPreview(null)}>
-     <div className="detail-footer"><button className="button" disabled={busy} onClick={() => content(preview.doc, false)}>Preuzmi dokument</button></div>
-     {preview.doc.mime_tip.startsWith('image/') ? <img className="document-image" src={preview.url} alt={preview.doc.naziv}/> : <iframe className="document-frame" title={preview.doc.naziv} src={preview.url} referrerPolicy="no-referrer"/>}
+     <div className="detail-footer document-preview-toolbar">
+       {preview.doc.mime_tip.startsWith('image/') && <div className="document-window-actions" role="group" aria-label="Zum slike">
+         <button className="button" disabled={imageZoom <= 50} onClick={() => setImageZoom(zoom => Math.max(50, zoom - 25))} aria-label="Umanji sliku">?</button>
+         <output aria-live="polite">{imageZoom}%</output>
+         <button className="button" disabled={imageZoom >= 300} onClick={() => setImageZoom(zoom => Math.min(300, zoom + 25))} aria-label="Uvećaj sliku">+</button>
+         <button className="button" onClick={() => setImageZoom(100)}>Prilagodi širini</button>
+       </div>}
+       <button className="button" disabled={busy} onClick={() => content(preview.doc, false)}>Preuzmi dokument</button></div>
+     {preview.doc.mime_tip.startsWith('image/') ? <div className="document-image-viewport"><img className="document-image" style={{ width: `${imageZoom}%` }} src={preview.url} alt={preview.doc.naziv}/></div> : <iframe className="document-frame" title={preview.doc.naziv} src={preview.url} referrerPolicy="no-referrer"/>}
    </DocumentDialog>}
  </>;
 }

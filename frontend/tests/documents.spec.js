@@ -66,11 +66,11 @@ test('upload entry points preselect document types and refresh the list', async 
  await expect(page.getByLabel('Tip dokumenta')).toHaveValue('Rešenje za operativno praćenje');
  await page.getByLabel('Fajl', { exact: true }).setInputFiles({ name: 'novi.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF') });
  await page.getByLabel('Naziv dokumenta', { exact: true }).fill('Resenje 2026');
- await page.getByLabel('Datum dokumenta', { exact: true }).fill('2026-10-11');
+ await expect(page.getByLabel('Datum dokumenta', { exact: true })).toHaveCount(0);
  await page.getByRole('button', { name: 'Sačuvaj dokument', exact: true }).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(page.getByRole('region', { name: 'Dokumenta ugovora' })).toContainText('Resenje 2026');
- expect(state.uploads[0]).toMatchObject({ id_tip_doc: 2, naziv: 'Resenje 2026', datum_dokumenta: '2026-10-11' });
+ expect(state.uploads[0]).toMatchObject({ id_tip_doc: 2, naziv: 'Resenje 2026', datum_dokumenta: '' });
  await page.getByRole('button', { name: 'Dodaj zapisnik', exact: true }).click();
  await expect(page.getByLabel('Tip dokumenta')).toHaveValue('Zapisnik');
 });
@@ -116,6 +116,15 @@ test('authenticated download and inline preview work for closed contracts withou
  await page.getByRole('button', { name: 'Pregled', exact: true }).click();
  await expect(page.getByRole('dialog', { name: 'Potpisani ugovor' })).toBeVisible();
  await expect(page.locator('iframe')).toHaveAttribute('src', /^blob:/);
+ const previewDialog = page.getByRole('dialog', { name: 'Potpisani ugovor' });
+ const original = await previewDialog.boundingBox();
+ await page.getByRole('button', { name: 'Uvećaj prozor', exact: true }).click();
+ await expect(previewDialog).toHaveClass(/is-expanded/);
+ expect((await previewDialog.boundingBox()).width).toBeGreaterThan(original.width);
+ await page.getByRole('button', { name: 'Vrati veličinu', exact: true }).click();
+ await expect(previewDialog).not.toHaveClass(/is-expanded/);
+ expect(await previewDialog.evaluate(node => getComputedStyle(node).resize)).toBe('both');
+
  await expect(page.frameLocator('iframe').locator('embed')).toBeVisible();
  await page.screenshot({ path: 'test-results/document-preview.png', fullPage: true });
  await page.getByRole('button', { name: 'Zatvori dokument' }).click();
@@ -145,4 +154,55 @@ test('missing contract type shows a toast instead of uploading under another typ
  await expect(page.getByRole('alert')).toContainText('Tip dokumenta UGOVOR nije dostupan');
  await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(state.uploads).toHaveLength(0);
+});
+
+async function dropFiles(page, names) {
+ const transfer = await page.evaluateHandle(names => {
+  const transfer = new DataTransfer();
+  for (const name of names) transfer.items.add(new File(['%PDF-1.4\n%%EOF'], name, { type: 'application/pdf' }));
+  return transfer;
+ }, names);
+ const header = page.getByRole('dialog').getByRole('heading', { name: 'Dodaj dokument' });
+ await header.dispatchEvent('dragenter', { dataTransfer: transfer });
+ await header.dispatchEvent('dragover', { dataTransfer: transfer });
+ await header.dispatchEvent('drop', { dataTransfer: transfer });
+ await transfer.dispose();
+}
+
+test('dropping on dialog selects a file and waits for save; chooser remains available', async ({ context, page }) => {
+ const state = await setup(context); await open(page);
+ await page.getByRole('button', { name: 'Dodaj ugovor', exact: true }).click();
+ await dropFiles(page, ['prevucen.pdf']);
+ await expect(page.getByLabel('Naziv dokumenta', { exact: true })).toHaveValue('prevucen.pdf');
+ expect(await page.getByLabel('Fajl', { exact: true }).evaluate(input => input.files[0].name)).toBe('prevucen.pdf');
+ expect(state.uploads).toHaveLength(0);
+ await page.getByLabel('Naziv dokumenta', { exact: true }).fill('Moj naziv');
+ await dropFiles(page, ['jedan.pdf', 'dva.pdf']);
+ await expect(page.getByRole('alert')).toContainText('Prevucite jedan dokument');
+ expect(await page.getByLabel('Fajl', { exact: true }).evaluate(input => input.files[0].name)).toBe('prevucen.pdf');
+ await page.getByLabel('Fajl', { exact: true }).setInputFiles({ name: 'izabran.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
+ await expect(page.getByLabel('Naziv dokumenta', { exact: true })).toHaveValue('Moj naziv');
+ await dropFiles(page, ['poslednji.pdf']);
+ await expect(page.getByLabel('Naziv dokumenta', { exact: true })).toHaveValue('Moj naziv');
+ await page.getByRole('button', { name: 'Sačuvaj dokument', exact: true }).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(state.uploads).toHaveLength(1);
+ expect(state.uploads[0].naziv).toBe('Moj naziv');
+});
+
+test('image preview supports zoom and fit to width', async ({ context, page }) => {
+ await setup(context, { docs: [{ id: 11, naziv: 'Slika ugovora', originalni_naziv: 'ugovor.png', mime_tip: 'image/png', velicina_bajt: 100, version: '1' }] });
+ await context.route('**/api/ugo_doc/11/sadrzaj?preview=1', route => route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') }));
+ await open(page);
+ await page.getByRole('button', { name: 'Pregled', exact: true }).click();
+ const picture = page.getByRole('img', { name: 'Slika ugovora' });
+ await expect(picture).toBeVisible();
+ const originalWidth = (await picture.boundingBox()).width;
+ await page.getByRole('button', { name: 'Uvećaj sliku', exact: true }).click();
+ expect((await picture.boundingBox()).width).toBeGreaterThan(originalWidth);
+ await expect(page.getByRole('group', { name: 'Zum slike' })).toContainText('125%');
+ await page.getByRole('button', { name: 'Prilagodi širini', exact: true }).click();
+ await expect(page.getByRole('group', { name: 'Zum slike' })).toContainText('100%');
+ await page.getByRole('button', { name: 'Zatvori dokument', exact: true }).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
 });

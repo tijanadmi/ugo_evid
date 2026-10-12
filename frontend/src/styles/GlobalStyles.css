@@ -86,3 +86,16 @@
 .contract-supplier-filter{margin:0;flex:1;max-width:700px}.contract-supplier-filter .partner-filter-controls{flex-wrap:wrap}.contract-supplier-filter input{min-width:160px}
 
 .documents-panel{margin-top:20px}.document-buttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.document-list{list-style:none;padding:0;margin:16px 0 0}.document-list>li{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding:14px 0}.document-list>li>div:first-child{min-width:0;display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}.document-list small,.document-list span{color:var(--color-grey-500)}.document-dialog{width:min(680px,calc(100% - 24px))}.document-dialog textarea{width:100%;font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px;resize:vertical}.document-preview{width:min(1000px,calc(100% - 24px))}.document-frame{width:100%;height:70vh;border:0}.document-image{display:block;max-width:100%;max-height:70vh;margin:auto;object-fit:contain}.compact-contract-heading h1>.icon-button,.operational-contacts h2>.icon-button{margin-left:12px;vertical-align:middle}@media(max-width:760px){.documents-panel .partner-heading,.document-list>li{align-items:flex-start;flex-direction:column}.document-buttons .button{white-space:normal}}
+
+.document-drop-hint{margin:0;padding:16px;border:2px dashed var(--line);border-radius:8px;overflow-wrap:anywhere}.document-drop-hint.is-dragging{border-color:#245b3e;background:#edf7f0}.document-drop-hint span{display:block;margin-top:6px;font-weight:600}
+
+.document-preview[open]{display:flex;flex-direction:column;height:85dvh;max-height:calc(100dvh - 24px);max-width:calc(100vw - 24px);min-width:min(360px,calc(100vw - 24px));min-height:min(320px,calc(100dvh - 24px));resize:both;overflow:hidden}
+.document-preview.is-expanded{width:calc(100vw - 24px);height:calc(100dvh - 24px);resize:none}
+.document-preview>.detail-header,.document-preview>.detail-footer{flex-shrink:0}
+.document-preview .detail-header{gap:12px;position:static;flex-wrap:wrap;padding:16px 20px}
+.document-preview .detail-header h2{min-width:0;overflow-wrap:anywhere;flex:1}
+.document-window-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.document-preview-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;padding:12px 20px}
+.document-preview .document-frame{flex:1;min-height:0;height:auto}
+.document-image-viewport{flex:1;min-height:0;overflow:auto;padding:12px}
+.document-image-viewport .document-image{max-width:none;max-height:none;height:auto;margin:0 auto}
