@@ -114,3 +114,6 @@
 .contract-picker-table thead tr>:first-child{z-index:3;background:#f3f5f9}
 .contract-picker>.contract-registration-form{overflow:auto;min-height:0;flex:1}
 @media(max-width:760px){.contract-picker-body{padding:12px;gap:10px}.contract-picker>.detail-header{padding:12px}.contract-picker-table .picker-subject-column{width:220px}}
+
+.contract-picker-body>.partner-filter{flex:0 0 auto}
+.contract-picker-body>.pagination .button{flex:0 0 auto;width:auto;height:auto;min-height:36px;padding:8px 12px;white-space:nowrap}

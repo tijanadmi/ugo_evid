@@ -130,11 +130,27 @@ test('picker keeps actions, filter and pagination accessible with long rows on d
  expect(await region.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
  expect(await region.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
  const nav = page.getByRole('navigation', { name: 'Stranice izbora ugovora' });
+ async function checkSpacing() {
+  const filter = await page.locator('.contract-picker-body>.partner-filter').boundingBox();
+  const table = await region.boundingBox();
+  expect(table.y - (filter.y + filter.height)).toBeLessThan(70);
+  for (const button of await nav.getByRole('button').all()) {
+   expect(await button.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+   expect((await button.boundingBox()).width).toBeGreaterThan(60);
+  }
+  const buttons = await nav.getByRole('button').all();
+  const first = await buttons[0].boundingBox(), second = await buttons[1].boundingBox();
+  expect(second.y >= first.y + first.height || second.x >= first.x + first.width).toBe(true);
+ }
+ await checkSpacing();
+ await page.screenshot({ path: 'test-results/contract-picker-desktop.png' });
  const before = await nav.boundingBox();
  await region.evaluate(node => { node.scrollTop = node.scrollHeight; });
  expect((await nav.boundingBox()).y).toBe(before.y);
  expect(before.y + before.height).toBeLessThan(768);
  await page.setViewportSize({ width: 390, height: 844 });
+ await checkSpacing();
+ await page.screenshot({ path: 'test-results/contract-picker-mobile.png' });
  await region.evaluate(node => { node.scrollTop = 0; node.scrollLeft = node.scrollWidth; });
  const action = region.getByRole('button', { name: 'Izaberi ugovor 460001', exact: true });
  const buttonBounds = await action.boundingBox();
