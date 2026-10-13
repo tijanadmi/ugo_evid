@@ -7,6 +7,10 @@ import (
 )
 
 type Store interface {
+	ListContractTypes(context.Context) ([]models.ContractType, error)
+	GetContractSettings(context.Context, int) (*models.ContractSettings, error)
+	SetContractType(context.Context, int, int, int64, int, int) error
+	CreateMaintenance(context.Context, int, models.Maintenance, int, int) error
 	ListDocumentTypes(ctx context.Context) ([]models.DocumentType, error)
 	ListDocuments(ctx context.Context, contractID int) ([]models.Document, error)
 	GetDocument(ctx context.Context, id int) (*models.Document, error)

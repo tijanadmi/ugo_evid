@@ -9,6 +9,7 @@ async function setup(context, options = {}) {
     const request = route.request();
     const url = new URL(request.url());
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (url.pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
     if (url.pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
     if (url.pathname === '/api/ugo_org') return json({ total: 1, items: [{ id: 3, sifra: 'CTKS', naziv: 'Moja organizacija' }] });
     if (url.pathname === '/api/ugo_evid/otvoreni' || url.pathname === '/api/ugo_evid/zatvoreni') return json({ total: 0, items: [] });
@@ -43,6 +44,8 @@ async function openPicker(page) {
 }
 async function choose(page) {
   await page.getByRole('button', { name: 'Izaberi ugovor 460001', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Evidentiraj ugovor', exact: true })).toBeDisabled();
+  await page.getByLabel('Tip ugovora', { exact: true }).selectOption('1');
   await expect(page.getByRole('button', { name: 'Evidentiraj ugovor', exact: true })).toBeEnabled();
 }
 
@@ -62,7 +65,7 @@ test('filter, pagination and register using existing active role-1 contact', asy
   await expect(page.getByRole('form', { name: 'Unos ugovora' })).toContainText('Moja organizacija');
   await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
   await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toHaveAttribute('href', '/ugovori/detalji/55');
-  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_ugo_dob_lica: 7, contact_version: '2' }]);
+  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_tip_ugovora: 1, id_ugo_dob_lica: 7, contact_version: '2' }]);
   expect(state.filters).toContain('Oprema');
 });
 
@@ -75,7 +78,7 @@ test('new role-1 contact is sent together with contract; work position optional'
   await page.getByLabel('Email', { exact: true }).fill('novo@example.test');
   await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
   await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toBeVisible();
-  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, novo_lice: { ime: 'Novo lice', radno_mesto: '', telefon: '011 555', email: 'novo@example.test' } }]);
+  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_tip_ugovora: 1, novo_lice: { ime: 'Novo lice', radno_mesto: '', telefon: '011 555', email: 'novo@example.test' } }]);
 });
 
 test('two tabs selecting one SAP contract handle a concurrent registration', async ({ context, page }) => {

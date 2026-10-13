@@ -19,6 +19,8 @@ async function setup(context, overrides = {}) {
  await context.route('**/api/**', async route => {
   const req = route.request(), url = new URL(req.url()), method = req.method();
   const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (new URL(route.request().url()).pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
+    if (new URL(route.request().url()).pathname.endsWith('/podesavanja')) return json({ settings: {id_tip_ugovora:0,version:'1',odrzavanje:null}, document_types:[] });
   if (url.pathname.endsWith('/detalji')) return json({ id_ugo_evid: 9, id_ugo_org: 3, id_sap_dobavljac: 20, br_ugovor: '460', predmet_ugovora: 'Oprema', naziv: 'Partner', otvoren_ug: state.closed ? '' : 'X', lica_dobavljaca: [] });
   if (state.forbidden) return json({ error: 'Zabranjen pristup' }, 403);
   if (url.pathname.endsWith('/dokumenti')) {

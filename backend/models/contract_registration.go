@@ -24,6 +24,7 @@ type NewContractContact struct {
 }
 
 type RegisterContract struct {
+	TypeID         int                 `json:"id_tip_ugovora" binding:"required,min=1"`
 	ContractID     int                 `json:"id_sap_ugovor" binding:"required,min=1"`
 	ContactID      int                 `json:"id_ugo_dob_lica" binding:"min=0"`
 	ContactVersion int64               `json:"contact_version,string"`

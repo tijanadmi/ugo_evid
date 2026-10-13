@@ -32,6 +32,8 @@ func TestRegistrationTransaction(t *testing.T) {
 			released := false
 			store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
 				switch {
+				case strings.Contains(q, "FROM TED.UGO_TIP_UGOVORA"):
+					return editRows("ODRZAVANJE"), nil
 				case strings.Contains(q, "u.br_ugovor"):
 					if len(locks) != 1 {
 						t.Fatal("must lock contract before checking availability")
@@ -87,7 +89,7 @@ func TestRegistrationTransaction(t *testing.T) {
 					*a[len(a)-1].Value.(sql.Out).Dest.(*int) = 99
 				case strings.Contains(q, "INSERT INTO TED.UGO_EVID"):
 					writes = append(writes, "evidence")
-					if a[0].Value != 101 || a[1].Value != 3 || !strings.Contains(q, "'A',SYSDATE") {
+					if a[0].Value != 1 || a[1].Value != 101 || a[2].Value != 3 || !strings.Contains(q, "'A',SYSDATE") {
 						t.Fatal("wrong registration values")
 					}
 					if tc.failEvidence {
@@ -101,7 +103,7 @@ func TestRegistrationTransaction(t *testing.T) {
 				}
 				return driver.RowsAffected(1), nil
 			})
-			req := models.RegisterContract{ContractID: 101, ContactID: 7, ContactVersion: 2}
+			req := models.RegisterContract{TypeID: 1, ContractID: 101, ContactID: 7, ContactVersion: 2}
 			if tc.newContact {
 				req.ContactID = 0
 				req.ContactVersion = 0
@@ -163,6 +165,9 @@ func TestUnregisteredContractsQuery(t *testing.T) {
 
 func TestRegistrationRejectsNewContactIfAnotherRequestCreatedSLM(t *testing.T) {
 	store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
+		if strings.Contains(q, "FROM TED.UGO_TIP_UGOVORA") {
+			return editRows("ODRZAVANJE"), nil
+		}
 		if strings.Contains(q, "u.br_ugovor") {
 			return editRows(int64(101), int64(20), "1", "2026", "P", "D", "X"), nil
 		}
@@ -179,7 +184,7 @@ func TestRegistrationRejectsNewContactIfAnotherRequestCreatedSLM(t *testing.T) {
 		}
 		return driver.RowsAffected(1), nil
 	})
-	_, err := store.RegisterContract(context.Background(), models.RegisterContract{ContractID: 101, Contact: &models.NewContractContact{Ime: "Novo"}}, 3, 5)
+	_, err := store.RegisterContract(context.Background(), models.RegisterContract{TypeID: 1, ContractID: 101, Contact: &models.NewContractContact{Ime: "Novo"}}, 3, 5)
 	if !errors.Is(err, ErrContractContactChanged) || tx.committed || !tx.rolledBack {
 		t.Fatal(err)
 	}

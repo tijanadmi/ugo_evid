@@ -1,3 +1,4 @@
+import Maintenance from '../features/contracts/Maintenance';
 import Documents from '../features/documents/Documents';
 import Icon from '../ui/Icon';
 import { Link, useLocation, useParams } from 'react-router-dom';
@@ -24,6 +25,7 @@ export default function Contract() {
           <div className="contract-heading-meta"><span>SAP UGOVOR</span><span className={`status-badge ${item.otvoren_ug === 'X' ? 'open' : 'closed'}`}>{item.otvoren_ug === 'X' ? 'Otvoren ugovor' : 'Zatvoren ugovor'}</span></div>
           <h1><span>{value(item, 'br_ugovor')}</span><span className="contract-title-divider"> / </span>{value(item, 'predmet_ugovora')}{canWrite && <button className="icon-button" aria-label="Dodaj ugovor" title="Dodaj ugovor" onClick={() => upload('UGOVOR')}><Icon name="upload"/></button>}</h1>
         </div>
+        <Maintenance key={item.id_ugo_evid} item={item}/>
         <ContractDetails item={item} onUploadResolution={canWrite ? () => upload('RESENJE') : null}/>
       </>}</Documents>}
   </>;

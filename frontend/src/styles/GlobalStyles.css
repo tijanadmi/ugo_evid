@@ -117,3 +117,5 @@
 
 .contract-picker-body>.partner-filter{flex:0 0 auto}
 .contract-picker-body>.pagination .button{flex:0 0 auto;width:auto;height:auto;min-height:36px;padding:8px 12px;white-space:nowrap}
+
+.maintenance-panel{margin:16px 0}.maintenance-panel>p{margin:12px 0}.maintenance-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px}.maintenance-summary dt{color:var(--muted);font-size:12px}.maintenance-summary dd{margin:6px 0 0}

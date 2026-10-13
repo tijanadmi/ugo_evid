@@ -35,16 +35,17 @@ func (s *registrationStore) RegisterContract(_ context.Context, r models.Registe
 }
 
 func TestRegisterContractAPI(t *testing.T) {
-	existing := `{"id_sap_ugovor":101,"id_ugo_dob_lica":7,"contact_version":"2","id_ugo_org":999,"user_id":999,"id_sap_dobavljac":999}`
+	existing := `{"id_sap_ugovor":101,"id_tip_ugovora":1,"id_ugo_dob_lica":7,"contact_version":"2","id_ugo_org":999,"user_id":999,"id_sap_dobavljac":999}`
 	for _, tc := range []struct {
 		name, body      string
 		orgErr, failure error
 		status, calls   int
 	}{
+		{"missing type", strings.Replace(existing, `,"id_tip_ugovora":1`, "", 1), nil, nil, 400, 0},
 		{"existing contact", existing, nil, nil, 201, 1},
-		{"new contact", `{"id_sap_ugovor":101,"novo_lice":{"ime":" Ana ","telefon":"011","email":"ana@example.test"}}`, nil, nil, 201, 1},
-		{"missing phone", `{"id_sap_ugovor":101,"novo_lice":{"ime":"Ana","email":"ana@example.test"}}`, nil, nil, 400, 0},
-		{"bad email", `{"id_sap_ugovor":101,"novo_lice":{"ime":"Ana","telefon":"011","email":"invalid"}}`, nil, nil, 400, 0},
+		{"new contact", `{"id_sap_ugovor":101,"id_tip_ugovora":1,"novo_lice":{"ime":" Ana ","telefon":"011","email":"ana@example.test"}}`, nil, nil, 201, 1},
+		{"missing phone", `{"id_sap_ugovor":101,"id_tip_ugovora":1,"novo_lice":{"ime":"Ana","email":"ana@example.test"}}`, nil, nil, 400, 0},
+		{"bad email", `{"id_sap_ugovor":101,"id_tip_ugovora":1,"novo_lice":{"ime":"Ana","telefon":"011","email":"invalid"}}`, nil, nil, 400, 0},
 		{"no organization", existing, repository.ErrUserOrganization, nil, 403, 0},
 		{"duplicate", existing, nil, repository.ErrContractRegistered, 409, 1},
 		{"active editor", existing, nil, repository.ErrContactLocked, 423, 1},

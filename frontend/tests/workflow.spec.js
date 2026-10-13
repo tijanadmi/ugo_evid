@@ -25,6 +25,8 @@ async function mockAPI(page, options = {}) {
     const url = new URL(req.url());
     calls.push(url);
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+    if (new URL(route.request().url()).pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
+    if (new URL(route.request().url()).pathname.endsWith('/podesavanja')) return json({ settings: {id_tip_ugovora:0,version:'1',odrzavanje:null}, document_types:[] });
     if (new URL(req.url()).pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
     if (url.pathname === '/api/users/login') {
       if (req.postDataJSON().password === 'wrong') return json({ error: 'neuspesna prijava' }, 401);

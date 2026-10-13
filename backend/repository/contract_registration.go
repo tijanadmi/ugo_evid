@@ -149,6 +149,9 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 		return nil, err
 	}
 	defer tx.Rollback()
+	if _, err = activeContractType(ctx, tx, req.TypeID); err != nil {
+		return nil, err
+	}
 	random := make([]byte, 32)
 	if _, err = rand.Read(random); err != nil {
 		return nil, err
@@ -223,8 +226,8 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 		return nil, ErrContractContactRequired
 	}
 	result := &models.UgoEvid{SapUgovor: models.SapUgovor{ID: req.ContractID}, UgoOrg: models.UgoOrg{ID: orgID}, UgoDobLice: models.UgoDobLice{ID: person.ID}, Ime: person.Ime, Telefon: person.Telefon, Email: person.Email, Status: "A"}
-	_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_EVID (id_sap_ugovor,id_ugo_org,ime,telefon,email,status,datpri,id_ugo_dob_lica)
- VALUES (:contract,:org,:ime,:telefon,:email,'A',SYSDATE,:person) RETURNING id INTO :new_id`, sql.Named("contract", req.ContractID), sql.Named("org", orgID), sql.Named("ime", person.Ime), sql.Named("telefon", person.Telefon), sql.Named("email", person.Email), sql.Named("person", person.ID), sql.Named("new_id", sql.Out{Dest: &result.ID}))
+	_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_EVID (id_sap_ugovor,id_ugo_org,ime,telefon,email,status,datpri,id_ugo_dob_lica,id_tip_ugovora)
+ VALUES (:contract,:org,:ime,:telefon,:email,'A',SYSDATE,:person,:type_id) RETURNING id INTO :new_id`, sql.Named("type_id", req.TypeID), sql.Named("contract", req.ContractID), sql.Named("org", orgID), sql.Named("ime", person.Ime), sql.Named("telefon", person.Telefon), sql.Named("email", person.Email), sql.Named("person", person.ID), sql.Named("new_id", sql.Out{Dest: &result.ID}))
 	if err != nil {
 		if strings.Contains(err.Error(), "ORA-00001") {
 			return nil, ErrContractRegistered

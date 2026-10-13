@@ -68,6 +68,10 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/ugo_evid/:id/detalji", server.GetUgoEvidProsireni)
 
 	// Documents are served through authenticated endpoints, never static files.
+	authRoutes.GET("/ugo_tip_ugovora", server.ListContractTypes)
+	authRoutes.GET("/ugo_evid/:id/podesavanja", server.GetContractSettings)
+	authRoutes.PUT("/ugo_evid/:id/tip", server.SetContractType)
+	authRoutes.POST("/ugo_evid/:id/odrzavanje", server.CreateMaintenance)
 	authRoutes.GET("/ugo_evid/:id/dokumenti", server.ListDocuments)
 	authRoutes.POST("/ugo_evid/:id/dokumenti", server.UploadDocument)
 	authRoutes.GET("/ugo_doc/:id", server.GetDocument)
