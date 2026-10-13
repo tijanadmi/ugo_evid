@@ -7,6 +7,8 @@ import (
 )
 
 type Store interface {
+	MaintenanceLock(context.Context, int, int, int, string, string) (*models.EditLock, error)
+	UpdateMaintenance(context.Context, int, models.Maintenance, int, int) error
 	ListContractTypes(context.Context) ([]models.ContractType, error)
 	GetContractSettings(context.Context, int) (*models.ContractSettings, error)
 	SetContractType(context.Context, int, int, int64, int, int) error

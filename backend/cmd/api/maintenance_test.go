@@ -31,9 +31,10 @@ func TestCreateMaintenanceAPI(t *testing.T) {
 		failure         error
 		status, writes  int
 	}{
+		{name: "fractional hours", body: strings.Replace(valid, `"id_teh_tip_doc":5`, `"id_teh_tip_doc":5,"fondovi":[{"id_vrsta_rada":1,"ugovoreno_casova":1.5}]`, 1), status: 400},
 		{name: "valid", body: valid, status: 201, writes: 1},
 		{name: "custom periods", body: strings.Replace(valid, `"teh_period_meseci":3`, `"teh_period_meseci":null`, 1), status: 201, writes: 1},
-		{name: "bad dates", body: strings.Replace(valid, "2026-12-31", "2025-12-31", 1), status: 400},
+		{name: "invalid override", body: strings.Replace(valid, `"datum_potpisa":"2026-01-01"`, `"pocetak_odrzavanja":"bad"`, 1), status: 400},
 		{name: "fractional months", body: strings.Replace(valid, `"teh_period_meseci":3`, `"teh_period_meseci":1.5`, 1), status: 400},
 		{name: "negative reminder", body: strings.Replace(valid, `"teh_podsetnik_dana":7`, `"teh_podsetnik_dana":-1`, 1), status: 400},
 		{name: "foreign", body: valid, foreign: true, status: 403},
@@ -94,6 +95,58 @@ func TestSetContractTypeAPI(t *testing.T) {
 			server.router.ServeHTTP(rec, req)
 			if rec.Code != tc.status || store.writes != tc.writes {
 				t.Fatalf("status=%d writes=%d body=%s", rec.Code, store.writes, rec.Body.String())
+			}
+		})
+	}
+}
+
+func (s *maintenanceTestStore) UpdateMaintenance(_ context.Context, id int, m models.Maintenance, org, user int) error {
+	s.writes++
+	if id != 9 || org != 3 || user != 7 || m.Version != 2 || m.Token != strings.Repeat("a", 64) {
+		panic("incorrect update ownership")
+	}
+	return s.failure
+}
+func (s *maintenanceTestStore) MaintenanceLock(_ context.Context, id, org, user int, action, token string) (*models.EditLock, error) {
+	s.writes++
+	if id != 9 || org != 3 || user != 7 {
+		panic("incorrect lease identity")
+	}
+	return &models.EditLock{Token: strings.Repeat("a", 64)}, s.failure
+}
+func TestMaintenanceEditEndpoints(t *testing.T) {
+	body := `{"version":"2","lock_token":"` + strings.Repeat("a", 64) + `","id_teh_tip_doc":5,"teh_period_meseci":3}`
+	for _, tc := range []struct {
+		name, method, path, body string
+		foreign, closed          bool
+		failure                  error
+		status, writes           int
+	}{
+		{name: "update", method: "PUT", path: "/odrzavanje", body: body, status: 200, writes: 1},
+		{name: "missing lease", method: "PUT", path: "/odrzavanje", body: `{"id_teh_tip_doc":5,"version":"2"}`, status: 400},
+		{name: "wrong owner", method: "PUT", path: "/odrzavanje", body: body, foreign: true, status: 403},
+		{name: "lost lease", method: "PUT", path: "/odrzavanje", body: body, failure: repository.ErrMaintenanceLease, status: 409, writes: 1},
+		{name: "acquire", method: "POST", path: "/odrzavanje/lock", status: 200, writes: 1},
+		{name: "locked", method: "POST", path: "/odrzavanje/lock", failure: repository.ErrMaintenanceLocked, status: 423, writes: 1},
+		{name: "closed acquire", method: "POST", path: "/odrzavanje/lock", closed: true, status: 409},
+		{name: "release closed", method: "DELETE", path: "/odrzavanje/lock", body: body, closed: true, status: 200, writes: 1},
+		{name: "renew", method: "PUT", path: "/odrzavanje/lock", body: body, status: 200, writes: 1},
+		{name: "bad release token", method: "DELETE", path: "/odrzavanje/lock", body: `{"lock_token":"bad"}`, status: 400},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &maintenanceTestStore{documentTestStore: documentTestStore{foreign: tc.foreign, closed: tc.closed}, failure: tc.failure}
+			server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32), ActiveUserStatus: "A"}, store)
+			if err != nil {
+				t.Fatal(err)
+			}
+			access, _, _ := server.tokenMaker.CreateToken("test.user", "user", time.Minute)
+			req := httptest.NewRequest(tc.method, "/ugo_evid/9"+tc.path, strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+access)
+			rec := httptest.NewRecorder()
+			server.router.ServeHTTP(rec, req)
+			if rec.Code != tc.status || store.writes != tc.writes {
+				t.Fatalf("status=%d calls=%d body=%s", rec.Code, store.writes, rec.Body.String())
 			}
 		})
 	}

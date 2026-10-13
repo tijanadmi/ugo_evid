@@ -1,3 +1,5 @@
+> Naknadna dorada: pogledati maintenance_edit.md i izvrsiti maintenance_edit.sql posle ove pocetne migracije. Ona uvodi SAP datume, izmenu sa zakljucavanjem i fondove razvojnih casova.
+
 # Tip ugovora i osnovni podaci odrzavanja
 
 ## Instalacija
