@@ -21,7 +21,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
  const query=useQuery({queryKey:['maintenance-tracking',user.username,id],queryFn:({signal})=>api(`/ugo_evid/${id}/pracenje`,{signal}),retry:false,refetchInterval:30000,refetchOnWindowFocus:true});
  const documents=useQuery({queryKey:['documents',user.username,id],queryFn:({signal})=>api(`/ugo_evid/${id}/dokumenti`,{signal}),retry:false});
  const data=query.data,canWrite=item.otvoren_ug==='X' && !!data && !query.error;
- async function open(kind,row,generate=false,remove=false){
+ async function open(kind,row,generate=false,remove=false,completed=false){
   if(pending.current || editor)return;pending.current=true;setBusy(true);setBlocked(false);
   try {
    const session=await owner.acquire(id,'edit');if(!session)return;
@@ -29,7 +29,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
    const source=row?fresh[kind].find(x=>x.id===row.id):null;if(row && !source)throw new Error('Slog više nije dostupan.');
    if(remove && source?.status!=='PLANIRAN')throw new Error('Samo period sa statusom Planiran može da se obriše.');
    const current=session.person.settings;
-   setEditor({kind,generate,remove,mode:[1,3,6,12].includes(current.odrzavanje.teh_period_meseci)?'calendar':'anchor',preview:null,settings:current,row:source||{...empty,status:kind==='periodi'?'PLANIRAN':'NACRT',id_tip_doc:current.odrzavanje.id_teh_tip_doc}});
+   setEditor({kind,generate,remove,mode:[1,3,6,12].includes(current.odrzavanje.teh_period_meseci)?'calendar':'anchor',preview:null,settings:current,row:source||{...empty,status:kind==='periodi'?'PLANIRAN':completed?'ZAVRSEN':'NACRT',id_tip_doc:current.odrzavanje.id_teh_tip_doc}});
   }catch(e){toast.error(e.message);await owner.release();}finally{pending.current=false;setBusy(false);}
  }
  function change(key,value){setEditor(s=>({...s,row:{...s.row,[key]:value}}));}
@@ -66,7 +66,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
     <h3>Razvojna podrška</h3>
     <div className="tracking-table"><table><thead><tr><th>Vrsta rada</th><th>Ugovoreno</th><th>Zauzeto / utrošeno</th><th>Preostalo</th></tr></thead><tbody>{data.fondovi.map(f=><tr key={f.id_vrsta_rada}><td>{f.naziv}</td><td>{f.ugovoreno}</td><td>{f.zauzeto}</td><td>{f.preostalo}</td></tr>)}</tbody></table></div>
     <p className="muted">Nacrt i otkazan zahtev ne zauzimaju časove. Završeni zahtevi ostaju u obračunu.</p>
-    {canWrite && <button className="button" disabled={busy || !data.fondovi.length} onClick={()=>open('zahtevi')}>Dodaj razvojni zahtev</button>}
+    {canWrite && <div className="tracking-actions"><button className="button" disabled={busy || !data.fondovi.length} onClick={()=>open('zahtevi')}>Dodaj razvojni zahtev</button><button className="button" disabled={busy || !data.fondovi.length} onClick={()=>open('zahtevi',null,false,false,true)}>Unesi završen zahtev</button></div>}
     <div className="tracking-table"><table><thead><tr><th>Radnja</th><th>Zahtev / datum</th><th>Vrsta rada</th><th>Časovi / radni dani</th><th>Potpisati pre</th><th>Status</th></tr></thead><tbody>{data.zahtevi.map(p=><tr key={p.id}><td>{canWrite && <button className="button" disabled={busy} onClick={()=>open('zahtevi',p)}>Izmeni zahtev</button>}</td><td>{p.broj_zahteva}<br/>{p.datum_zahteva}</td><td>{settings.vrste_rada.find(w=>w.id===p.id_vrsta_rada)?.naziv}</td><td>{p.broj_casova} / {p.rok_radnih_dana}</td><td>{p.rok}</td><td>{labels[p.status]}</td></tr>)}</tbody></table></div>
     {!data.zahtevi.length && <p>Nema evidentiranih razvojnih zahteva.</p>}
    </>}
@@ -101,6 +101,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
      </>}
      <label>Status<select aria-label="Status" value={editor.row.status} onChange={e=>change('status',e.target.value)}>{(editor.kind==='periodi'?['PLANIRAN','PRIPREMA','NA_POTPISU','ZAVRSEN','OTKAZAN']:['NACRT','PODNET','U_RADU','NA_POTPISU','ZAVRSEN','OTKAZAN']).map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>
      <label>Datum potpisa<input required={editor.row.status==='ZAVRSEN'} type="date" value={editor.row.datum_potpisa} onChange={e=>change('datum_potpisa',e.target.value)}/></label>
+     {editor.kind==='zahtevi' && editor.row.status==='ZAVRSEN' && <p>Unesite originalni datum zahteva i datum potpisa završnog zapisnika. Časovi ulaze u utrošeni fond. Za izračunavanje roka potreban je potvrđen radni kalendar za taj period.</p>}
      {docSelect('id_ugo_doc','Potvrda / zapisnik')}
      <p className="muted">Dokument prvo dodajte u odeljku Dokumenta ugovora, zatim ga ovde povežite.</p>
      <label>Napomena<textarea maxLength={2000} value={editor.row.napomena} onChange={e=>change('napomena',e.target.value)}/></label>

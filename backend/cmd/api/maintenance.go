@@ -1,9 +1,11 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 	"github.com/tijanadmi/ugo_evid/models"
 	"github.com/tijanadmi/ugo_evid/repository"
 )
@@ -20,8 +22,15 @@ func maintenanceError(c *gin.Context, err error) {
 		c.JSON(400, gin.H{"error": err.Error()})
 	case errors.Is(err, repository.ErrRegistrationBusy):
 		c.JSON(423, gin.H{"error": err.Error()})
+	case errors.Is(err, sql.ErrNoRows):
+		c.JSON(404, gin.H{"error": "Ugovor ili podaci odrzavanja nisu pronadjeni."})
+	case errors.Is(err, repository.ErrUserOrganization):
+		c.JSON(403, gin.H{"error": err.Error()})
+	case errors.Is(err, repository.ErrDocumentClosed):
+		c.JSON(409, gin.H{"error": err.Error()})
 	default:
-		documentError(c, err)
+		log.Error().Err(err).Str("path", c.FullPath()).Msg("maintenance operation failed")
+		c.JSON(500, gin.H{"error": "Operacija nad podacima odrzavanja nije uspela. Administrator treba da proveri serverski log."})
 	}
 }
 func (s *Server) ListContractTypes(c *gin.Context) {

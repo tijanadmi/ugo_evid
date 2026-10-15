@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"github.com/tijanadmi/ugo_evid/models"
 	"github.com/tijanadmi/ugo_evid/repository"
 	"github.com/tijanadmi/ugo_evid/util"
@@ -27,6 +28,7 @@ func TestTrackingAPI(t *testing.T) {
 		status, writes  int
 	}{
 		{name: "authorized", body: body, status: 200, writes: 1},
+		{name: "internal failure", body: body, failure: errors.New("ORA-01745 internal details"), status: 500, writes: 1},
 		{name: "fractional", body: strings.Replace(body, ":20", ":1.5", 1), status: 400},
 		{name: "no lease", body: `{"items":[]}`, status: 400},
 		{name: "foreign", body: body, foreign: true, status: 403},
@@ -47,6 +49,9 @@ func TestTrackingAPI(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			server.router.ServeHTTP(rec, req)
+			if rec.Code == 500 && (strings.Contains(rec.Body.String(), "dokumentom") || strings.Contains(rec.Body.String(), "ORA-01745") || !strings.Contains(rec.Body.String(), "odrzavanja")) {
+				t.Fatalf("misleading or exposed internal error: %s", rec.Body.String())
+			}
 			if rec.Code != tc.status || store.writes != tc.writes {
 				t.Fatalf("%d %s writes %d", rec.Code, rec.Body.String(), store.writes)
 			}

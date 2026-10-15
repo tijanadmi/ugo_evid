@@ -56,6 +56,7 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		lease, overlap, used                               int64
 		stale, foreign, closed, missingCalendar, failWrite bool
 		status                                             string
+		signed                                             string
 		want                                               error
 	}{
 		{name: "delete planned period", kind: "obrisi-period", lease: 1},
@@ -70,6 +71,9 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		{name: "expired or foreign lease", kind: "periodi", status: "PLANIRAN", want: ErrMaintenanceLease},
 		{name: "stale period", kind: "periodi", lease: 1, stale: true, status: "PLANIRAN", want: ErrMaintenanceConflict},
 		{name: "request reserve", kind: "zahtevi", lease: 1, used: 80, status: "PODNET"},
+		{name: "completed historical request", kind: "zahtevi", lease: 1, used: 80, status: "ZAVRSEN", signed: "2026-01-05"},
+		{name: "completed request consumes fund", kind: "zahtevi", lease: 1, used: 81, status: "ZAVRSEN", signed: "2026-01-05", want: ErrTrackingFunds},
+		{name: "completed request requires signature", kind: "zahtevi", lease: 1, status: "ZAVRSEN", want: ErrTrackingInput},
 		{name: "fund exhausted", kind: "zahtevi", lease: 1, used: 81, status: "PODNET", want: ErrTrackingFunds},
 		{name: "draft does not reserve", kind: "zahtevi", lease: 1, used: 100, status: "NACRT"},
 		{name: "cancel frees hours", kind: "zahtevi", lease: 1, used: 100, status: "OTKAZAN"},
@@ -129,6 +133,9 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				if tc.kind == "zahtevi" && !fundLocked {
 					return nil, fmt.Errorf("fund not locked")
 				}
+				if tc.kind == "zahtevi" && (strings.Contains(q, ":number") || !strings.Contains(q, ":request_number")) {
+					return nil, fmt.Errorf("unsafe Oracle request number bind")
+				}
 				if tc.kind == "obrisi-period" && (!strings.Contains(q, "status='PLANIRAN'") || !strings.Contains(q, "version=:version") || !strings.Contains(q, "id_odrzavanja=:mid")) {
 					return nil, fmt.Errorf("unguarded period delete")
 				}
@@ -139,6 +146,7 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				return driver.RowsAffected(1), nil
 			})
 			p := models.TrackingItem{Start: "2026-01-01", End: "2026-01-31", DocumentType: 5, Status: tc.status, WorkType: 1, Number: "Z-1", Requested: "2026-01-05", Days: 1, Hours: 20}
+			p.Signed = tc.signed
 			if tc.stale || tc.kind == "obrisi-period" {
 				p.ID = 2
 				p.Version = 1

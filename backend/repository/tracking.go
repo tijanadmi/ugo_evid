@@ -291,13 +291,13 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	if p.Signed != "" && (p.Signed < p.Requested || p.Signed >= deadline) {
 		return ErrTrackingInput
 	}
-	args := []any{sql.Named("fid", fid), sql.Named("number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("request_doc", p.RequestDocument), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
+	args := []any{sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("request_doc", p.RequestDocument), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
 	if p.ID == 0 {
-		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(:fid,:number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),NULLIF(:request_doc,0),:status,:note,:user_id)`, args...)
+		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),NULLIF(:request_doc,0),:status,:note,:user_id)`, args...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
-	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET id_raz_fonda=:fid,broj_zahteva=:number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),id_zahtev_doc=NULLIF(:request_doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version`, args...)
+	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET id_raz_fonda=:fid,broj_zahteva=:request_number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),id_zahtev_doc=NULLIF(:request_doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version`, args...)
 	if e != nil {
 		return e
 	}

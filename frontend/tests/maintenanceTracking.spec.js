@@ -33,6 +33,25 @@ async function setup(context,extra={}){
 }
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('heading',{name:'Praćenje održavanja'})).toBeVisible();}
 
+test('records a completed development request with its original dates',async({page,context})=>{
+ const state=await setup(context);await open(page);
+ await page.getByRole('button',{name:'Unesi završen zahtev'}).click();
+ await expect(page.getByLabel('Status',{exact:true})).toHaveValue('ZAVRSEN');
+ await page.getByLabel('Broj zahteva',{exact:true}).fill('R-OLD-1');
+ await page.getByLabel('Datum zahteva',{exact:true}).fill('2026-01-20');
+ await page.getByLabel('Vrsta rada',{exact:true}).selectOption('1');
+ await page.getByLabel('Broj časova',{exact:true}).fill('20');
+ await page.getByLabel('Rok u radnim danima').fill('15');
+ await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
+ expect(state.writes).toHaveLength(0);
+ await expect(page.getByLabel('Datum potpisa',{exact:true})).toHaveAttribute('required','');
+ await page.getByLabel('Datum potpisa',{exact:true}).fill('2026-01-30');
+ await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(state.writes[0].items[0]).toMatchObject({status:'ZAVRSEN',datum_zahteva:'2026-01-20',datum_potpisa:'2026-01-30',broj_casova:20});
+ await expect(page.locator('.tracking-table').filter({hasText:'R-OLD-1'})).toContainText('Završen');
+});
+
 test('generation previews before saving and displays reminders and contracted work only',async({page,context})=>{
  const state=await setup(context);await open(page);
  await expect(page.locator('.maintenance-summary')).not.toContainText('Konsultant');
