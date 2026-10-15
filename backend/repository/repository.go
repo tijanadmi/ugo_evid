@@ -7,6 +7,10 @@ import (
 )
 
 type Store interface {
+	GetTracking(context.Context, int) (*models.TrackingData, error)
+	PreviewPeriods(context.Context, int, string) ([]models.TrackingItem, error)
+	SaveTracking(context.Context, int, int, int, string, models.TrackingChange) error
+	ListReminders(context.Context, int) ([]models.Reminder, error)
 	MaintenanceLock(context.Context, int, int, int, string, string) (*models.EditLock, error)
 	UpdateMaintenance(context.Context, int, models.Maintenance, int, int) error
 	ListContractTypes(context.Context) ([]models.ContractType, error)

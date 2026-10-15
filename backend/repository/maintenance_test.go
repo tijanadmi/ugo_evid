@@ -134,6 +134,10 @@ func TestMaintenanceUpdateAtomicFunds(t *testing.T) {
 			store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
 				checkBinds(t, q, a)
 				switch {
+				case strings.Contains(q, "FROM TED.UGO_TEH_PERIOD"):
+					return editRows(int64(0)), nil
+				case strings.Contains(q, "FROM TED.UGO_RAZ_FOND f JOIN TED.UGO_RAZ_ZAHTEV"):
+					return &schemaRows{width: 4}, nil
 				case strings.Contains(q, "FROM TED.UGO_EVID WHERE"):
 					if !strings.Contains(q, "FOR UPDATE NOWAIT") {
 						t.Fatal("missing parent lock")

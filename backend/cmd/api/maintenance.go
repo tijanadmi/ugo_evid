@@ -10,6 +10,8 @@ import (
 
 func maintenanceError(c *gin.Context, err error) {
 	switch {
+	case errors.Is(err, repository.ErrTrackingInput), errors.Is(err, repository.ErrTrackingCalendar), errors.Is(err, repository.ErrTrackingFunds), errors.Is(err, repository.ErrTrackingDependencies):
+		c.JSON(400, gin.H{"error": err.Error()})
 	case errors.Is(err, repository.ErrMaintenanceLocked):
 		c.JSON(423, gin.H{"error": err.Error()})
 	case errors.Is(err, repository.ErrMaintenanceLease), errors.Is(err, repository.ErrMaintenanceVersion), errors.Is(err, repository.ErrMaintenanceConflict):

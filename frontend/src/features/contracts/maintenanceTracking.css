@@ -1,0 +1,10 @@
+.maintenance-tracking { margin-top: 1.5rem; display: grid; gap: 1rem; min-width: 0; }
+.tracking-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+.tracking-table { overflow:auto; max-height:28rem; min-width:0; }
+.tracking-table table { width:100%; border-collapse:collapse; table-layout:auto; }
+.tracking-table th,.tracking-table td { padding:.65rem; text-align:left; vertical-align:top; border-bottom:1px solid var(--color-grey-200,#ddd); overflow-wrap:anywhere; }
+.tracking-table th { position:sticky; top:0; background:var(--color-grey-0,#fff); }
+.tracking-table .button { width:auto; min-width:max-content; }
+.tracking-preview { max-height:18rem; overflow:auto; }
+.tracking-editor fieldset { min-width:0; }
+.tracking-editor textarea { width:100%; min-height:5rem; }

@@ -6,6 +6,8 @@ async function setup(context, overrides = {}) {
  await context.route('**/api/**', async route => {
   const req = route.request(), path = new URL(req.url()).pathname;
   const json = (body,status=200) => route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+    if(new URL(route.request().url()).pathname.endsWith('/podsetnici')) return json({items:[]});
+    if(new URL(route.request().url()).pathname.endsWith('/pracenje')) return json({periodi:[],zahtevi:[],fondovi:[]});
   if(path.endsWith('/detalji')) return json({id_ugo_evid:9,id_ugo_org:3,br_ugovor:'460',predmet_ugovora:'Odrzavanje',otvoren_ug:state.closed?'':'X',lica_dobavljaca:[]});
   if(path.endsWith('/ugo_tip_ugovora')) return json({items:[{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'},{id:2,sifra:'LICENCE',naziv:'Licence'}]});
   if(path.endsWith('/dokumenti')) return json({items:[],types:[]});

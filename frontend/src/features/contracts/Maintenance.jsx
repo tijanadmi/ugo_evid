@@ -1,3 +1,4 @@
+import MaintenanceTracking from './MaintenanceTracking';
 import { useContactSession } from '../partners/useContactSession';
 import { maintenanceService } from './maintenanceAPI';
 import { useRef, useState } from 'react';
@@ -78,7 +79,7 @@ export default function Maintenance({ item }) {
    {maintenance && <dl className="maintenance-summary">
     <div><dt>Početak održavanja / kraj ugovora</dt><dd>{maintenance.pocetak_odrzavanja || settings.sap_pocetak || 'Nedostaje u SAP-u'} / {settings.sap_kraj || 'Nedostaje u SAP-u'}</dd></div>
     {(maintenance.datum_potpisa || maintenance.datum_kraja) && <div><dt>Ranije uneti datumi (za proveru)</dt><dd>{maintenance.datum_potpisa || '—'} / {maintenance.datum_kraja || '—'}</dd></div>}
-    {maintenance.ima_razvojnu_podrsku && settings.vrste_rada?.map(type=><div key={type.id}><dt>{type.naziv} — ugovoreni časovi</dt><dd>{maintenance.fondovi?.find(f=>f.id_vrsta_rada===type.id)?.ugovoreno_casova||0}</dd></div>)}
+    {maintenance.ima_razvojnu_podrsku && settings.vrste_rada?.filter(type=>maintenance.fondovi?.some(f=>f.id_vrsta_rada===type.id && f.ugovoreno_casova>0)).map(type=><div key={type.id}><dt>{type.naziv} — ugovoreni časovi</dt><dd>{maintenance.fondovi?.find(f=>f.id_vrsta_rada===type.id)?.ugovoreno_casova||0}</dd></div>)}
     <div><dt>Podrška</dt><dd>{maintenance.ima_razvojnu_podrsku ? 'Tehnička i razvojna' : 'Tehnička'}</dd></div>
     <div><dt>Period tehničke podrške</dt><dd>{maintenance.teh_period_meseci ? `${maintenance.teh_period_meseci} meseci` : 'Posebno ugovoreni periodi'}</dd></div>
     <div><dt>Dokument tehničke podrške</dt><dd>{query.data.document_types?.find(type => type.id === maintenance.id_teh_tip_doc)?.naziv || 'Neaktivan tip dokumenta'}</dd></div>
@@ -87,6 +88,7 @@ export default function Maintenance({ item }) {
    </dl>}
    {canWrite && maintenance && <button className="button" disabled={busy} onClick={()=>start('edit')}>Izmeni održavanje</button>}
   </>}
+  {maintenance && <MaintenanceTracking item={item} settings={settings} documentTypes={query.data.document_types || []}/>}
   {editor && <DocumentDialog title={editor.mode === 'type' ? 'Tip ugovora' : editor.mode === 'edit' ? 'Izmena održavanja' : 'Unos održavanja'} onClose={close} busy={busy}>
    <form className="contact-editor" aria-label="Podešavanja ugovora" onSubmit={submit}><fieldset disabled={busy || blocked || owner.lost}>
     {editor.mode === 'type' ? <label>Tip ugovora<select aria-label="Tip ugovora" required value={editor.id_tip_ugovora} onChange={e => change('id_tip_ugovora', e.target.value)}><option value="">Izaberite tip</option>{types.data?.items?.map(type => <option key={type.id} value={type.id}>{type.naziv}</option>)}</select></label> : <>

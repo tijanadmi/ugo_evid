@@ -235,6 +235,9 @@ func (r *OracleStore) saveMaintenance(ctx context.Context, id int, m models.Main
 		if version != m.Version {
 			return ErrMaintenanceConflict
 		}
+		if err = validateTrackingSettings(ctx, tx, maintenanceID, start, end, m); err != nil {
+			return err
+		}
 		_, err = tx.ExecContext(ctx, `UPDATE TED.UGO_ODRZAVANJE SET pocetak_odrzavanja=TO_DATE(:start_date,'YYYY-MM-DD'),ima_razvojnu_podrsku=:development,teh_period_meseci=:months,id_teh_tip_doc=:doc_type,teh_podsetnik_dana=:tech_reminder,raz_podsetnik_dana=:dev_reminder,id_korisnika_izmene=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id_ugo_evid=:id`, args...)
 	} else {
 		args = append(args, sql.Named("new_id", sql.Out{Dest: &maintenanceID}))
