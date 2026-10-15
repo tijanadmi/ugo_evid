@@ -1,3 +1,4 @@
+import WorkCalendar from './pages/WorkCalendar';
 import AppToaster from './ui/AppToaster';
 import DataSync from './services/DataSync';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
@@ -20,6 +21,7 @@ export default function App() { return (<QueryClientProvider client={queryClient
     <Route element={<ProtectedRoute/>}>
       <Route element={<PortalLayout/>}><Route index element={<Portal/>}/></Route>
       <Route path="/ugovori" element={<WorkspaceLayout/>}>
+        <Route path="radni-kalendar" element={<WorkCalendar/>}/>
         <Route path="partneri" element={<Partners/>}/>
         <Route path="detalji/:id" element={<Contract/>}/>
         <Route index element={<Navigate to="otvoreni" replace/>}/>

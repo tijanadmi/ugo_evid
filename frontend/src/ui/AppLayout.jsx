@@ -27,6 +27,7 @@ export function WorkspaceLayout() {
         <NavLink to="/ugovori/otvoreni" onClick={() => setMenuOpen(false)}><Icon name="open"/>Otvoreni ugovori</NavLink>
         <NavLink to="/ugovori/zatvoreni" onClick={() => setMenuOpen(false)}><Icon name="closed"/>Zatvoreni ugovori</NavLink>
         <NavLink to="/ugovori/partneri" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Moji partneri</NavLink>
+        <NavLink to="/ugovori/radni-kalendar" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Radni kalendar</NavLink>
       </nav>
       <div className="sidebar-bottom"><Link to="/" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Portal aplikacija</Link><small>Evidencija ugovora · 1.0</small></div>
     </aside>

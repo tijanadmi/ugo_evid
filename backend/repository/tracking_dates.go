@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"github.com/tijanadmi/ugo_evid/models"
 	"time"
 )
@@ -9,7 +10,7 @@ import (
 var ErrPeriodDelete = errors.New("Period nije obrisan: samo nepromenjen period sa statusom Planiran moze da se obrise. Osvezite podatke.")
 
 var ErrTrackingInput = errors.New("Proverite datume, status, dokument i ugovorene casove. Periodi ne smeju da se preklapaju.")
-var ErrTrackingCalendar = errors.New("Nedostaju odobreni datumi u UGO_RADNI_KALENDAR. Dopunite kalendar radnih dana i praznika.")
+var ErrTrackingCalendar = errors.New("Otvorite Radni kalendar, dopunite potrebne datume i potvrdite godinu.")
 var ErrTrackingFunds = errors.New("Zahtev prekoracuje preostale casove ove vrste rada ili fond nije ugovoren.")
 var ErrTrackingDependencies = errors.New("Postojeci periodi ili zahtevi nisu uskladjeni sa novim datumima ili fondom casova.")
 
@@ -68,7 +69,7 @@ func requestDeadline(start string, days int, calendar map[string]bool) (string, 
 		key := d.Format("2006-01-02")
 		work, ok := calendar[key]
 		if !ok {
-			return "", ErrTrackingCalendar
+			return "", fmt.Errorf("Kalendar za %d. godinu nije pripremljen ili potvrdjen (datum %s). %w", d.Year(), key, ErrTrackingCalendar)
 		}
 		if work {
 			days--

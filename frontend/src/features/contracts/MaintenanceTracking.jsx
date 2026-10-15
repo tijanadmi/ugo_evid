@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import RowMenu from '../../ui/RowMenu';
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -95,6 +96,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
       <label>Broj časova<input required type="number" min="1" max="2147483647" step="1" value={editor.row.broj_casova} onChange={e=>change('broj_casova',Number(e.target.value))}/></label>
       <label>Rok u radnim danima<input required type="number" min="1" max="3660" step="1" value={editor.row.rok_radnih_dana} onChange={e=>change('rok_radnih_dana',Number(e.target.value))}/></label>
       <p>Rok se računa pri čuvanju iz kalendara radnih dana, počev od narednog dana. Zapisnik mora biti potpisan pre datuma roka.{editor.row.rok && ` Sačuvani rok: ${editor.row.rok}.`}</p>
+      <p><Link target="_blank" rel="noopener noreferrer" to={`/ugovori/radni-kalendar${editor.row.datum_zahteva?'?godina='+editor.row.datum_zahteva.slice(0,4):''}`}>Otvori radni kalendar u novom tabu</Link></p>
       {docSelect('id_zahtev_doc','Dokument zahteva')}
      </>}
      <label>Status<select aria-label="Status" value={editor.row.status} onChange={e=>change('status',e.target.value)}>{(editor.kind==='periodi'?['PLANIRAN','PRIPREMA','NA_POTPISU','ZAVRSEN','OTKAZAN']:['NACRT','PODNET','U_RADU','NA_POTPISU','ZAVRSEN','OTKAZAN']).map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label>

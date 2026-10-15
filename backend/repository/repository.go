@@ -7,6 +7,8 @@ import (
 )
 
 type Store interface {
+	GetCalendar(context.Context, int) (*models.CalendarYear, error)
+	ChangeCalendar(context.Context, int, models.CalendarChange) error
 	GetTracking(context.Context, int) (*models.TrackingData, error)
 	PreviewPeriods(context.Context, int, string) ([]models.TrackingItem, error)
 	SaveTracking(context.Context, int, int, int, string, models.TrackingChange) error
