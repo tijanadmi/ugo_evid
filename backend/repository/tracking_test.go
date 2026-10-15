@@ -58,6 +58,11 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		status                                             string
 		want                                               error
 	}{
+		{name: "delete planned period", kind: "obrisi-period", lease: 1},
+		{name: "delete changed status or version", kind: "obrisi-period", lease: 1, stale: true, want: ErrPeriodDelete},
+		{name: "delete without lease", kind: "obrisi-period", want: ErrMaintenanceLease},
+		{name: "delete foreign organization", kind: "obrisi-period", lease: 1, foreign: true, want: ErrUserOrganization},
+		{name: "delete closed contract", kind: "obrisi-period", lease: 1, closed: true, want: ErrDocumentClosed},
 		{name: "period insert", kind: "periodi", lease: 1, status: "PLANIRAN"},
 		{name: "overlap", kind: "periodi", lease: 1, overlap: 1, status: "PLANIRAN", want: ErrTrackingInput},
 		{name: "foreign org", kind: "periodi", lease: 1, foreign: true, status: "PLANIRAN", want: ErrUserOrganization},
@@ -124,6 +129,9 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				if tc.kind == "zahtevi" && !fundLocked {
 					return nil, fmt.Errorf("fund not locked")
 				}
+				if tc.kind == "obrisi-period" && (!strings.Contains(q, "status='PLANIRAN'") || !strings.Contains(q, "version=:version") || !strings.Contains(q, "id_odrzavanja=:mid")) {
+					return nil, fmt.Errorf("unguarded period delete")
+				}
 				writes++
 				if tc.stale {
 					return driver.RowsAffected(0), nil
@@ -131,7 +139,7 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				return driver.RowsAffected(1), nil
 			})
 			p := models.TrackingItem{Start: "2026-01-01", End: "2026-01-31", DocumentType: 5, Status: tc.status, WorkType: 1, Number: "Z-1", Requested: "2026-01-05", Days: 1, Hours: 20}
-			if tc.stale {
+			if tc.stale || tc.kind == "obrisi-period" {
 				p.ID = 2
 				p.Version = 1
 			}

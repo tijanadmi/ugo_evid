@@ -23,7 +23,7 @@ Podsetnici se računaju prilikom API poziva, bez posebnog job-a.
   Obračun od početka koristi originalni dan, uz ograničenje na poslednji dan kraćeg meseca, bez pomeranja sidra.
 - UI generiše samo dok nema perioda; pregled se potvrđuje pre transakcionog unosa svih perioda.
   Unos ne prepisuje postojeće redove. Backend odbija preklapanje aktivnih perioda i duplirane datume.
-  Rupe u pokrivenosti prikazane su kao upozorenje. Izmene su pojedinačne; otkazivanje se radi statusom, bez fizičkog brisanja.
+  Rupe u pokrivenosti prikazane su kao upozorenje. Izmene su pojedinačne; planirani periodi mogu da se obrišu, a ostali otkazuju promenom statusa.
 - Tip dokumenta perioda bira se između `POTVRDA_TEH` i `ZAPISNIK_TEH`.
 - Tehnički podsetnik počinje `PERIOD_DO - TEH_PODSETNIK_DANA` i ostaje dok period nije završen/otkazan.
   Sam kraj perioda nije prekoračenje roka potpisa. Ako je upisan opcioni `ROK_DOKUMENTA`, posle njega se prikazuje kašnjenje.
@@ -59,3 +59,7 @@ Podsetnici se računaju prilikom API poziva, bez posebnog job-a.
 
 SQL nije izvršen nad poslovnom Oracle bazom u razvojnom okruženju. Lokalni testovi koriste SQL driver/mokove,
 pa na poslovnoj mreži treba proveriti instalaciju, kalendar i dva istovremena taba.
+
+## Brisanje planiranog perioda
+
+Meni perioda nudi izmenu i brisanje. DELETE /ugo_evid/:id/pracenje/periodi koristi isti omotac sa jednim slogom (id, version) i lock_token. Fizicko brisanje dozvoljeno je samo za status PLANIRAN, uz roditeljski lock, vazeci lease i verziju. Dokument se ne brise. Za ostale statuse ostaje izmena/otkazivanje. Nije potrebna SQL migracija.

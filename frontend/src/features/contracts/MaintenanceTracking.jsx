@@ -1,3 +1,4 @@
+import RowMenu from '../../ui/RowMenu';
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -19,14 +20,15 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
  const query=useQuery({queryKey:['maintenance-tracking',user.username,id],queryFn:({signal})=>api(`/ugo_evid/${id}/pracenje`,{signal}),retry:false,refetchInterval:30000,refetchOnWindowFocus:true});
  const documents=useQuery({queryKey:['documents',user.username,id],queryFn:({signal})=>api(`/ugo_evid/${id}/dokumenti`,{signal}),retry:false});
  const data=query.data,canWrite=item.otvoren_ug==='X' && !!data && !query.error;
- async function open(kind,row,generate=false){
+ async function open(kind,row,generate=false,remove=false){
   if(pending.current || editor)return;pending.current=true;setBusy(true);setBlocked(false);
   try {
    const session=await owner.acquire(id,'edit');if(!session)return;
    const fresh=await api(`/ugo_evid/${id}/pracenje`);client.setQueryData(['maintenance-tracking',user.username,id],fresh);
    const source=row?fresh[kind].find(x=>x.id===row.id):null;if(row && !source)throw new Error('Slog više nije dostupan.');
+   if(remove && source?.status!=='PLANIRAN')throw new Error('Samo period sa statusom Planiran može da se obriše.');
    const current=session.person.settings;
-   setEditor({kind,generate,mode:[1,3,6,12].includes(current.odrzavanje.teh_period_meseci)?'calendar':'anchor',preview:null,settings:current,row:source||{...empty,status:kind==='periodi'?'PLANIRAN':'NACRT',id_tip_doc:current.odrzavanje.id_teh_tip_doc}});
+   setEditor({kind,generate,remove,mode:[1,3,6,12].includes(current.odrzavanje.teh_period_meseci)?'calendar':'anchor',preview:null,settings:current,row:source||{...empty,status:kind==='periodi'?'PLANIRAN':'NACRT',id_tip_doc:current.odrzavanje.id_teh_tip_doc}});
   }catch(e){toast.error(e.message);await owner.release();}finally{pending.current=false;setBusy(false);}
  }
  function change(key,value){setEditor(s=>({...s,row:{...s.row,[key]:value}}));}
@@ -37,11 +39,11 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
   catch(e){toast.error(e.message);}finally{pending.current=false;setBusy(false);}
  }
  async function save(event){
-  event.preventDefault();if(pending.current || owner.lost || blocked)return;
+  event?.preventDefault();if(pending.current || owner.lost || blocked)return;
   pending.current=true;setBusy(true);
   try{
    if(!await owner.renew())return;
-   await api(`/ugo_evid/${id}/pracenje/${editor.kind}`,{method:'POST',body:{lock_token:owner.session.token,items:editor.generate?editor.preview:[editor.row]}});
+   await api(`/ugo_evid/${id}/pracenje/${editor.kind}`,{method:editor.remove?'DELETE':'POST',body:{lock_token:owner.session.token,items:editor.generate?editor.preview:[editor.row]}});
    owner.committed();setEditor(null);toast.success('Podaci su sačuvani.');announceBusinessChange(client);
   }catch(e){toast.error(e.message);if([0,404,409,423].includes(e.status)||e.status>=500)setBlocked(true);}
   finally{pending.current=false;setBusy(false);}
@@ -57,7 +59,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
    {canWrite && <div className="tracking-actions"><button className="button" disabled={busy} onClick={()=>open('periodi')}>Dodaj period</button><button className="button" disabled={busy || periods.length>0 || !settings.odrzavanje.teh_period_meseci} onClick={()=>open('periodi',null,true)}>Generiši periode</button></div>}
    <p className="muted">Generisanje je dostupno dok lista nema perioda. Postojeći periodi se menjaju pojedinačno. Otkazani periodi ostaju u evidenciji.</p>
    {hasGap && <p role="status">Postoje nepokriveni delovi trajanja održavanja. Proverite datume perioda.</p>}
-   <div className="tracking-table"><table><thead><tr><th>Radnja</th><th>Period</th><th>Status</th><th>Rok dokumenta</th><th>Potpisano</th></tr></thead><tbody>{periods.map(p=><tr key={p.id}><td>{canWrite && <button className="button" disabled={busy} onClick={()=>open('periodi',p)}>Izmeni period</button>}</td><td>{p.period_od} — {p.period_do}</td><td>{labels[p.status]}</td><td>{p.rok||'Nije određen'}</td><td>{p.datum_potpisa||'—'}</td></tr>)}</tbody></table></div>
+   <div className="tracking-table"><table><thead><tr><th>Radnja</th><th>Period</th><th>Status</th><th>Rok dokumenta</th><th>Potpisano</th></tr></thead><tbody>{periods.map(p=><tr key={p.id}><td>{canWrite && <RowMenu label={`Akcije za period ${p.period_od} - ${p.period_do}`} actions={[{label:'Izmeni period',icon:'edit',onClick:()=>open('periodi',p)},...(p.status==='PLANIRAN'?[{label:'Obriši period',icon:'trash',danger:true,onClick:()=>open('periodi',p,false,true)}]:[])]}/>}</td><td>{p.period_od} — {p.period_do}</td><td>{labels[p.status]}</td><td>{p.rok||'Nije određen'}</td><td>{p.datum_potpisa||'—'}</td></tr>)}</tbody></table></div>
    {!periods.length && <p>Nema evidentiranih tehničkih perioda.</p>}
    {settings.odrzavanje.ima_razvojnu_podrsku && <>
     <h3>Razvojna podrška</h3>
@@ -69,7 +71,11 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
    </>}
   </>}
   <Reminders contractID={id}/>
-  {editor && <DocumentDialog title={editor.generate?'Generisanje tehničkih perioda':editor.kind==='periodi'?'Tehnički period':'Razvojni zahtev'} onClose={()=>setConfirm(true)} busy={busy}>
+  {editor?.remove && <ConfirmAction modal title="Obrisati tehnički period?" confirmLabel="Obriši period" cancelLabel="Odustani" variation="danger" disabled={busy} blocked={blocked||owner.lost} onConfirm={()=>save()} onCancel={discard}>
+   <p>Period {editor.row.period_od} — {editor.row.period_do} biće trajno obrisan. Povezani dokument ostaje sačuvan.</p>
+   {(blocked||owner.lost) && <p>Pravo brisanja više nije važeće. Zatvorite prozor i osvežite podatke.</p>}
+  </ConfirmAction>}
+  {editor && !editor.remove && <DocumentDialog title={editor.generate?'Generisanje tehničkih perioda':editor.kind==='periodi'?'Tehnički period':'Razvojni zahtev'} onClose={()=>setConfirm(true)} busy={busy}>
    <form className="contact-editor tracking-editor" onSubmit={save}><fieldset disabled={busy || owner.lost || blocked}>
     {editor.generate?<>
      <label>Način obračuna<select value={editor.mode} onChange={e=>setEditor(s=>({...s,mode:e.target.value,preview:null}))}><option value="calendar" disabled={![1,3,6,12].includes(editor.settings.odrzavanje.teh_period_meseci)}>Kalendarski mesec / kvartal / polugodište / godina</option><option value="anchor">Od datuma početka održavanja</option></select></label>

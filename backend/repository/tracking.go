@@ -77,7 +77,7 @@ func (r *OracleStore) PreviewPeriods(ctx context.Context, id int, mode string) (
 }
 
 func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind string, change models.TrackingChange) error {
-	if (kind != "periodi" && kind != "zahtevi") || len(change.Items) == 0 || len(change.Items) > 1200 || (kind == "zahtevi" && len(change.Items) != 1) {
+	if (kind != "periodi" && kind != "zahtevi" && kind != "obrisi-period") || len(change.Items) == 0 || len(change.Items) > 1200 || (kind != "periodi" && len(change.Items) != 1) {
 		return ErrTrackingInput
 	}
 	tx, err := r.DB.BeginTx(ctx, nil)
@@ -99,6 +99,27 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 	}
 	if start == "" || end == "" {
 		return ErrTrackingInput
+	}
+	if kind == "obrisi-period" {
+		p := change.Items[0]
+		if p.ID < 1 || p.Version < 1 {
+			return ErrTrackingInput
+		}
+		result, e := tx.ExecContext(ctx, `DELETE FROM TED.UGO_TEH_PERIOD WHERE id=:id AND id_odrzavanja=:mid AND version=:version AND status='PLANIRAN'`, sql.Named("id", p.ID), sql.Named("mid", mid), sql.Named("version", p.Version))
+		if e != nil {
+			return e
+		}
+		n, e := result.RowsAffected()
+		if e != nil {
+			return e
+		}
+		if n != 1 {
+			return ErrPeriodDelete
+		}
+		if e = releaseMaintenanceLease(ctx, tx, id, user, change.Token); e != nil {
+			return e
+		}
+		return tx.Commit()
 	}
 	seen := map[int]bool{}
 	for _, p := range change.Items {

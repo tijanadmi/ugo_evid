@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var ErrPeriodDelete = errors.New("Period nije obrisan: samo nepromenjen period sa statusom Planiran moze da se obrise. Osvezite podatke.")
+
 var ErrTrackingInput = errors.New("Proverite datume, status, dokument i ugovorene casove. Periodi ne smeju da se preklapaju.")
 var ErrTrackingCalendar = errors.New("Nedostaju odobreni datumi u UGO_RADNI_KALENDAR. Dopunite kalendar radnih dana i praznika.")
 var ErrTrackingFunds = errors.New("Zahtev prekoracuje preostale casove ove vrste rada ili fond nije ugovoren.")

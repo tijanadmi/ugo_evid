@@ -73,6 +73,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/ugo_evid/:id/pracenje", server.GetTracking)
 	authRoutes.POST("/ugo_evid/:id/pracenje/preview", server.PreviewPeriods)
 	authRoutes.POST("/ugo_evid/:id/pracenje/:kind", server.SaveTracking)
+	authRoutes.DELETE("/ugo_evid/:id/pracenje/periodi", server.SaveTracking)
 	authRoutes.GET("/podsetnici", server.ListReminders)
 	authRoutes.PUT("/ugo_evid/:id/tip", server.SetContractType)
 	authRoutes.POST("/ugo_evid/:id/odrzavanje", server.CreateMaintenance)

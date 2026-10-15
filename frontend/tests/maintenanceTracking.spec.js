@@ -24,6 +24,7 @@ async function setup(context,extra={}){
    if(state.error)return json({error:state.error},400);
    if(body.lock_token!==state.token)return json({error:'Zaključavanje nije važeće.'},409);
    const kind=path.split('/').at(-1);state.writes.push(body);
+   if(req.method()==='DELETE'){const p=state.periodi.find(p=>p.id===body.items[0].id);if(!p||p.status!=='PLANIRAN'||p.version!==body.items[0].version)return json({error:'Period nije vise planiran ili je promenjen.'},409);state.periodi=state.periodi.filter(x=>x.id!==p.id);state.token=null;return json({status:'ok'});}
    for(const p of body.items){const current=state[kind].find(x=>x.id===p.id);if(current)Object.assign(current,p,{version:String(Number(p.version)+1)});else state[kind].push({...p,id:state[kind].length+1,version:'1',rok:p.rok||'2026-02-10'});}
    state.token=null;return json({status:'ok'});
   }
@@ -69,3 +70,21 @@ test('closed maintenance is read only and home shows reminders',async({page,cont
  await setup(context,{closed:true});await open(page);await expect(page.getByRole('button',{name:'Dodaj period'})).toHaveCount(0);
  await page.goto('/');await expect(page.getByRole('region',{name:'Podsetnici za održavanje'})).toContainText('Januar');
 });
+
+ test('period menu deletes only planned periods, confirms and locks other tabs',async({page,context})=>{
+ const state=await setup(context,{periodi:[{id:1,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',status:'PLANIRAN',id_tip_doc:5},{id:2,version:'1',period_od:'2026-02-01',period_do:'2026-02-28',status:'PRIPREMA',id_tip_doc:5}]});
+ await open(page);const other=await context.newPage();await open(other);
+ await page.getByRole('button',{name:'Akcije za period 2026-02-01 - 2026-02-28'}).click();
+ await expect(page.getByRole('menuitem',{name:'Obriši period'})).toHaveCount(0);
+ await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();
+ await page.getByRole('menuitem',{name:'Obriši period'}).click();
+ await expect(page.getByRole('dialog')).toBeVisible();
+ await other.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();
+ await other.getByRole('menuitem',{name:'Izmeni period'}).click();await expect(other.getByRole('alert')).toContainText('drugi');await expect(other.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:'Odustani',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.periodi).toHaveLength(2);expect(state.token).toBeNull();
+ await page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();await page.getByRole('menuitem',{name:'Obriši period'}).click();
+ await page.getByRole('button',{name:'Obriši period',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'})).toHaveCount(0);
+ expect(state.periodi).toHaveLength(1);expect(state.token).toBeNull();
+ });

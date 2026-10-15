@@ -57,7 +57,14 @@ func (s *Server) SaveTracking(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Neispravni podaci ili token izmene."})
 		return
 	}
-	if e := s.store.SaveTracking(c.Request.Context(), id, org, user, c.Param("kind"), req); e != nil {
+	kind := c.Param("kind")
+	if c.Request.Method == "DELETE" {
+		kind = "obrisi-period"
+	} else if kind != "periodi" && kind != "zahtevi" {
+		c.JSON(400, gin.H{"error": "Nepoznata vrsta evidencije."})
+		return
+	}
+	if e := s.store.SaveTracking(c.Request.Context(), id, org, user, kind, req); e != nil {
 		maintenanceError(c, e)
 		return
 	}
