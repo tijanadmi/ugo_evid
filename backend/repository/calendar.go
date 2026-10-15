@@ -32,7 +32,7 @@ func readCalendar(ctx context.Context, db calendarReader, year int) (*models.Cal
 	if e != nil {
 		return nil, e
 	}
-	rows, e := db.QueryContext(ctx, `SELECT TO_CHAR(datum,'YYYY-MM-DD'),radni,potvrdjen,opis FROM TED.UGO_RADNI_KALENDAR WHERE datum>=TO_DATE(:start_date,'YYYY-MM-DD') AND datum<TO_DATE(:end_date,'YYYY-MM-DD') ORDER BY datum`, sql.Named("start_date", start.Format("2006-01-02")), sql.Named("end_date", end.Format("2006-01-02")))
+	rows, e := db.QueryContext(ctx, `SELECT TO_CHAR(datum,'YYYY-MM-DD'),radni,potvrdjen,opis,izvor FROM TED.UGO_RADNI_KALENDAR WHERE datum>=TO_DATE(:start_date,'YYYY-MM-DD') AND datum<TO_DATE(:end_date,'YYYY-MM-DD') ORDER BY datum`, sql.Named("start_date", start.Format("2006-01-02")), sql.Named("end_date", end.Format("2006-01-02")))
 	if e != nil {
 		return nil, e
 	}
@@ -40,7 +40,7 @@ func readCalendar(ctx context.Context, db calendarReader, year int) (*models.Cal
 	result := &models.CalendarYear{Items: []models.CalendarDay{}}
 	for rows.Next() {
 		var day models.CalendarDay
-		if e = scanNullable(rows, &day.Date, &day.Work, &day.Approved, &day.Description); e != nil {
+		if e = scanNullable(rows, &day.Date, &day.Work, &day.Approved, &day.Description, &day.Source); e != nil {
 			return nil, e
 		}
 		result.Items = append(result.Items, day)
@@ -61,7 +61,7 @@ func (r *OracleStore) ChangeCalendar(ctx context.Context, year int, m models.Cal
 	if e != nil {
 		return e
 	}
-	if m.Action != "generate" && m.Action != "change" && m.Action != "approve" {
+	if m.Action != "generate" && m.Action != "change" && m.Action != "approve" && m.Action != "import" {
 		return ErrCalendarInput
 	}
 	if len(m.Version) != 64 || utf8.RuneCountInString(m.Description) > 200 {
@@ -72,6 +72,19 @@ func (r *OracleStore) ChangeCalendar(ctx context.Context, year int, m models.Cal
 		b, be := date(m.End)
 		if ae != nil || be != nil || a.Before(start) || !b.Before(end) || a.After(b) || (m.Work != "D" && m.Work != "N") {
 			return ErrCalendarInput
+		}
+	}
+	if m.Action == "import" {
+		if len(m.Holidays) < 1 || len(m.Holidays) > 60 {
+			return ErrCalendarInput
+		}
+		seen := map[string]bool{}
+		for _, h := range m.Holidays {
+			d, err := date(h.Date)
+			if err != nil || d.Year() != year || seen[h.Date] || strings.TrimSpace(h.Name) == "" || utf8.RuneCountInString(h.Name) > 200 {
+				return ErrCalendarInput
+			}
+			seen[h.Date] = true
 		}
 	}
 	tx, e := r.DB.BeginTx(ctx, nil)
@@ -102,7 +115,7 @@ func (r *OracleStore) ChangeCalendar(ctx context.Context, year int, m models.Cal
 	case "change":
 		a, _ := date(m.Start)
 		b, _ := date(m.End)
-		result, err := tx.ExecContext(ctx, `UPDATE TED.UGO_RADNI_KALENDAR SET radni=:work,opis=:description,potvrdjen='N' WHERE datum>=TO_DATE(:start_date,'YYYY-MM-DD') AND datum<=TO_DATE(:end_date,'YYYY-MM-DD')`, sql.Named("work", m.Work), sql.Named("description", m.Description), sql.Named("start_date", m.Start), sql.Named("end_date", m.End))
+		result, err := tx.ExecContext(ctx, `UPDATE TED.UGO_RADNI_KALENDAR SET radni=:work,opis=:description,potvrdjen='N',izvor='RUCNO' WHERE datum>=TO_DATE(:start_date,'YYYY-MM-DD') AND datum<=TO_DATE(:end_date,'YYYY-MM-DD')`, sql.Named("work", m.Work), sql.Named("description", m.Description), sql.Named("start_date", m.Start), sql.Named("end_date", m.End))
 		if err != nil {
 			return err
 		}
@@ -112,6 +125,28 @@ func (r *OracleStore) ChangeCalendar(ctx context.Context, year int, m models.Cal
 		}
 		if n != int64(b.Sub(a).Hours()/24)+1 {
 			return ErrCalendarInput
+		}
+	case "import":
+		if len(current.Items) != int(end.Sub(start).Hours()/24) {
+			return ErrCalendarInput
+		}
+		byDate := map[string]models.CalendarDay{}
+		for _, d := range current.Items {
+			byDate[d.Date] = d
+		}
+		for _, h := range m.Holidays {
+			day := byDate[h.Date]
+			if (day.Source == "RUCNO" && !h.ReplaceManual) || (day.Work == "N" && day.Description == h.Name && day.Source == "PRAZNIK") {
+				continue
+			}
+			replace := 0
+			if h.ReplaceManual {
+				replace = 1
+			}
+			_, e = tx.ExecContext(ctx, `UPDATE TED.UGO_RADNI_KALENDAR SET radni='N',opis=:description,potvrdjen='N',izvor='PRAZNIK' WHERE datum=TO_DATE(:day,'YYYY-MM-DD') AND (izvor<>'RUCNO' OR :replace_manual=1)`, sql.Named("description", h.Name), sql.Named("day", h.Date), sql.Named("replace_manual", replace))
+			if e != nil {
+				return e
+			}
 		}
 	case "approve":
 		if len(current.Items) != int(end.Sub(start).Hours()/24) {

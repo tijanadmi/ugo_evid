@@ -35,3 +35,20 @@ func (s *Server) Calendar(c *gin.Context) {
 	}
 	c.JSON(200, gin.H{"status": "ok"})
 }
+
+func (s *Server) CalendarHolidays(c *gin.Context) {
+	if _, _, ok := s.registrationIdentity(c); !ok {
+		return
+	}
+	year, e := strconv.Atoi(c.Param("year"))
+	if e != nil || year < 1900 || year > 2200 {
+		c.JSON(400, gin.H{"error": "Neispravna godina."})
+		return
+	}
+	items, e := s.fetchHolidays(c.Request.Context(), year)
+	if e != nil {
+		c.JSON(502, gin.H{"error": "Preuzimanje praznika nije uspelo ili servis nije vratio potpun spisak. Pokusajte ponovo ili unesite dane rucno."})
+		return
+	}
+	c.JSON(200, gin.H{"items": items, "source": "Nager.Date + pravila prenosa praznika Srbije"})
+}

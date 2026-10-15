@@ -29,7 +29,7 @@ func TestCalendarChanges(t *testing.T) {
 			start, end, _ := calendarBounds(tc.year)
 			values := [][]driver.Value{}
 			for d := start; d.Before(end); d = d.AddDate(0, 0, 1) {
-				values = append(values, []driver.Value{d.Format("2006-01-02"), "N", "D", "Praznik"})
+				values = append(values, []driver.Value{d.Format("2006-01-02"), "N", "D", "Praznik", "GENERISAN"})
 				if !tc.full {
 					break
 				}
@@ -37,7 +37,7 @@ func TestCalendarChanges(t *testing.T) {
 			locked := false
 			inserts, updates := 0, 0
 			store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
-				return &schemaRows{width: 4, values: values}, nil
+				return &schemaRows{width: 5, values: values}, nil
 			}, func(q string, a []driver.NamedValue) (driver.Result, error) {
 				if strings.HasPrefix(q, "LOCK TABLE") {
 					if tc.busy {
@@ -105,5 +105,71 @@ func TestCalendarValidation(t *testing.T) {
 		if e := store.ChangeCalendar(context.Background(), 2026, m); !errors.Is(e, ErrCalendarInput) {
 			t.Fatal(e)
 		}
+	}
+}
+
+func TestCalendarHolidayImport(t *testing.T) {
+	for _, tc := range []struct {
+		name                 string
+		replace, stale, fail bool
+		wantWrites           int
+		want                 error
+	}{
+		{name: "preserve manual and identical import", wantWrites: 1},
+		{name: "explicit manual replacement", replace: true, wantWrites: 2},
+		{name: "stale preview", stale: true, want: ErrCalendarConflict},
+		{name: "atomic rollback", replace: true, fail: true, wantWrites: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, end, _ := calendarBounds(2026)
+			values := [][]driver.Value{}
+			for d := start; d.Before(end); d = d.AddDate(0, 0, 1) {
+				source, description, work := "GENERISAN", "", "D"
+				if d.Day() == 1 && d.Month() == 1 {
+					source = "RUCNO"
+				}
+				if d.Day() == 2 && d.Month() == 1 {
+					source = "PRAZNIK"
+					description = "Nova godina"
+					work = "N"
+				}
+				values = append(values, []driver.Value{d.Format("2006-01-02"), work, "D", description, source})
+			}
+			writes := 0
+			store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
+				return &schemaRows{width: 5, values: values}, nil
+			}, func(q string, a []driver.NamedValue) (driver.Result, error) {
+				if strings.HasPrefix(q, "LOCK TABLE") {
+					return driver.RowsAffected(0), nil
+				}
+				writes++
+				if !strings.Contains(q, "potvrdjen='N'") || !strings.Contains(q, "izvor<>'RUCNO'") {
+					return nil, fmt.Errorf("unprotected import")
+				}
+				if tc.fail && writes == 2 {
+					return nil, fmt.Errorf("write failed")
+				}
+				return driver.RowsAffected(1), nil
+			})
+			snapshot, e := store.GetCalendar(context.Background(), 2026)
+			if e != nil {
+				t.Fatal(e)
+			}
+			version := snapshot.Version
+			if tc.stale {
+				version = strings.Repeat("a", 64)
+			}
+			e = store.ChangeCalendar(context.Background(), 2026, models.CalendarChange{Action: "import", Version: version, Holidays: []models.CalendarHoliday{{Date: "2026-01-01", Name: "Nova godina", ReplaceManual: tc.replace}, {Date: "2026-01-02", Name: "Nova godina"}, {Date: "2026-01-07", Name: "Bozic"}}})
+			if tc.fail {
+				if e == nil || tx.committed || !tx.rolledBack {
+					t.Fatal("partial import committed")
+				}
+			} else if !errors.Is(e, tc.want) {
+				t.Fatal(e)
+			}
+			if writes != tc.wantWrites {
+				t.Fatalf("writes %d expected %d", writes, tc.wantWrites)
+			}
+		})
 	}
 }

@@ -1,7 +1,10 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"github.com/tijanadmi/ugo_evid/holidays"
+	"github.com/tijanadmi/ugo_evid/models"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -15,6 +18,7 @@ import (
 
 // Server serves HTTP requests for our banking service.
 type Server struct {
+	fetchHolidays    func(context.Context, int) ([]models.CalendarHoliday, error)
 	config           util.Config
 	store            db.Store
 	tokenMaker       token.Maker
@@ -31,6 +35,7 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 
 	server := &Server{
 		config:           config,
+		fetchHolidays:    holidays.Fetch,
 		authenticateLDAP: util.AuthenticateLDAP,
 		store:            store,
 		tokenMaker:       tokenMaker,
@@ -76,6 +81,7 @@ func (server *Server) setupRouter() {
 	authRoutes.DELETE("/ugo_evid/:id/pracenje/periodi", server.SaveTracking)
 	authRoutes.GET("/podsetnici", server.ListReminders)
 	authRoutes.GET("/radni_kalendar/:year", server.Calendar)
+	authRoutes.GET("/radni_kalendar/:year/praznici", server.CalendarHolidays)
 	authRoutes.POST("/radni_kalendar/:year", server.Calendar)
 	authRoutes.PUT("/ugo_evid/:id/tip", server.SetContractType)
 	authRoutes.POST("/ugo_evid/:id/odrzavanje", server.CreateMaintenance)

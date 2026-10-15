@@ -1,6 +1,8 @@
+> Za novi mesečni prikaz i uvoz praznika potrebna je migracija `calendar_holiday_import.sql`. Aktuelno uputstvo: [calendar_holiday_import.md](calendar_holiday_import.md).
+
 # Radni kalendar u aplikaciji
 
-Nije potrebna nova SQL migracija. Koristi se postojeća `TED.UGO_RADNI_KALENDAR`
+Prvobitni ekran nije zahtevao novu SQL migraciju. Koristi se postojeća `TED.UGO_RADNI_KALENDAR`
 iz `maintenance_tracking.sql`, sa kolonama DATUM, RADNI, POTVRDJEN i OPIS.
 
 1. U bočnom meniju otvoriti **Radni kalendar** i izabrati godinu.

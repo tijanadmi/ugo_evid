@@ -52,3 +52,42 @@ func TestCalendarAPI(t *testing.T) {
 		})
 	}
 }
+
+func TestCalendarHolidayPreviewAPI(t *testing.T) {
+	for _, tc := range []struct {
+		name              string
+		anonymous, failed bool
+		status            int
+	}{
+		{"preview", false, false, 200}, {"upstream unavailable", false, true, 502}, {"anonymous", true, false, 401},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &maintenanceTestStore{}
+			server, e := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32), ActiveUserStatus: "A"}, store)
+			if e != nil {
+				t.Fatal(e)
+			}
+			called := false
+			server.fetchHolidays = func(ctx context.Context, year int) ([]models.CalendarHoliday, error) {
+				called = true
+				if year != 2026 {
+					t.Fatal(year)
+				}
+				if tc.failed {
+					return nil, repository.ErrCalendarInput
+				}
+				return []models.CalendarHoliday{{Date: "2026-01-01", Name: "Nova godina"}}, nil
+			}
+			req := httptest.NewRequest("GET", "/radni_kalendar/2026/praznici", nil)
+			if !tc.anonymous {
+				token, _, _ := server.tokenMaker.CreateToken("test.user", "user", time.Minute)
+				req.Header.Set("Authorization", "Bearer "+token)
+			}
+			rec := httptest.NewRecorder()
+			server.router.ServeHTTP(rec, req)
+			if rec.Code != tc.status || store.writes != 0 || called == tc.anonymous {
+				t.Fatalf("code %d called %v writes %d", rec.Code, called, store.writes)
+			}
+		})
+	}
+}
