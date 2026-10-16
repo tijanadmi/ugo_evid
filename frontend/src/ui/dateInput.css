@@ -1,0 +1,7 @@
+.date-input-control { display:flex; align-items:center; position:relative; gap:.4rem; flex-wrap:wrap; min-width:0; }
+.date-input-control > input[type="text"] { flex:1; width:0; min-width:8rem; }
+.date-input-calendar-button { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; width:2.6rem; height:2.6rem; padding:.4rem; border:1px solid var(--color-grey-300,#cbd5e1); border-radius:.4rem; color:inherit; background:var(--color-grey-0,#fff); cursor:pointer; }
+.date-input-calendar-button:focus-visible { outline:2px solid #6366f1; outline-offset:2px; }
+.date-input-calendar-button:disabled { cursor:default; opacity:.5; }
+.date-input-control > .date-input-native { position:absolute; bottom:0; right:0; width:1px; height:1px; min-width:0; padding:0; border:0; opacity:0; pointer-events:none; }
+.date-input-native-fallback { flex-basis:100%; }

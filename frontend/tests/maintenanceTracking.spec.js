@@ -69,6 +69,27 @@ test('unfinished request can be deleted with confirmation and retained documents
  await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.zahtevi).toHaveLength(0);
 });
 
+test('dates support typing and calendar selection with the same display format',async({page,context})=>{
+ await setup(context);await open(page);
+ await page.getByRole('button',{name:'Dodaj razvojni zahtev'}).click();
+ const text=page.getByLabel('Datum zahteva',{exact:true});
+ const control=text.locator('..');
+ await text.fill('20.01.2026');
+ await expect(control.locator('input[type="date"]')).toHaveValue('2026-01-20');
+ await control.locator('input[type="date"]').evaluate(input=>{input.showPicker=()=>{input.dataset.opened='yes';};});
+ await control.getByRole('button',{name:'Otvori kalendar'}).click();
+ await expect(control.locator('input[type="date"]')).toHaveAttribute('data-opened','yes');
+ await control.locator('input[type="date"]').evaluate(input=>{
+  const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
+  setter.call(input,'2026-01-23');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));
+ });
+ await expect(text).toHaveValue('23.01.2026');
+ await text.fill('31.02.2026');
+ expect(await text.evaluate(input=>input.validity.valid)).toBeFalsy();
+ await text.fill('24.01.2026');
+ await expect(control.locator('input[type="date"]')).toHaveValue('2026-01-24');
+});
+
 test('completed request has edit but no delete action',async({page,context})=>{
  await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'ZAVRSEN'}]});
  await open(page);await page.getByRole('button',{name:'Akcije za zahtev R-7'}).click();
