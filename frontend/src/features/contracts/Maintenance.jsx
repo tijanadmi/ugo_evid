@@ -1,3 +1,5 @@
+import DateInput from '../../ui/DateInput';
+import { formatDate } from '../../utils/contractFormatting';
 import MaintenanceTracking from './MaintenanceTracking';
 import { useContactSession } from '../partners/useContactSession';
 import { maintenanceService } from './maintenanceAPI';
@@ -77,8 +79,8 @@ export default function Maintenance({ item }) {
    {canWrite && !maintenance && <button className="button" onClick={() => start('type')}>Odredi tip ugovora</button>}
    {currentType?.sifra === 'ODRZAVANJE' && !maintenance && <><p>Osnovni podaci održavanja još nisu uneti.</p>{canWrite && <button className="button primary" onClick={() => start('maintenance')}>Unesi održavanje</button>}</>}
    {maintenance && <dl className="maintenance-summary">
-    <div><dt>Početak održavanja / kraj ugovora</dt><dd>{maintenance.pocetak_odrzavanja || settings.sap_pocetak || 'Nedostaje u SAP-u'} / {settings.sap_kraj || 'Nedostaje u SAP-u'}</dd></div>
-    {(maintenance.datum_potpisa || maintenance.datum_kraja) && <div><dt>Ranije uneti datumi (za proveru)</dt><dd>{maintenance.datum_potpisa || '—'} / {maintenance.datum_kraja || '—'}</dd></div>}
+    <div><dt>Početak održavanja / kraj ugovora</dt><dd>{formatDate(maintenance.pocetak_odrzavanja || settings.sap_pocetak)} / {formatDate(settings.sap_kraj)}</dd></div>
+    {(maintenance.datum_potpisa || maintenance.datum_kraja) && <div><dt>Ranije uneti datumi (za proveru)</dt><dd>{formatDate(maintenance.datum_potpisa)} / {formatDate(maintenance.datum_kraja)}</dd></div>}
     {maintenance.ima_razvojnu_podrsku && settings.vrste_rada?.filter(type=>maintenance.fondovi?.some(f=>f.id_vrsta_rada===type.id && f.ugovoreno_casova>0)).map(type=><div key={type.id}><dt>{type.naziv} — ugovoreni časovi</dt><dd>{maintenance.fondovi?.find(f=>f.id_vrsta_rada===type.id)?.ugovoreno_casova||0}</dd></div>)}
     <div><dt>Podrška</dt><dd>{maintenance.ima_razvojnu_podrsku ? 'Tehnička i razvojna' : 'Tehnička'}</dd></div>
     <div><dt>Period tehničke podrške</dt><dd>{maintenance.teh_period_meseci ? `${maintenance.teh_period_meseci} meseci` : 'Posebno ugovoreni periodi'}</dd></div>
@@ -92,9 +94,9 @@ export default function Maintenance({ item }) {
   {editor && <DocumentDialog title={editor.mode === 'type' ? 'Tip ugovora' : editor.mode === 'edit' ? 'Izmena održavanja' : 'Unos održavanja'} onClose={close} busy={busy}>
    <form className="contact-editor" aria-label="Podešavanja ugovora" onSubmit={submit}><fieldset disabled={busy || blocked || owner.lost}>
     {editor.mode === 'type' ? <label>Tip ugovora<select aria-label="Tip ugovora" required value={editor.id_tip_ugovora} onChange={e => change('id_tip_ugovora', e.target.value)}><option value="">Izaberite tip</option>{types.data?.items?.map(type => <option key={type.id} value={type.id}>{type.naziv}</option>)}</select></label> : <>
-     <p>Važenje ugovora iz SAP-a: <strong>{editor.settings.sap_pocetak || 'Početak nije upisan'} — {editor.settings.sap_kraj || 'Kraj nije upisan'}</strong></p>
+     <p>Važenje ugovora iz SAP-a: <strong>{formatDate(editor.settings.sap_pocetak)} — {formatDate(editor.settings.sap_kraj)}</strong></p>
      <label>Početak održavanja<select aria-label="Početak održavanja" value={String(editor.overrideStart)} onChange={e=>change('overrideStart',e.target.value==='true')}><option value="false">Preuzmi početak važenja iz SAP-a</option><option value="true">Drugi datum početka održavanja</option></select></label>
-     {editor.overrideStart && <label>Drugi datum početka<input aria-label="Drugi datum početka" type="date" required max={editor.settings.sap_kraj||undefined} value={editor.pocetak_odrzavanja} onChange={e=>change('pocetak_odrzavanja',e.target.value)}/></label>}
+     {editor.overrideStart && <label>Drugi datum početka<DateInput aria-label="Drugi datum početka"  required max={editor.settings.sap_kraj||undefined} value={editor.pocetak_odrzavanja} onChange={e=>change('pocetak_odrzavanja',e.target.value)}/></label>}
      <label>Razvojna podrška<select aria-label="Razvojna podrška" value={String(editor.ima_razvojnu_podrsku)} onChange={e => change('ima_razvojnu_podrsku', e.target.value === 'true')}><option value="false">Ne</option><option value="true">Da</option></select></label>
      <label>Period potvrđivanja tehničke podrške<select aria-label="Period potvrđivanja tehničke podrške" value={editor.period} onChange={e=>change('period',e.target.value)}><option value="1">Mesečno</option><option value="3">Kvartalno</option><option value="6">Polugodišnje</option><option value="12">Godišnje</option><option value="other">Drugi pravilni period</option><option value="custom">Posebno ugovoreni periodi</option></select></label>
      {editor.period==='other' && <label>Broj meseci<input aria-label="Broj meseci" required type="number" min="1" max="120" step="1" value={editor.teh_period_meseci} onChange={e=>change('teh_period_meseci',e.target.value)}/></label>}

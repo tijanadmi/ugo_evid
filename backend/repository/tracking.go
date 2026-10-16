@@ -28,13 +28,13 @@ func (r *OracleStore) GetTracking(ctx context.Context, id int) (*models.Tracking
 	if err != nil {
 		return nil, err
 	}
-	rows, err = r.DB.QueryContext(ctx, `SELECT z.id,z.version,f.id_vrsta_rada,z.broj_zahteva,TO_CHAR(z.datum_zahteva,'YYYY-MM-DD'),z.broj_casova,z.rok_radnih_dana,TO_CHAR(z.rok_potpisa,'YYYY-MM-DD'),TO_CHAR(z.datum_potpisa,'YYYY-MM-DD'),NVL(z.id_ugo_doc,0),NVL(z.id_zahtev_doc,0),z.status,z.napomena FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja WHERE o.id_ugo_evid=:id ORDER BY z.datum_zahteva,z.id`, sql.Named("id", id))
+	rows, err = r.DB.QueryContext(ctx, `SELECT z.id,z.version,f.id_vrsta_rada,z.broj_zahteva,TO_CHAR(z.datum_zahteva,'YYYY-MM-DD'),z.broj_casova,z.rok_radnih_dana,TO_CHAR(z.rok_potpisa,'YYYY-MM-DD'),TO_CHAR(z.datum_potpisa,'YYYY-MM-DD'),NVL(z.id_ugo_doc,0),NVL(z.id_zahtev_doc,0),z.status,z.napomena,TO_CHAR(z.datum_realizacije,'YYYY-MM-DD') FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja WHERE o.id_ugo_evid=:id AND z.status<>'OBRISAN' ORDER BY z.datum_zahteva,z.id`, sql.Named("id", id))
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var p models.TrackingItem
-		if err = scanNullable(rows, &p.ID, &p.Version, &p.WorkType, &p.Number, &p.Requested, &p.Hours, &p.Days, &p.Deadline, &p.Signed, &p.Document, &p.RequestDocument, &p.Status, &p.Note); err != nil {
+		if err = scanNullable(rows, &p.ID, &p.Version, &p.WorkType, &p.Number, &p.Requested, &p.Hours, &p.Days, &p.Deadline, &p.Signed, &p.Document, &p.RequestDocument, &p.Status, &p.Note, &p.Completed); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -45,7 +45,7 @@ func (r *OracleStore) GetTracking(ctx context.Context, id int) (*models.Tracking
 	if err != nil {
 		return nil, err
 	}
-	rows, err = r.DB.QueryContext(ctx, `SELECT f.id_vrsta_rada,v.naziv,f.ugovoreno_casova,NVL(SUM(CASE WHEN z.status NOT IN ('NACRT','OTKAZAN') THEN z.broj_casova ELSE 0 END),0) FROM TED.UGO_RAZ_FOND f JOIN TED.UGO_RAZ_VRSTA_RADA v ON v.id=f.id_vrsta_rada JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja LEFT JOIN TED.UGO_RAZ_ZAHTEV z ON z.id_raz_fonda=f.id WHERE o.id_ugo_evid=:id AND f.ugovoreno_casova>0 GROUP BY f.id_vrsta_rada,v.naziv,f.ugovoreno_casova ORDER BY f.id_vrsta_rada`, sql.Named("id", id))
+	rows, err = r.DB.QueryContext(ctx, `SELECT f.id_vrsta_rada,v.naziv,f.ugovoreno_casova,NVL(SUM(CASE WHEN z.status NOT IN ('NACRT','OTKAZAN','OBRISAN') THEN z.broj_casova ELSE 0 END),0) FROM TED.UGO_RAZ_FOND f JOIN TED.UGO_RAZ_VRSTA_RADA v ON v.id=f.id_vrsta_rada JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja LEFT JOIN TED.UGO_RAZ_ZAHTEV z ON z.id_raz_fonda=f.id WHERE o.id_ugo_evid=:id AND f.ugovoreno_casova>0 GROUP BY f.id_vrsta_rada,v.naziv,f.ugovoreno_casova ORDER BY f.id_vrsta_rada`, sql.Named("id", id))
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (r *OracleStore) PreviewPeriods(ctx context.Context, id int, mode string) (
 }
 
 func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind string, change models.TrackingChange) error {
-	if (kind != "periodi" && kind != "zahtevi" && kind != "obrisi-period") || len(change.Items) == 0 || len(change.Items) > 1200 || (kind != "periodi" && len(change.Items) != 1) {
+	if (kind != "periodi" && kind != "zahtevi" && kind != "obrisi-period" && kind != "obrisi-zahtev") || len(change.Items) == 0 || len(change.Items) > 1200 || (kind != "periodi" && len(change.Items) != 1) {
 		return ErrTrackingInput
 	}
 	tx, err := r.DB.BeginTx(ctx, nil)
@@ -99,6 +99,27 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 	}
 	if start == "" || end == "" {
 		return ErrTrackingInput
+	}
+	if kind == "obrisi-zahtev" {
+		p := change.Items[0]
+		if p.ID < 1 || p.Version < 1 {
+			return ErrTrackingInput
+		}
+		result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET status='OBRISAN',version=version+1,datizm=SYSTIMESTAMP,id_korisnika=:user_id WHERE id=:id AND version=:version AND status NOT IN ('ZAVRSEN','OBRISAN') AND id_raz_fonda IN (SELECT id FROM TED.UGO_RAZ_FOND WHERE id_odrzavanja=:mid)`, sql.Named("user_id", user), sql.Named("id", p.ID), sql.Named("version", p.Version), sql.Named("mid", mid))
+		if e != nil {
+			return e
+		}
+		n, e := result.RowsAffected()
+		if e != nil {
+			return e
+		}
+		if n != 1 {
+			return ErrRequestDelete
+		}
+		if e = releaseMaintenanceLease(ctx, tx, id, user, change.Token); e != nil {
+			return e
+		}
+		return tx.Commit()
 	}
 	if kind == "obrisi-period" {
 		p := change.Items[0]
@@ -144,7 +165,13 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 				continue
 			}
 			var count int
-			err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_DOC WHERE id=:doc AND id_ugo_evid=:id AND status='A'`, sql.Named("doc", doc), sql.Named("id", id)).Scan(&count)
+			docQuery := `SELECT COUNT(*) FROM TED.UGO_DOC WHERE id=:doc AND id_ugo_evid=:id AND status='A'`
+			docArgs := []any{sql.Named("doc", doc), sql.Named("id", id)}
+			if kind == "zahtevi" {
+				docQuery += ` AND (id_raz_zahtev IS NULL OR id_raz_zahtev=:request_id)`
+				docArgs = append(docArgs, sql.Named("request_id", p.ID))
+			}
+			err = tx.QueryRowContext(ctx, docQuery, docArgs...).Scan(&count)
 			if err != nil {
 				return err
 			}
@@ -245,7 +272,7 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	if contracted <= 0 {
 		return ErrTrackingFunds
 	}
-	e = tx.QueryRowContext(ctx, `SELECT NVL(SUM(broj_casova),0) FROM TED.UGO_RAZ_ZAHTEV WHERE id_raz_fonda=:fid AND id<>:id AND status NOT IN ('NACRT','OTKAZAN')`, sql.Named("fid", fid), sql.Named("id", p.ID)).Scan(&used)
+	e = tx.QueryRowContext(ctx, `SELECT NVL(SUM(broj_casova),0) FROM TED.UGO_RAZ_ZAHTEV WHERE id_raz_fonda=:fid AND id<>:id AND status NOT IN ('NACRT','OTKAZAN','OBRISAN')`, sql.Named("fid", fid), sql.Named("id", p.ID)).Scan(&used)
 	if e != nil {
 		return e
 	}
@@ -256,7 +283,7 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	oldDate, deadline := "", ""
 	oldDays := 0
 	if p.ID > 0 {
-		e = scanNullable(tx.QueryRowContext(ctx, `SELECT z.rok_radnih_dana,TO_CHAR(z.datum_zahteva,'YYYY-MM-DD'),TO_CHAR(z.rok_potpisa,'YYYY-MM-DD') FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda WHERE z.id=:id AND z.version=:version AND f.id_odrzavanja=:mid`, sql.Named("id", p.ID), sql.Named("version", p.Version), sql.Named("mid", mid)), &oldDays, &oldDate, &deadline)
+		e = scanNullable(tx.QueryRowContext(ctx, `SELECT z.rok_radnih_dana,TO_CHAR(z.datum_zahteva,'YYYY-MM-DD'),TO_CHAR(z.rok_potpisa,'YYYY-MM-DD') FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda WHERE z.id=:id AND z.version=:version AND f.id_odrzavanja=:mid AND z.status<>'OBRISAN'`, sql.Named("id", p.ID), sql.Named("version", p.Version), sql.Named("mid", mid)), &oldDays, &oldDate, &deadline)
 		if e == sql.ErrNoRows {
 			return ErrMaintenanceConflict
 		}
@@ -288,16 +315,25 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 			return e
 		}
 	}
+	if p.Completed != "" {
+		d, e := date(p.Completed)
+		if e != nil || d.After(time.Now().UTC().Truncate(24*time.Hour)) || p.Completed < p.Requested || (p.Signed != "" && p.Completed > p.Signed) {
+			return ErrTrackingInput
+		}
+	}
+	if p.Status == "ZAVRSEN" && p.Completed == "" {
+		return ErrTrackingInput
+	}
 	if p.Signed != "" && (p.Signed < p.Requested || p.Signed >= deadline) {
 		return ErrTrackingInput
 	}
-	args := []any{sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("request_doc", p.RequestDocument), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
+	args := []any{sql.Named("completed", p.Completed), sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("request_doc", p.RequestDocument), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
 	if p.ID == 0 {
-		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),NULLIF(:request_doc,0),:status,:note,:user_id)`, args...)
+		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(datum_realizacije,id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(TO_DATE(:completed,'YYYY-MM-DD'),:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),NULLIF(:request_doc,0),:status,:note,:user_id)`, args...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
-	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET id_raz_fonda=:fid,broj_zahteva=:request_number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),id_zahtev_doc=NULLIF(:request_doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version`, args...)
+	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET datum_realizacije=TO_DATE(:completed,'YYYY-MM-DD'),id_raz_fonda=:fid,broj_zahteva=:request_number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),id_zahtev_doc=NULLIF(:request_doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version AND status<>'OBRISAN'`, args...)
 	if e != nil {
 		return e
 	}
@@ -319,7 +355,7 @@ func (r *OracleStore) ListReminders(ctx context.Context, org int) ([]models.Remi
  UNION ALL
  SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>=z.rok_potpisa THEN 1 ELSE 0 END
  FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
- WHERE e.id_ugo_org=:org2 AND s.otvoren_ug='X' AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
+ WHERE e.id_ugo_org=:org2 AND s.otvoren_ug='X' AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
  ) ORDER BY rok,id_ugo_evid,id`, sql.Named("org", org), sql.Named("org2", org))
 	if e != nil {
 		return nil, e
@@ -348,7 +384,7 @@ func validateTrackingSettings(ctx context.Context, tx *sql.Tx, mid int, start, e
 	if count > 0 {
 		return ErrTrackingDependencies
 	}
-	rows, e := tx.QueryContext(ctx, `SELECT f.id_vrsta_rada,NVL(SUM(CASE WHEN z.status NOT IN ('NACRT','OTKAZAN') THEN z.broj_casova ELSE 0 END),0),SUM(CASE WHEN z.status<>'OTKAZAN' THEN 1 ELSE 0 END),SUM(CASE WHEN z.status<>'OTKAZAN' AND (z.datum_zahteva<TO_DATE(:start_date,'YYYY-MM-DD') OR z.datum_zahteva>TO_DATE(:end_date,'YYYY-MM-DD')) THEN 1 ELSE 0 END) FROM TED.UGO_RAZ_FOND f JOIN TED.UGO_RAZ_ZAHTEV z ON z.id_raz_fonda=f.id WHERE f.id_odrzavanja=:mid GROUP BY f.id_vrsta_rada`, sql.Named("start_date", start), sql.Named("end_date", end), sql.Named("mid", mid))
+	rows, e := tx.QueryContext(ctx, `SELECT f.id_vrsta_rada,NVL(SUM(CASE WHEN z.status NOT IN ('NACRT','OTKAZAN','OBRISAN') THEN z.broj_casova ELSE 0 END),0),SUM(CASE WHEN z.status NOT IN ('OTKAZAN','OBRISAN') THEN 1 ELSE 0 END),SUM(CASE WHEN z.status NOT IN ('OTKAZAN','OBRISAN') AND (z.datum_zahteva<TO_DATE(:start_date,'YYYY-MM-DD') OR z.datum_zahteva>TO_DATE(:end_date,'YYYY-MM-DD')) THEN 1 ELSE 0 END) FROM TED.UGO_RAZ_FOND f JOIN TED.UGO_RAZ_ZAHTEV z ON z.id_raz_fonda=f.id WHERE f.id_odrzavanja=:mid GROUP BY f.id_vrsta_rada`, sql.Named("start_date", start), sql.Named("end_date", end), sql.Named("mid", mid))
 	if e != nil {
 		return e
 	}

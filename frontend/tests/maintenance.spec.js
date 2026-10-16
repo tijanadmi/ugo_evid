@@ -29,7 +29,7 @@ async function setup(context, overrides = {}) {
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('region',{name:'Tip ugovora i održavanje'})).toBeVisible();}
 async function fill(page){
  await page.getByRole('button',{name:'Unesi održavanje'}).click();
- await expect(page.getByText(/Važenje ugovora iz SAP-a:/)).toContainText('2026-01-01');
+ await expect(page.getByText(/Važenje ugovora iz SAP-a:/)).toContainText('01.01.2026');
 
  await page.getByLabel('Dokument tehničke podrške',{exact:true}).selectOption('5');
 }
@@ -92,7 +92,7 @@ test('maintenance editing locks other tabs, preserves draft on cancel and saves 
  await page.getByLabel('Tehnicar — ugovoreni časovi',{exact:true}).fill('40');
  await page.getByRole('button',{name:'Odustani',exact:true}).click();
  await page.getByRole('button',{name:'Otkaži',exact:true}).click();
- await expect(page.getByLabel('Drugi datum početka',{exact:true})).toHaveValue('2026-02-01');
+ await expect(page.getByLabel('Drugi datum početka',{exact:true})).toHaveValue('01.02.2026');
  const other=await context.newPage();await open(other);
  await other.getByRole('button',{name:'Izmeni održavanje'}).click();
  await expect(other.getByRole('alert')).toContainText('drugi korisnik');
@@ -103,7 +103,7 @@ test('maintenance editing locks other tabs, preserves draft on cancel and saves 
  expect(state.maintenance.fondovi.find(f=>f.id_vrsta_rada===2).ugovoreno_casova).toBe(40);
  expect(state.maintenance.datum_potpisa).toBe('2025-12-20');expect(state.token).toBeNull();
  await other.getByRole('button',{name:'Izmeni održavanje'}).click();
- await expect(other.getByLabel('Drugi datum početka',{exact:true})).toHaveValue('2026-02-01');
+ await expect(other.getByLabel('Drugi datum početka',{exact:true})).toHaveValue('01.02.2026');
  await other.getByRole('button',{name:'Odustani',exact:true}).click();
  await other.getByRole('button',{name:'OK',exact:true}).click();
  await expect.poll(()=>state.token).toBeNull();

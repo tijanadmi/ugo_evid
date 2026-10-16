@@ -8,11 +8,12 @@ type DocumentType struct {
 	Name string `json:"naziv"`
 }
 type DocumentMetadata struct {
-	TypeID int    `json:"id_tip_doc" binding:"required,min=1"`
-	Name   string `json:"naziv" binding:"required,max=200"`
-	Number string `json:"broj_dokumenta" binding:"max=100"`
-	Date   string `json:"datum_dokumenta" binding:"omitempty,datetime=2006-01-02"`
-	Note   string `json:"napomena" binding:"max=2000"`
+	RequestID int    `json:"id_raz_zahtev" binding:"min=0"`
+	TypeID    int    `json:"id_tip_doc" binding:"required,min=1"`
+	Name      string `json:"naziv" binding:"required,max=200"`
+	Number    string `json:"broj_dokumenta" binding:"max=100"`
+	Date      string `json:"datum_dokumenta" binding:"omitempty,datetime=2006-01-02"`
+	Note      string `json:"napomena" binding:"max=2000"`
 }
 type Document struct {
 	DocumentMetadata

@@ -12,7 +12,7 @@ import ConfirmAction from '../../ui/ConfirmAction';
 import RowMenu from '../../ui/RowMenu';
 import Icon from '../../ui/Icon';
 
-export default function Documents({ item, children }) {
+export default function Documents({ item, children, request, startUpload=false }) {
  const { api, user } = useAuth();
  const client = useQueryClient();
  const owner = useContactSession(api, documentSessionService);
@@ -30,8 +30,16 @@ export default function Documents({ item, children }) {
    queryFn: async ({ signal }) => { try { return await api(`/ugo_evid/${item.id_ugo_evid}/dokumenti`, { signal }); } catch (error) { if (error.status === 403) return { forbidden: true }; throw error; } },
    retry: false, refetchOnWindowFocus: true, refetchInterval: 30000,
  });
- const data = query.data;
+ const requestCodes = ['RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'];
+ const data = query.data && { ...query.data,
+   types: request ? query.data.types?.filter(t => requestCodes.includes(t.sifra)) : query.data.types,
+   items: request ? query.data.items?.filter(d => d.id_raz_zahtev === request.id || d.id === request.id_ugo_doc || d.id === request.id_zahtev_doc) : query.data.items,
+ };
  const canWrite = item.otvoren_ug === 'X' && data && !data.forbidden && !query.error;
+ const uploadStarted = useRef(false);
+ useEffect(()=>{
+   if(startUpload && canWrite && !uploadStarted.current) { uploadStarted.current=true; upload(); }
+ },[startUpload,canWrite]);
  function upload(code) {
    if (!canWrite || busy || pending.current || editor) return;
    const type = data.types?.find(type => type.sifra === code);
@@ -59,7 +67,7 @@ export default function Documents({ item, children }) {
    if (pending.current || busy || blocked || (editor.mode !== 'add' && owner.lost)) return;
    pending.current = true; setBusy(true);
    try {
-     if (editor.mode === 'add') await uploadDocument(api, item.id_ugo_evid, metadata, file);
+     if (editor.mode === 'add') await uploadDocument(api, item.id_ugo_evid, {...metadata, id_raz_zahtev: request?.id || 0}, file);
      else {
        if (!await owner.renew()) return;
        await api(`/ugo_doc/${editor.initial.id}`, { method: editor.mode === 'delete' ? 'DELETE' : 'PUT', body: { ...(metadata || {}), version: owner.session.person.version, lock_token: owner.session.token } });
@@ -82,10 +90,11 @@ export default function Documents({ item, children }) {
    finally { pending.current = false; if (mounted.current) setBusy(false); }
  }
  return <>
-   {children(upload, !!canWrite && !busy)}
+   {children?.(upload, !!canWrite && !busy)}
    <section className="contract-card documents-panel" aria-label="Dokumenta ugovora">
-     <div className="partner-heading"><h2>Dokumenta ugovora</h2><div className="document-buttons">
-       {canWrite && <><button className="button" disabled={busy} onClick={() => upload('DODATNO_RESENJE')}>Dodaj dodatno rešenje</button><button className="button" disabled={busy} onClick={() => upload('ZAPISNIK')}>Dodaj zapisnik</button><button className="button primary" disabled={busy} onClick={() => upload()}>Dodaj dokument</button></>}
+     <div className="partner-heading"><h2>{request ? `Dokumenta zahteva ${request.broj_zahteva}` : 'Dokumenta ugovora'}</h2><div className="document-buttons">
+       {canWrite && !request && <><button className="button" disabled={busy} onClick={() => upload('DODATNO_RESENJE')}>Dodaj dodatno rešenje</button><button className="button" disabled={busy} onClick={() => upload('ZAPISNIK')}>Dodaj zapisnik</button><button className="button primary" disabled={busy} onClick={() => upload()}>Dodaj dokument</button></>}
+       <>{canWrite && request && <button className="button primary" disabled={busy} onClick={()=>upload()}>Dodaj dokument zahteva</button>}</>
        <button className="button" disabled={query.isFetching} onClick={() => query.refetch()}>Osveži dokumenta</button>
      </div></div>
      {query.isPending ? <p role="status">Učitavanje dokumenata…</p> : data?.forbidden ? <p>Dokumenta su dostupna korisnicima organizacione jedinice ugovora.</p> : query.error ? <p>Dokumenta trenutno nisu dostupna.</p> : !data?.items?.length ? <p>Nema dodatih dokumenata.</p> :

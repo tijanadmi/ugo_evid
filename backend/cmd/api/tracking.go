@@ -58,8 +58,16 @@ func (s *Server) SaveTracking(c *gin.Context) {
 		return
 	}
 	kind := c.Param("kind")
+	if c.Request.Method == "DELETE" && kind != "periodi" && kind != "zahtevi" {
+		c.JSON(400, gin.H{"error": "Nepoznata vrsta evidencije."})
+		return
+	}
 	if c.Request.Method == "DELETE" {
-		kind = "obrisi-period"
+		if kind == "zahtevi" {
+			kind = "obrisi-zahtev"
+		} else {
+			kind = "obrisi-period"
+		}
 	} else if kind != "periodi" && kind != "zahtevi" {
 		c.JSON(400, gin.H{"error": "Nepoznata vrsta evidencije."})
 		return

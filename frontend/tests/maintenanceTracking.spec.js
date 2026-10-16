@@ -1,15 +1,19 @@
 import { test, expect } from '@playwright/test';
 
 async function setup(context,extra={}){
- const state={token:null,periodi:[],zahtevi:[],writes:[],error:null,closed:false,...extra};
+ const state={token:null,periodi:[],zahtevi:[],writes:[],error:null,closed:false,uploads:[],docs:[],...extra};
  const maintenance={id:1,version:'1',pocetak_odrzavanja:'',ima_razvojnu_podrsku:true,teh_period_meseci:1,id_teh_tip_doc:5,teh_podsetnik_dana:7,raz_podsetnik_dana:3,fondovi:[{id_vrsta_rada:1,ugovoreno_casova:100},{id_vrsta_rada:3,ugovoreno_casova:0}]};
  await context.addInitScript(()=>sessionStorage.setItem('ugo-evid-session',JSON.stringify({access_token:'access',refresh_token:'refresh',access_token_expires_at:new Date(Date.now()+3600000).toISOString(),refresh_token_expires_at:new Date(Date.now()+7200000).toISOString(),user:{username:'test.user'}})));
  await context.route('**/api/**',async route=>{
-  const req=route.request(),path=new URL(req.url()).pathname,body=req.postData()?req.postDataJSON():{};
+  const req=route.request(),path=new URL(req.url()).pathname,body=req.postData() && !req.headers()['content-type']?.includes('multipart/form-data')?req.postDataJSON():{};
   const json=(data,status=200)=>route.fulfill({status,json:data});
   if(path.endsWith('/detalji'))return json({id_ugo_evid:9,id_ugo_org:3,br_ugovor:'460',predmet_ugovora:'Održavanje',otvoren_ug:state.closed?'':'X',lica_dobavljaca:[]});
   if(path.endsWith('/ugo_tip_ugovora'))return json({items:[{id:1,sifra:'ODRZAVANJE',naziv:'Održavanje softvera'}]});
-  if(path.endsWith('/dokumenti'))return json({items:[{id:20,naziv:'Potvrda januar',id_tip_doc:5}],types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'}]});
+  if(path.endsWith('/dokumenti') && req.method()==='POST'){
+   const metadata=JSON.parse(req.postData().match(/name="metadata"\r\n\r\n([^\r]+)/)[1]);state.uploads.push(metadata);
+   state.docs.push({...metadata,id:100+state.uploads.length,originalni_naziv:'test.pdf',mime_tip:'application/pdf',velicina_bajt:100});return json({id:100+state.uploads.length},201);
+  }
+  if(path.endsWith('/dokumenti'))return json({items:[{id:20,naziv:'Potvrda januar',id_tip_doc:5},...state.docs],types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'},...['RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'].map((sifra,i)=>({id:10+i,sifra,naziv:sifra}))]});
   if(path.endsWith('/podesavanja'))return json({settings:{id_tip_ugovora:1,version:'1',odrzavanje:maintenance,sap_pocetak:'2026-01-15',sap_kraj:'2026-02-28',vrste_rada:[{id:1,naziv:'Inženjer/programer'},{id:3,naziv:'Konsultant'}]},document_types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'}]});
   if(path.endsWith('/podsetnici'))return json({items:[{id_ugo_evid:9,vrsta:'TEH',id:1,opis:'Januar',rok:'2026-01-31',kasni:false}]});
   if(path.endsWith('/pracenje'))return json({periodi:state.periodi,zahtevi:state.zahtevi,fondovi:[{id_vrsta_rada:1,naziv:'Inženjer/programer',ugovoreno:100,zauzeto:20,preostalo:80}]});
@@ -24,6 +28,7 @@ async function setup(context,extra={}){
    if(state.error)return json({error:state.error},400);
    if(body.lock_token!==state.token)return json({error:'Zaključavanje nije važeće.'},409);
    const kind=path.split('/').at(-1);state.writes.push(body);
+   if(req.method()==='DELETE' && kind==='zahtevi'){state.zahtevi=state.zahtevi.filter(p=>p.id!==body.items[0].id);state.token=null;return json({status:'ok'});}
    if(req.method()==='DELETE'){const p=state.periodi.find(p=>p.id===body.items[0].id);if(!p||p.status!=='PLANIRAN'||p.version!==body.items[0].version)return json({error:'Period nije vise planiran ili je promenjen.'},409);state.periodi=state.periodi.filter(x=>x.id!==p.id);state.token=null;return json({status:'ok'});}
    for(const p of body.items){const current=state[kind].find(x=>x.id===p.id);if(current)Object.assign(current,p,{version:String(Number(p.version)+1)});else state[kind].push({...p,id:state[kind].length+1,version:'1',rok:p.rok||'2026-02-10'});}
    state.token=null;return json({status:'ok'});
@@ -32,6 +37,44 @@ async function setup(context,extra={}){
  });return state;
 }
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('heading',{name:'Praćenje održavanja'})).toBeVisible();}
+
+test('request row uploads multiple details and displays only its own documents',async({page,context})=>{
+ const state=await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',datum_zahteva:'2026-01-20',datum_realizacije:'2026-01-29',datum_potpisa:'2026-01-30',status:'ZAVRSEN',id_vrsta_rada:1}],docs:[{id:30,id_raz_zahtev:99,naziv:'Drugi zahtev',velicina_bajt:10,mime_tip:'application/pdf'}]});
+ await open(page);
+ const row=page.getByRole('row').filter({hasText:'R-7'});
+ await expect(row).toContainText('29.01.2026');await expect(row).toContainText('30.01.2026');
+ await row.getByRole('button',{name:'Upload',exact:true}).click();
+ for(let i=1;i<=2;i++){
+  const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
+  await form.getByLabel('Tip dokumenta').selectOption('11');
+  await form.getByLabel('Fajl',{exact:true}).setInputFiles({name:`detalji-${i}.pdf`,mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')});
+  await form.getByRole('button',{name:'Sačuvaj dokument'}).click();
+  await expect(form).toHaveCount(0);
+  if(i===1)await page.getByRole('button',{name:'Dodaj dokument zahteva'}).click();
+ }
+ expect(state.uploads).toHaveLength(2);
+ expect(state.uploads.every(d=>d.id_raz_zahtev===7&&d.id_tip_doc===11)).toBeTruthy();
+ const dialog=page.getByRole('dialog');
+ await expect(dialog).toContainText('detalji-1.pdf');await expect(dialog).toContainText('detalji-2.pdf');
+ await expect(dialog).not.toContainText('Drugi zahtev');await expect(dialog).not.toContainText('Potvrda januar');
+});
+
+test('unfinished request can be deleted with confirmation and retained documents',async({page,context})=>{
+ const state=await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'U_RADU',id_ugo_doc:20}]});
+ await open(page);await page.getByRole('button',{name:'Akcije za zahtev R-7'}).click();
+ await page.getByRole('menuitem',{name:'Obriši',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Dokumenti i evidencija ostaju sačuvani');
+ expect(state.zahtevi).toHaveLength(1);
+ await page.getByRole('button',{name:'Obriši zahtev',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.zahtevi).toHaveLength(0);
+});
+
+test('completed request has edit but no delete action',async({page,context})=>{
+ await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'ZAVRSEN'}]});
+ await open(page);await page.getByRole('button',{name:'Akcije za zahtev R-7'}).click();
+ await expect(page.getByRole('menuitem',{name:'Izmeni',exact:true})).toBeVisible();
+ await expect(page.getByRole('menuitem',{name:'Obriši',exact:true})).toHaveCount(0);
+});
 
 test('records a completed development request with its original dates',async({page,context})=>{
  const state=await setup(context);await open(page);
@@ -44,8 +87,9 @@ test('records a completed development request with its original dates',async({pa
  await page.getByLabel('Rok u radnim danima').fill('15');
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
  expect(state.writes).toHaveLength(0);
- await expect(page.getByLabel('Datum potpisa',{exact:true})).toHaveAttribute('required','');
- await page.getByLabel('Datum potpisa',{exact:true}).fill('2026-01-30');
+ await expect(page.getByLabel('Datum potpisa zapisnika',{exact:true})).toHaveAttribute('required','');
+ await page.getByLabel('Datum realizacije',{exact:true}).fill('29.01.2026');
+ await page.getByLabel('Datum potpisa zapisnika',{exact:true}).fill('30.01.2026');
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(state.writes[0].items[0]).toMatchObject({status:'ZAVRSEN',datum_zahteva:'2026-01-20',datum_potpisa:'2026-01-30',broj_casova:20});
@@ -59,7 +103,7 @@ test('generation previews before saving and displays reminders and contracted wo
  await page.getByRole('button',{name:'Generiši periode'}).click();
  await expect(page.getByRole('button',{name:'Sačuvaj',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'Prikaži predlog'}).click();
- await expect(page.locator('.tracking-preview')).toContainText('2026-01-15 — 2026-01-31');expect(state.writes).toHaveLength(0);
+ await expect(page.locator('.tracking-preview')).toContainText('15.01.2026 — 31.01.2026');expect(state.writes).toHaveLength(0);
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.periodi).toHaveLength(2);
  await expect(page.getByRole('button',{name:'Generiši periode'})).toBeDisabled();
@@ -70,7 +114,7 @@ test('manual period form locks other tab and cancellation keeps draft until conf
  await page.getByRole('button',{name:'Dodaj period'}).click();await page.getByLabel('Period od',{exact:true}).fill('2026-01-15');
  await other.getByRole('button',{name:'Dodaj razvojni zahtev'}).click();await expect(other.getByRole('dialog')).toHaveCount(0);await expect(other.getByRole('alert')).toContainText('drugi');
  await page.getByRole('button',{name:'Odustani',exact:true}).click();await page.getByRole('button',{name:'Otkaži',exact:true}).click();
- await expect(page.getByLabel('Period od',{exact:true})).toHaveValue('2026-01-15');
+ await expect(page.getByLabel('Period od',{exact:true})).toHaveValue('15.01.2026');
  await page.getByLabel('Period do',{exact:true}).fill('2026-01-31');await page.getByLabel('Potvrda / zapisnik').selectOption('20');
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.writes[0].items[0].id_ugo_doc).toBe(20);
 });
@@ -93,17 +137,17 @@ test('closed maintenance is read only and home shows reminders',async({page,cont
  test('period menu deletes only planned periods, confirms and locks other tabs',async({page,context})=>{
  const state=await setup(context,{periodi:[{id:1,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',status:'PLANIRAN',id_tip_doc:5},{id:2,version:'1',period_od:'2026-02-01',period_do:'2026-02-28',status:'PRIPREMA',id_tip_doc:5}]});
  await open(page);const other=await context.newPage();await open(other);
- await page.getByRole('button',{name:'Akcije za period 2026-02-01 - 2026-02-28'}).click();
+ await page.getByRole('button',{name:'Akcije za period 01.02.2026 - 28.02.2026'}).click();
  await expect(page.getByRole('menuitem',{name:'Obriši period'})).toHaveCount(0);
  await page.keyboard.press('Escape');
- await page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();
+ await page.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'}).click();
  await page.getByRole('menuitem',{name:'Obriši period'}).click();
  await expect(page.getByRole('dialog')).toBeVisible();
- await other.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();
+ await other.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'}).click();
  await other.getByRole('menuitem',{name:'Izmeni period'}).click();await expect(other.getByRole('alert')).toContainText('drugi');await expect(other.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'Odustani',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.periodi).toHaveLength(2);expect(state.token).toBeNull();
- await page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'}).click();await page.getByRole('menuitem',{name:'Obriši period'}).click();
+ await page.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'}).click();await page.getByRole('menuitem',{name:'Obriši period'}).click();
  await page.getByRole('button',{name:'Obriši period',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
- await expect(page.getByRole('button',{name:'Akcije za period 2026-01-15 - 2026-01-31'})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'})).toHaveCount(0);
  expect(state.periodi).toHaveLength(1);expect(state.token).toBeNull();
  });

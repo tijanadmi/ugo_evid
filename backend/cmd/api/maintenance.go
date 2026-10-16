@@ -16,7 +16,7 @@ func maintenanceError(c *gin.Context, err error) {
 		c.JSON(400, gin.H{"error": err.Error()})
 	case errors.Is(err, repository.ErrMaintenanceLocked):
 		c.JSON(423, gin.H{"error": err.Error()})
-	case errors.Is(err, repository.ErrCalendarConflict), errors.Is(err, repository.ErrPeriodDelete), errors.Is(err, repository.ErrMaintenanceLease), errors.Is(err, repository.ErrMaintenanceVersion), errors.Is(err, repository.ErrMaintenanceConflict):
+	case errors.Is(err, repository.ErrCalendarConflict), errors.Is(err, repository.ErrPeriodDelete), errors.Is(err, repository.ErrRequestDelete), errors.Is(err, repository.ErrMaintenanceLease), errors.Is(err, repository.ErrMaintenanceVersion), errors.Is(err, repository.ErrMaintenanceConflict):
 		c.JSON(409, gin.H{"error": err.Error()})
 	case errors.Is(err, repository.ErrMaintenanceInput), errors.Is(err, repository.ErrContractType):
 		c.JSON(400, gin.H{"error": err.Error()})

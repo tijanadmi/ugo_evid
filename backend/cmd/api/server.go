@@ -78,7 +78,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/ugo_evid/:id/pracenje", server.GetTracking)
 	authRoutes.POST("/ugo_evid/:id/pracenje/preview", server.PreviewPeriods)
 	authRoutes.POST("/ugo_evid/:id/pracenje/:kind", server.SaveTracking)
-	authRoutes.DELETE("/ugo_evid/:id/pracenje/periodi", server.SaveTracking)
+	authRoutes.DELETE("/ugo_evid/:id/pracenje/:kind", server.SaveTracking)
 	authRoutes.GET("/podsetnici", server.ListReminders)
 	authRoutes.GET("/radni_kalendar/:year", server.Calendar)
 	authRoutes.GET("/radni_kalendar/:year/praznici", server.CalendarHolidays)

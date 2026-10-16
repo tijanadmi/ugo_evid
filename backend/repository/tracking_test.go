@@ -57,8 +57,14 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		stale, foreign, closed, missingCalendar, failWrite bool
 		status                                             string
 		signed                                             string
+		completed                                          string
+		missingCompleted                                   bool
 		want                                               error
 	}{
+		{name: "delete unfinished request retains history", kind: "obrisi-zahtev", lease: 1},
+		{name: "delete completed request", kind: "obrisi-zahtev", lease: 1, status: "ZAVRSEN", want: ErrRequestDelete},
+		{name: "delete changed request", kind: "obrisi-zahtev", lease: 1, stale: true, want: ErrRequestDelete},
+		{name: "delete request expired lease", kind: "obrisi-zahtev", want: ErrMaintenanceLease},
 		{name: "delete planned period", kind: "obrisi-period", lease: 1},
 		{name: "delete changed status or version", kind: "obrisi-period", lease: 1, stale: true, want: ErrPeriodDelete},
 		{name: "delete without lease", kind: "obrisi-period", want: ErrMaintenanceLease},
@@ -72,6 +78,9 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		{name: "stale period", kind: "periodi", lease: 1, stale: true, status: "PLANIRAN", want: ErrMaintenanceConflict},
 		{name: "request reserve", kind: "zahtevi", lease: 1, used: 80, status: "PODNET"},
 		{name: "completed historical request", kind: "zahtevi", lease: 1, used: 80, status: "ZAVRSEN", signed: "2026-01-05"},
+		{name: "completed date required", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", missingCompleted: true, want: ErrTrackingInput},
+		{name: "completion before request", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", completed: "2026-01-04", want: ErrTrackingInput},
+		{name: "completion after signature", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", completed: "2026-01-06", want: ErrTrackingInput},
 		{name: "completed request consumes fund", kind: "zahtevi", lease: 1, used: 81, status: "ZAVRSEN", signed: "2026-01-05", want: ErrTrackingFunds},
 		{name: "completed request requires signature", kind: "zahtevi", lease: 1, status: "ZAVRSEN", want: ErrTrackingInput},
 		{name: "fund exhausted", kind: "zahtevi", lease: 1, used: 81, status: "PODNET", want: ErrTrackingFunds},
@@ -111,7 +120,7 @@ func TestTrackingTransactionGuards(t *testing.T) {
 					fundLocked = strings.Contains(q, "FOR UPDATE NOWAIT")
 					return editRows(int64(20), int64(100)), nil
 				case strings.Contains(q, "SUM(broj_casova)"):
-					if !strings.Contains(q, "'NACRT','OTKAZAN'") {
+					if !strings.Contains(q, "'NACRT','OTKAZAN','OBRISAN'") {
 						return nil, fmt.Errorf("wrong reservation statuses")
 					}
 					return editRows(tc.used), nil
@@ -139,15 +148,25 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				if tc.kind == "obrisi-period" && (!strings.Contains(q, "status='PLANIRAN'") || !strings.Contains(q, "version=:version") || !strings.Contains(q, "id_odrzavanja=:mid")) {
 					return nil, fmt.Errorf("unguarded period delete")
 				}
+				if tc.kind == "obrisi-zahtev" && (!strings.Contains(q, "status='OBRISAN'") || !strings.Contains(q, "status NOT IN ('ZAVRSEN','OBRISAN')") || !strings.Contains(q, "version=:version") || !strings.Contains(q, "id_odrzavanja=:mid") || strings.Contains(q, "DELETE FROM")) {
+					return nil, fmt.Errorf("unsafe request deletion")
+				}
 				writes++
-				if tc.stale {
+				if tc.stale || (tc.kind == "obrisi-zahtev" && tc.status == "ZAVRSEN") {
 					return driver.RowsAffected(0), nil
 				}
 				return driver.RowsAffected(1), nil
 			})
 			p := models.TrackingItem{Start: "2026-01-01", End: "2026-01-31", DocumentType: 5, Status: tc.status, WorkType: 1, Number: "Z-1", Requested: "2026-01-05", Days: 1, Hours: 20}
 			p.Signed = tc.signed
-			if tc.stale || tc.kind == "obrisi-period" {
+			p.Completed = tc.signed
+			if tc.completed != "" {
+				p.Completed = tc.completed
+			}
+			if tc.missingCompleted {
+				p.Completed = ""
+			}
+			if tc.stale || tc.kind == "obrisi-period" || tc.kind == "obrisi-zahtev" {
 				p.ID = 2
 				p.Version = 1
 			}
@@ -224,7 +243,7 @@ func TestGeneratedBatchRollsBackOnOverlap(t *testing.T) {
 func TestRemindersAreOrganizationScoped(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, a []driver.NamedValue) (driver.Rows, error) {
 		checkBinds(t, q, a)
-		if len(a) != 2 || a[0].Value != 3 || a[1].Value != 3 || strings.Count(q, "e.id_ugo_org=") != 2 || !strings.Contains(q, "'NACRT','ZAVRSEN','OTKAZAN'") {
+		if len(a) != 2 || a[0].Value != 3 || a[1].Value != 3 || strings.Count(q, "e.id_ugo_org=") != 2 || !strings.Contains(q, "'NACRT','ZAVRSEN','OTKAZAN','OBRISAN'") {
 			return nil, fmt.Errorf("reminders are not scoped")
 		}
 		return editRows(int64(9), "RAZ", int64(1), "Z-1", "2026-01-10", int64(1)), nil

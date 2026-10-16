@@ -80,3 +80,5 @@ func requestDeadline(start string, days int, calendar map[string]bool) (string, 
 	}
 	return "", ErrTrackingCalendar
 }
+
+var ErrRequestDelete = errors.New("Zavrsen zahtev nije moguce obrisati. Zahtev je mozda promenjen ili vec obrisan; osvezite listu.")

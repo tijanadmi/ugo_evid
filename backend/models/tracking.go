@@ -13,6 +13,7 @@ type TrackingItem struct {
 	Hours           int    `json:"broj_casova"`
 	Days            int    `json:"rok_radnih_dana"`
 	Deadline        string `json:"rok"`
+	Completed       string `json:"datum_realizacije"`
 	Signed          string `json:"datum_potpisa"`
 	Document        int    `json:"id_ugo_doc"`
 	RequestDocument int    `json:"id_zahtev_doc"`
