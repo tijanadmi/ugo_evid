@@ -157,28 +157,6 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 		if p.Status == "ZAVRSEN" && p.Signed == "" {
 			return ErrTrackingInput
 		}
-		if p.Document < 0 || p.RequestDocument < 0 {
-			return ErrTrackingInput
-		}
-		for _, doc := range []int{p.Document, p.RequestDocument} {
-			if doc == 0 {
-				continue
-			}
-			var count int
-			docQuery := `SELECT COUNT(*) FROM TED.UGO_DOC WHERE id=:doc AND id_ugo_evid=:id AND status='A'`
-			docArgs := []any{sql.Named("doc", doc), sql.Named("id", id)}
-			if kind == "zahtevi" {
-				docQuery += ` AND (id_raz_zahtev IS NULL OR id_raz_zahtev=:request_id)`
-				docArgs = append(docArgs, sql.Named("request_id", p.ID))
-			}
-			err = tx.QueryRowContext(ctx, docQuery, docArgs...).Scan(&count)
-			if err != nil {
-				return err
-			}
-			if count != 1 {
-				return ErrTrackingInput
-			}
-		}
 		if kind == "periodi" {
 			err = savePeriod(ctx, tx, mid, user, start, end, p)
 		} else {
@@ -200,6 +178,7 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 	return tx.Commit()
 }
 
+// Legacy document links are read-only here; new associations are created by upload.
 func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p models.TrackingItem) error {
 	if _, e := date(p.Start); e != nil {
 		return ErrTrackingInput
@@ -234,13 +213,13 @@ func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end strin
 			return ErrTrackingInput
 		}
 	}
-	args := []any{sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("dtype", p.DocumentType), sql.Named("deadline", p.Deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user), sql.Named("mid", mid)}
+	args := []any{sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("dtype", p.DocumentType), sql.Named("deadline", p.Deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user), sql.Named("mid", mid)}
 	if p.ID == 0 {
-		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,id_ugo_doc,status,napomena,id_korisnika,id_odrzavanja) VALUES(TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),:status,:note,:user_id,:mid)`, args...)
+		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,id_ugo_doc,status,napomena,id_korisnika,id_odrzavanja) VALUES(TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULL,:status,:note,:user_id,:mid)`, args...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
-	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_TEH_PERIOD SET period_od=TO_DATE(:start_date,'YYYY-MM-DD'),period_do=TO_DATE(:end_date,'YYYY-MM-DD'),id_tip_doc=:dtype,rok_dokumenta=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id_odrzavanja=:mid AND id=:id AND version=:version`, args...)
+	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_TEH_PERIOD SET period_od=TO_DATE(:start_date,'YYYY-MM-DD'),period_do=TO_DATE(:end_date,'YYYY-MM-DD'),id_tip_doc=:dtype,rok_dokumenta=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id_odrzavanja=:mid AND id=:id AND version=:version`, args...)
 	if e != nil {
 		return e
 	}
@@ -327,13 +306,13 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	if p.Signed != "" && (p.Signed < p.Requested || p.Signed >= deadline) {
 		return ErrTrackingInput
 	}
-	args := []any{sql.Named("completed", p.Completed), sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("doc", p.Document), sql.Named("request_doc", p.RequestDocument), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
+	args := []any{sql.Named("completed", p.Completed), sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
 	if p.ID == 0 {
-		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(datum_realizacije,id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(TO_DATE(:completed,'YYYY-MM-DD'),:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULLIF(:doc,0),NULLIF(:request_doc,0),:status,:note,:user_id)`, args...)
+		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(datum_realizacije,id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,id_ugo_doc,id_zahtev_doc,status,napomena,id_korisnika) VALUES(TO_DATE(:completed,'YYYY-MM-DD'),:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),NULL,NULL,:status,:note,:user_id)`, args...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
-	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET datum_realizacije=TO_DATE(:completed,'YYYY-MM-DD'),id_raz_fonda=:fid,broj_zahteva=:request_number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),id_ugo_doc=NULLIF(:doc,0),id_zahtev_doc=NULLIF(:request_doc,0),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version AND status<>'OBRISAN'`, args...)
+	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_RAZ_ZAHTEV SET datum_realizacije=TO_DATE(:completed,'YYYY-MM-DD'),id_raz_fonda=:fid,broj_zahteva=:request_number,datum_zahteva=TO_DATE(:requested,'YYYY-MM-DD'),broj_casova=:hours,rok_radnih_dana=:days,rok_potpisa=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id=:id AND version=:version AND status<>'OBRISAN'`, args...)
 	if e != nil {
 		return e
 	}

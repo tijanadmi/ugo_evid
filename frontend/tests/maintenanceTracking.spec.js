@@ -90,6 +90,22 @@ test('dates support typing and calendar selection with the same display format',
  await expect(control.locator('input[type="date"]')).toHaveValue('2026-01-24');
 });
 
+test('technical period upload links automatically and retains legacy documents',async({page,context})=>{
+ const state=await setup(context,{periodi:[{id:7,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',id_tip_doc:5,status:'PLANIRAN',id_ugo_doc:20}],docs:[{id:40,id_teh_period:8,naziv:'Drugi period',mime_tip:'application/pdf',velicina_bajt:10}]});
+ await open(page);
+ const row=page.getByRole('row').filter({hasText:'15.01.2026 — 31.01.2026'});
+ await row.getByRole('button',{name:'Upload',exact:true}).click();
+ const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
+ await expect(form.getByLabel('Tip dokumenta')).toHaveValue('Potvrda');
+ await form.getByLabel('Fajl',{exact:true}).setInputFiles({name:'potvrda.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')});
+ await form.getByRole('button',{name:'Sačuvaj dokument'}).click();
+ await expect(form).toHaveCount(0);
+ expect(state.uploads[0]).toMatchObject({id_teh_period:7,id_raz_zahtev:0,id_tip_doc:5});
+ const dialog=page.getByRole('dialog');
+ await expect(dialog).toContainText('potvrda.pdf');await expect(dialog).toContainText('Potvrda januar');
+ await expect(dialog).not.toContainText('Drugi period');
+});
+
 test('completed request has edit but no delete action',async({page,context})=>{
  await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'ZAVRSEN'}]});
  await open(page);await page.getByRole('button',{name:'Akcije za zahtev R-7'}).click();
@@ -136,8 +152,8 @@ test('manual period form locks other tab and cancellation keeps draft until conf
  await other.getByRole('button',{name:'Dodaj razvojni zahtev'}).click();await expect(other.getByRole('dialog')).toHaveCount(0);await expect(other.getByRole('alert')).toContainText('drugi');
  await page.getByRole('button',{name:'Odustani',exact:true}).click();await page.getByRole('button',{name:'Otkaži',exact:true}).click();
  await expect(page.getByLabel('Period od',{exact:true})).toHaveValue('15.01.2026');
- await page.getByLabel('Period do',{exact:true}).fill('2026-01-31');await page.getByLabel('Potvrda / zapisnik').selectOption('20');
- await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.writes[0].items[0].id_ugo_doc).toBe(20);
+ await page.getByLabel('Period do',{exact:true}).fill('2026-01-31');await expect(page.getByLabel('Potvrda / zapisnik')).toHaveCount(0);
+ await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.writes[0].items[0].id_ugo_doc).toBe(0);
 });
 test('development request selects one funded work type and preserves form after rejected hours',async({page,context})=>{
  const state=await setup(context,{error:'Zahtev prekoračuje preostale časove.'});await open(page);

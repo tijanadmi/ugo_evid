@@ -8,6 +8,7 @@ type DocumentType struct {
 	Name string `json:"naziv"`
 }
 type DocumentMetadata struct {
+	PeriodID  int    `json:"id_teh_period" binding:"min=0"`
 	RequestID int    `json:"id_raz_zahtev" binding:"min=0"`
 	TypeID    int    `json:"id_tip_doc" binding:"required,min=1"`
 	Name      string `json:"naziv" binding:"required,max=200"`

@@ -14,13 +14,13 @@ var ErrDocumentClosed = errors.New("Dokumenta zatvorenog ugovora nije moguce men
 const documentSelect = `SELECT d.id, d.id_ugo_evid, d.id_tip_doc, t.naziv, d.naziv,
  d.broj_dokumenta, TO_CHAR(d.datum_dokumenta,'YYYY-MM-DD'), d.napomena,
  d.originalni_naziv, d.putanja, d.mime_tip, d.velicina_bajt, d.sha256, d.status,
- d.id_korisnika_unosa, d.datpri, d.datizm, d.version, NVL(d.id_raz_zahtev,0)
+ d.id_korisnika_unosa, d.datpri, d.datizm, d.version, NVL(d.id_raz_zahtev,0), NVL(d.id_teh_period,0)
  FROM TED.UGO_DOC d JOIN TED.UGO_TIP_DOC t ON t.id = d.id_tip_doc`
 
 func scanDocument(row interface{ Scan(...any) error }, d *models.Document) error {
 	return scanNullable(row, &d.ID, &d.ContractID, &d.TypeID, &d.TypeName, &d.Name,
 		&d.Number, &d.Date, &d.Note, &d.OriginalName, &d.Path, &d.MIME, &d.Size,
-		&d.SHA256, &d.Status, &d.UserID, &d.Created, &d.Updated, &d.Version, &d.RequestID)
+		&d.SHA256, &d.Status, &d.UserID, &d.Created, &d.Updated, &d.Version, &d.RequestID, &d.PeriodID)
 }
 func (r *OracleStore) ListDocumentTypes(ctx context.Context) ([]models.DocumentType, error) {
 	rows, err := r.DB.QueryContext(ctx, `SELECT id,sifra,naziv FROM TED.UGO_TIP_DOC WHERE status='A' ORDER BY redosled,id`)
@@ -112,7 +112,7 @@ func (r *OracleStore) ReserveDocument(ctx context.Context, d *models.Document) e
 	if err = openDocumentContract(ctx, tx, d.ContractID); err != nil {
 		return err
 	}
-	if d.RequestID < 0 {
+	if d.RequestID < 0 || d.PeriodID < 0 || (d.RequestID > 0 && d.PeriodID > 0) {
 		return ErrDocumentType
 	}
 	if d.RequestID > 0 {
@@ -139,10 +139,34 @@ func (r *OracleStore) ReserveDocument(ctx context.Context, d *models.Document) e
 			return ErrDocumentType
 		}
 	}
+	if d.PeriodID > 0 {
+		var requestID int
+		err = tx.QueryRowContext(ctx, `SELECT z.id FROM TED.UGO_TEH_PERIOD z JOIN TED.UGO_ODRZAVANJE o ON o.id=z.id_odrzavanja WHERE z.id=:request_id AND o.id_ugo_evid=:contract_id FOR UPDATE OF z.version NOWAIT`, sql.Named("request_id", d.PeriodID), sql.Named("contract_id", d.ContractID)).Scan(&requestID)
+		if err != nil {
+			if strings.Contains(err.Error(), "ORA-00054") {
+				return ErrDocumentLocked
+			}
+			return err
+		}
+		var locks int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_EDIT_LOCK WHERE entity_type='UGO_ODRZAVANJE' AND entity_id=:contract_id AND expires_at>SYSTIMESTAMP`, sql.Named("contract_id", d.ContractID)).Scan(&locks); err != nil {
+			return err
+		}
+		if locks > 0 {
+			return ErrDocumentLocked
+		}
+		var valid int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_TIP_DOC WHERE id=:type_id AND status='A' AND sifra IN ('POTVRDA_TEH','ZAPISNIK_TEH')`, sql.Named("type_id", d.TypeID)).Scan(&valid); err != nil {
+			return err
+		}
+		if valid != 1 {
+			return ErrDocumentType
+		}
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_DOC
- (id_raz_zahtev,id_ugo_evid,id_tip_doc,naziv,broj_dokumenta,datum_dokumenta,napomena,originalni_naziv,putanja,mime_tip,velicina_bajt,sha256,status,id_korisnika_unosa)
- VALUES (NULLIF(:request_id,0),:contract_id,:doc_type,:doc_name,:doc_number,TO_DATE(:doc_date,'YYYY-MM-DD'),:doc_note,:original_name,:file_path,:file_mime,:file_size,:file_hash,'P',:user_id) RETURNING id INTO :out_id`,
-		sql.Named("request_id", d.RequestID), sql.Named("contract_id", d.ContractID), sql.Named("doc_type", d.TypeID), sql.Named("doc_name", d.Name), sql.Named("doc_number", d.Number), sql.Named("doc_date", d.Date), sql.Named("doc_note", d.Note),
+ (id_teh_period,id_raz_zahtev,id_ugo_evid,id_tip_doc,naziv,broj_dokumenta,datum_dokumenta,napomena,originalni_naziv,putanja,mime_tip,velicina_bajt,sha256,status,id_korisnika_unosa)
+ VALUES (NULLIF(:period_id,0),NULLIF(:request_id,0),:contract_id,:doc_type,:doc_name,:doc_number,TO_DATE(:doc_date,'YYYY-MM-DD'),:doc_note,:original_name,:file_path,:file_mime,:file_size,:file_hash,'P',:user_id) RETURNING id INTO :out_id`,
+		sql.Named("period_id", d.PeriodID), sql.Named("request_id", d.RequestID), sql.Named("contract_id", d.ContractID), sql.Named("doc_type", d.TypeID), sql.Named("doc_name", d.Name), sql.Named("doc_number", d.Number), sql.Named("doc_date", d.Date), sql.Named("doc_note", d.Note),
 		sql.Named("original_name", d.OriginalName), sql.Named("file_path", d.Path), sql.Named("file_mime", d.MIME), sql.Named("file_size", d.Size), sql.Named("file_hash", d.SHA256), sql.Named("user_id", d.UserID), sql.Named("out_id", sql.Out{Dest: &d.ID}))
 	if err != nil {
 		return err
@@ -202,7 +226,7 @@ func (r *OracleStore) ChangeDocument(ctx context.Context, d *models.Document, us
 			return err
 		}
 		var valid int
-		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_DOC d WHERE d.id=:doc_id AND (d.id_raz_zahtev IS NULL OR EXISTS (SELECT 1 FROM TED.UGO_TIP_DOC t WHERE t.id=:type_id AND t.sifra IN ('RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ')))`, sql.Named("doc_id", d.ID), sql.Named("type_id", d.TypeID)).Scan(&valid); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_DOC d WHERE d.id=:doc_id AND (d.id_raz_zahtev IS NULL OR EXISTS (SELECT 1 FROM TED.UGO_TIP_DOC t WHERE t.id=:type_id AND t.sifra IN ('RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'))) AND (d.id_teh_period IS NULL OR EXISTS (SELECT 1 FROM TED.UGO_TIP_DOC t WHERE t.id=:period_type_id AND t.sifra IN ('POTVRDA_TEH','ZAPISNIK_TEH')))`, sql.Named("doc_id", d.ID), sql.Named("type_id", d.TypeID), sql.Named("period_type_id", d.TypeID)).Scan(&valid); err != nil {
 			return err
 		}
 		if valid != 1 {
