@@ -20,7 +20,7 @@ var ErrDocumentSize = errors.New("Fajl je prazan ili prevelik.")
 
 func DocumentStorage(path string) (*os.Root, error) {
 	if path == "" {
-		path = "./doc"
+		return nil, errors.New("DOCUMENT_ROOT is required")
 	}
 	if err := os.MkdirAll(path, 0700); err != nil {
 		return nil, err

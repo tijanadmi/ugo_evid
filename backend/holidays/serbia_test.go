@@ -89,7 +89,7 @@ func TestHolidayHTTPFailures(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, e := fetch(ctx, 2026, client, Endpoint); e == nil {
+	if _, e := fetch(ctx, 2026, client, "https://holidays.example.test/RS/"); e == nil {
 		t.Fatal("cancelled request succeeded")
 	}
 }

@@ -14,7 +14,7 @@ func TestLDAPEmptyCredentials(t *testing.T) {
 }
 
 func TestConfigFromEnvironment(t *testing.T) {
-	for k, v := range map[string]string{"DB_DRIVER": "oracle", "DB_SOURCE": "oracle://user:pass@host/service", "TOKEN_SYMMETRIC_KEY": "12345678901234567890123456789012", "LDAP_SERVERS": "dc1,dc2", "LDAP_DOMAIN": "example.local", "LDAP_PORT": "389", "LDAP_TIMEOUT": "5s", "ACTIVE_USER_STATUS": "A", "ACCESS_TOKEN_DURATION": "15m", "REFRESH_TOKEN_DURATION": "24h"} {
+	for k, v := range map[string]string{"DOCUMENT_ROOT": "./test-docs", "HOLIDAYS_API_URL": "https://holidays.example.test/RS/", "DB_DRIVER": "oracle", "DB_SOURCE": "oracle://user:pass@host/service", "TOKEN_SYMMETRIC_KEY": "12345678901234567890123456789012", "LDAP_SERVERS": "dc1,dc2", "LDAP_DOMAIN": "example.local", "LDAP_PORT": "389", "LDAP_TIMEOUT": "5s", "ACTIVE_USER_STATUS": "A", "ACCESS_TOKEN_DURATION": "15m", "REFRESH_TOKEN_DURATION": "24h"} {
 		t.Setenv(k, v)
 	}
 	cfg, err := LoadConfig(t.TempDir())

@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/spf13/viper"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
 )
 
 type Config struct {
+	HolidaysAPIURL       string        `mapstructure:"HOLIDAYS_API_URL"`
 	DocumentRoot         string        `mapstructure:"DOCUMENT_ROOT"`
 	DocumentMaxBytes     int64         `mapstructure:"DOCUMENT_MAX_BYTES"`
 	Environment          string        `mapstructure:"ENVIRONMENT"`
@@ -31,7 +33,6 @@ func LoadConfig(path string) (config Config, err error) {
 	v.AddConfigPath(path)
 	v.SetConfigName("app")
 	v.SetConfigType("env")
-	v.SetDefault("DOCUMENT_ROOT", "./doc")
 	v.SetDefault("DOCUMENT_MAX_BYTES", 25*1024*1024)
 	v.SetDefault("DB_DRIVER", "oracle")
 	v.SetDefault("HTTP_SERVER_ADDRESS", ":8080")
@@ -56,6 +57,16 @@ func LoadConfig(path string) (config Config, err error) {
 	if err = v.Unmarshal(&config); err != nil {
 		return
 	}
+	config.DocumentRoot = strings.TrimSpace(config.DocumentRoot)
+	if config.DocumentRoot == "" {
+		return config, fmt.Errorf("DOCUMENT_ROOT is required")
+	}
+	config.HolidaysAPIURL = strings.TrimSpace(config.HolidaysAPIURL)
+	endpoint, parseErr := url.Parse(config.HolidaysAPIURL)
+	if parseErr != nil || endpoint.Hostname() == "" || (endpoint.Scheme != "https" && endpoint.Scheme != "http") || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return config, fmt.Errorf("HOLIDAYS_API_URL must be an http(s) base URL without credentials, query or fragment")
+	}
+	config.HolidaysAPIURL = strings.TrimRight(config.HolidaysAPIURL, "/") + "/"
 	if config.DocumentMaxBytes < 1 || config.DocumentMaxBytes > 1024*1024*1024 {
 		return config, fmt.Errorf("DOCUMENT_MAX_BYTES must be between 1 and 1073741824")
 	}

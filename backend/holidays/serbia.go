@@ -15,13 +15,11 @@ import (
 	"unicode/utf8"
 )
 
-const Endpoint = "https://nagerholidays.com/api/v4/Holidays/RS/"
-
 var ErrResponse = errors.New("holiday service returned invalid or incomplete data")
 var client = &http.Client{Timeout: 12 * time.Second, CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
 
-func Fetch(ctx context.Context, year int) ([]models.CalendarHoliday, error) {
-	return fetch(ctx, year, client, Endpoint)
+func Fetch(ctx context.Context, year int, endpoint string) ([]models.CalendarHoliday, error) {
+	return fetch(ctx, year, client, endpoint)
 }
 func fetch(ctx context.Context, year int, c *http.Client, endpoint string) ([]models.CalendarHoliday, error) {
 	if year < 1900 || year > 2200 {

@@ -34,8 +34,10 @@ func NewServer(config util.Config, store db.Store) (*Server, error) {
 	}
 
 	server := &Server{
-		config:           config,
-		fetchHolidays:    holidays.Fetch,
+		config: config,
+		fetchHolidays: func(ctx context.Context, year int) ([]models.CalendarHoliday, error) {
+			return holidays.Fetch(ctx, year, config.HolidaysAPIURL)
+		},
 		authenticateLDAP: util.AuthenticateLDAP,
 		store:            store,
 		tokenMaker:       tokenMaker,
