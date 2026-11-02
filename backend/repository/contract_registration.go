@@ -23,7 +23,7 @@ var (
 )
 
 // The same predicate scopes the list, preparation and transactional insertion.
-const registrationScope = `u.otvoren_ug = 'X' AND EXISTS (SELECT 1 FROM TED.UGO_ORG o WHERE o.id = :org_id AND o.nosilac_nab = u.nosilac_nab)`
+const registrationScope = `u.otvoren_ug = 'X' AND EXISTS (SELECT 1 FROM TED.UGO_ORG o WHERE o.id = :org_id AND o.nosilac_nab_skr = u.nosilac_nab_skr)`
 
 const choiceColumns = `u.id, u.id_sap_dobavljac, u.br_ugovor, u.godina, u.predmet_ugovora, d.naziv, u.otvoren_ug`
 const choiceFrom = ` FROM TED.SAP_UGOVORI u LEFT JOIN TED.SAP_DOBAVLJACI d ON d.id = u.id_sap_dobavljac`

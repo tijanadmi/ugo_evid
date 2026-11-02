@@ -37,7 +37,7 @@ func TestRegistrationTransaction(t *testing.T) {
 				case strings.Contains(q, "FROM TED.UGO_TIP_UGOVORA"):
 					return editRows("ODRZAVANJE"), nil
 				case strings.Contains(q, "u.br_ugovor"):
-					if !strings.Contains(q, registrationScope) || !strings.Contains(q, "FOR UPDATE OF u.otvoren_ug NOWAIT") || a[1].Value != 3 {
+					if !strings.Contains(q, "o.nosilac_nab_skr = u.nosilac_nab_skr") || !strings.Contains(q, "u.otvoren_ug = 'X'") || !strings.Contains(q, "o.id = :org_id") || !strings.Contains(q, "FOR UPDATE OF u.otvoren_ug NOWAIT") || a[1].Value != 3 {
 						return nil, fmt.Errorf("unscoped or unlocked registration")
 					}
 					if tc.unavailable {
@@ -151,7 +151,7 @@ func TestUnregisteredContractsQuery(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 		checkBinds(t, q, args)
 		queries++
-		if !strings.Contains(q, registrationScope) {
+		if !strings.Contains(q, "o.nosilac_nab_skr = u.nosilac_nab_skr") || !strings.Contains(q, "u.otvoren_ug = 'X'") || !strings.Contains(q, "o.id = :org_id") {
 			t.Fatal("missing organization or open status scope")
 		}
 		if !strings.Contains(q, "NOT EXISTS (SELECT 1 FROM TED.UGO_EVID e WHERE e.id_sap_ugovor = u.id)") || strings.Contains(q, "e.id_ugo_org") {
@@ -177,7 +177,7 @@ func TestUnregisteredContractsQuery(t *testing.T) {
 func TestPreparationRejectsContractOutsideScope(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 		checkBinds(t, q, args)
-		if !strings.Contains(q, registrationScope) || args[1].Value != 3 {
+		if !strings.Contains(q, "o.nosilac_nab_skr = u.nosilac_nab_skr") || !strings.Contains(q, "u.otvoren_ug = 'X'") || !strings.Contains(q, "o.id = :org_id") || args[1].Value != 3 {
 			return nil, fmt.Errorf("preparation did not apply organization scope")
 		}
 		return &schemaRows{width: 7}, nil
