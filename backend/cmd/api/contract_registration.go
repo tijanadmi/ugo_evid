@@ -20,6 +20,8 @@ func registrationError(ctx *gin.Context, err error) {
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		code, message = 404, "Izabrani SAP ugovor nije pronađen."
+	case errors.Is(err, repository.ErrContractUnavailable):
+		code, message = 403, err.Error()
 	case errors.Is(err, repository.ErrUserOrganization):
 		code, message = 403, "Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica."
 	case errors.Is(err, repository.ErrContractRegistered), errors.Is(err, repository.ErrContractContacts), errors.Is(err, repository.ErrContractContactChanged):
@@ -65,10 +67,11 @@ func (server *Server) ListUnregisteredContracts(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"error": "Neispravan filter ili veličina stranice."})
 		return
 	}
-	if _, _, ok := server.registrationIdentity(ctx); !ok {
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
 		return
 	}
-	items, total, err := server.store.GetUnregisteredContracts(ctx.Request.Context(), (req.Page-1)*req.Size, req.Size, req.Filter)
+	items, total, err := server.store.GetUnregisteredContracts(ctx.Request.Context(), orgID, (req.Page-1)*req.Size, req.Size, req.Filter)
 	if err != nil {
 		registrationError(ctx, err)
 		return
@@ -89,7 +92,7 @@ func (server *Server) PrepareContractRegistration(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-	result, err := server.store.PrepareContractRegistration(ctx.Request.Context(), id)
+	result, err := server.store.PrepareContractRegistration(ctx.Request.Context(), id, orgID)
 	if err != nil {
 		registrationError(ctx, err)
 		return

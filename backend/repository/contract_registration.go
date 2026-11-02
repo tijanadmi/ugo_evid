@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	ErrContractUnavailable     = errors.New("Ugovor nije dostupan za unos: mora biti otvoren i pripadati nosiocu nabavke vase organizacione jedinice.")
 	ErrContractRegistered      = errors.New("Ugovor je već evidentiran. Osvežite izbor ugovora.")
 	ErrContractContacts        = errors.New("Dobavljač ima više aktivnih lica sa rolom 1. Ispravite podatke pre unosa ugovora.")
 	ErrContractContactChanged  = errors.New("Kontakt lice je promenjeno. Ponovo učitajte podatke izabranog ugovora.")
@@ -21,6 +22,9 @@ var (
 	ErrRegistrationBusy        = errors.New("Unos za ovaj ugovor ili dobavljača je u toku. Pokušajte ponovo.")
 )
 
+// The same predicate scopes the list, preparation and transactional insertion.
+const registrationScope = `u.otvoren_ug = 'X' AND EXISTS (SELECT 1 FROM TED.UGO_ORG o WHERE o.id = :org_id AND o.nosilac_nab = u.nosilac_nab)`
+
 const choiceColumns = `u.id, u.id_sap_dobavljac, u.br_ugovor, u.godina, u.predmet_ugovora, d.naziv, u.otvoren_ug`
 const choiceFrom = ` FROM TED.SAP_UGOVORI u LEFT JOIN TED.SAP_DOBAVLJACI d ON d.id = u.id_sap_dobavljac`
 
@@ -28,12 +32,15 @@ func scanChoice(row interface{ Scan(...any) error }, m *models.ContractChoice) e
 	return scanNullable(row, &m.ID, &m.SupplierID, &m.Number, &m.Year, &m.Subject, &m.Supplier, &m.Open)
 }
 
-func (r *OracleStore) GetUnregisteredContracts(ctx context.Context, offset, limit int, filter string) ([]models.ContractChoice, int, error) {
+func (r *OracleStore) GetUnregisteredContracts(ctx context.Context, orgID, offset, limit int, filter string) ([]models.ContractChoice, int, error) {
+	if orgID < 1 {
+		return nil, 0, ErrUserOrganization
+	}
 	if offset < 0 || limit < 1 || limit > 100 {
 		return nil, 0, errors.New("invalid pagination")
 	}
-	where := ` WHERE NOT EXISTS (SELECT 1 FROM TED.UGO_EVID e WHERE e.id_sap_ugovor = u.id)`
-	args := []any{}
+	where := ` WHERE ` + registrationScope + ` AND NOT EXISTS (SELECT 1 FROM TED.UGO_EVID e WHERE e.id_sap_ugovor = u.id)`
+	args := []any{sql.Named("org_id", orgID)}
 	if filter = strings.TrimSpace(filter); filter != "" {
 		where += ` AND (INSTR(LOWER(u.br_ugovor), LOWER(:filter_number)) > 0 OR INSTR(LOWER(u.predmet_ugovora), LOWER(:filter_subject)) > 0 OR INSTR(LOWER(d.naziv), LOWER(:filter_supplier)) > 0)`
 		args = append(args, sql.Named("filter_number", filter), sql.Named("filter_subject", filter), sql.Named("filter_supplier", filter))
@@ -64,9 +71,22 @@ type contractQueryer interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-func registrationContract(ctx context.Context, q contractQueryer, id int) (models.ContractChoice, error) {
+func registrationContract(ctx context.Context, q contractQueryer, id, orgID int) (models.ContractChoice, error) {
 	var m models.ContractChoice
-	err := scanChoice(q.QueryRowContext(ctx, `SELECT `+choiceColumns+choiceFrom+` WHERE u.id = :id`, sql.Named("id", id)), &m)
+	if orgID < 1 {
+		return m, ErrUserOrganization
+	}
+	query := `SELECT ` + choiceColumns + choiceFrom + ` WHERE u.id = :id AND ` + registrationScope
+	if _, transactional := q.(*sql.Tx); transactional {
+		query += ` FOR UPDATE OF u.otvoren_ug NOWAIT`
+	}
+	err := scanChoice(q.QueryRowContext(ctx, query, sql.Named("id", id), sql.Named("org_id", orgID)), &m)
+	if errors.Is(err, sql.ErrNoRows) {
+		return m, ErrContractUnavailable
+	}
+	if err != nil && strings.Contains(err.Error(), "ORA-00054") {
+		return m, ErrRegistrationBusy
+	}
 	if err != nil {
 		return m, err
 	}
@@ -110,8 +130,8 @@ func registrationContacts(ctx context.Context, q contractQueryer, supplier int) 
 	return list, nil
 }
 
-func (r *OracleStore) PrepareContractRegistration(ctx context.Context, id int) (*models.ContractPreparation, error) {
-	contract, err := registrationContract(ctx, r.DB, id)
+func (r *OracleStore) PrepareContractRegistration(ctx context.Context, id, orgID int) (*models.ContractPreparation, error) {
+	contract, err := registrationContract(ctx, r.DB, id, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +180,7 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 	if err = registrationMutex(ctx, tx, "UGO_EVID_CREATE", req.ContractID, userID, token); err != nil {
 		return nil, err
 	}
-	contract, err := registrationContract(ctx, tx, req.ContractID)
+	contract, err := registrationContract(ctx, tx, req.ContractID, orgID)
 	if err != nil {
 		return nil, err
 	}

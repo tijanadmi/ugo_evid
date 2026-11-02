@@ -28,8 +28,8 @@ type Store interface {
 	DocumentLock(ctx context.Context, id, userID int, action, token string) (*models.EditLock, error)
 	ChangeDocument(ctx context.Context, doc *models.Document, userID int, token string, remove bool) error
 
-	GetUnregisteredContracts(ctx context.Context, offset, limit int, filter string) ([]models.ContractChoice, int, error)
-	PrepareContractRegistration(ctx context.Context, id int) (*models.ContractPreparation, error)
+	GetUnregisteredContracts(ctx context.Context, orgID, offset, limit int, filter string) ([]models.ContractChoice, int, error)
+	PrepareContractRegistration(ctx context.Context, id, orgID int) (*models.ContractPreparation, error)
 	RegisterContract(ctx context.Context, req models.RegisterContract, orgID, userID int) (*models.UgoEvid, error)
 	GetUserOrganization(ctx context.Context, username, activeStatus string) (int, error)
 	GetPartnersPaged(ctx context.Context, orgID, offset, limit int, naziv string) ([]models.Partner, int, error)

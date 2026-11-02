@@ -34,6 +34,34 @@ func (s *registrationStore) RegisterContract(_ context.Context, r models.Registe
 	return &models.UgoEvid{ID: 55}, s.failure
 }
 
+func (s *registrationStore) GetUnregisteredContracts(_ context.Context, org, offset, limit int, filter string) ([]models.ContractChoice, int, error) {
+	s.org = org
+	s.calls++
+	return nil, 0, s.failure
+}
+func (s *registrationStore) PrepareContractRegistration(_ context.Context, id, org int) (*models.ContractPreparation, error) {
+	s.org = org
+	s.calls++
+	return &models.ContractPreparation{}, s.failure
+}
+func TestRegistrationReadsUseAuthenticatedOrganization(t *testing.T) {
+	for _, path := range []string{"/sapugovori/neevidentirani?id_ugo_org=999", "/sapugovori/101/priprema?id_ugo_org=999"} {
+		store := &registrationStore{}
+		server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32), ActiveUserStatus: "A"}, store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		access, _, _ := server.tokenMaker.CreateToken("ad.user", "user", time.Minute)
+		req := httptest.NewRequest("GET", path, nil)
+		req.Header.Set("Authorization", "Bearer "+access)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		if rec.Code != 200 || store.calls != 1 || store.org != 3 {
+			t.Fatalf("untrusted scope: %d org=%d", rec.Code, store.org)
+		}
+	}
+}
+
 func TestRegisterContractAPI(t *testing.T) {
 	existing := `{"id_sap_ugovor":101,"id_tip_ugovora":1,"id_ugo_dob_lica":7,"contact_version":"2","id_ugo_org":999,"user_id":999,"id_sap_dobavljac":999}`
 	for _, tc := range []struct {
@@ -48,6 +76,7 @@ func TestRegisterContractAPI(t *testing.T) {
 		{"bad email", `{"id_sap_ugovor":101,"id_tip_ugovora":1,"novo_lice":{"ime":"Ana","telefon":"011","email":"invalid"}}`, nil, nil, 400, 0},
 		{"no organization", existing, repository.ErrUserOrganization, nil, 403, 0},
 		{"duplicate", existing, nil, repository.ErrContractRegistered, 409, 1},
+		{"closed or different procurement owner", existing, nil, repository.ErrContractUnavailable, 403, 1},
 		{"active editor", existing, nil, repository.ErrContactLocked, 423, 1},
 		{"multiple active SLM", existing, nil, repository.ErrContractContacts, 409, 1},
 		{"legacy bypass rejected", `{"sap_ugovor_id":101,"ugo_org_id":999,"ime":"Fake"}`, nil, nil, 400, 0},

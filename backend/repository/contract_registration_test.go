@@ -16,9 +16,11 @@ func TestRegistrationTransaction(t *testing.T) {
 	for _, tc := range []struct {
 		name                                                            string
 		newContact, duplicate, changed, editing, failEvidence, multiple bool
+		unavailable                                                     bool
 		want                                                            error
 	}{
 		{name: "existing contact"},
+		{name: "closed or foreign procurement owner", unavailable: true, want: ErrContractUnavailable},
 		{name: "new contact", newContact: true},
 		{name: "already registered", duplicate: true, want: ErrContractRegistered},
 		{name: "contact changed", changed: true, want: ErrContractContactChanged},
@@ -35,6 +37,12 @@ func TestRegistrationTransaction(t *testing.T) {
 				case strings.Contains(q, "FROM TED.UGO_TIP_UGOVORA"):
 					return editRows("ODRZAVANJE"), nil
 				case strings.Contains(q, "u.br_ugovor"):
+					if !strings.Contains(q, registrationScope) || !strings.Contains(q, "FOR UPDATE OF u.otvoren_ug NOWAIT") || a[1].Value != 3 {
+						return nil, fmt.Errorf("unscoped or unlocked registration")
+					}
+					if tc.unavailable {
+						return &schemaRows{width: 7}, nil
+					}
 					if len(locks) != 1 {
 						t.Fatal("must lock contract before checking availability")
 					}
@@ -143,10 +151,13 @@ func TestUnregisteredContractsQuery(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 		checkBinds(t, q, args)
 		queries++
+		if !strings.Contains(q, registrationScope) {
+			t.Fatal("missing organization or open status scope")
+		}
 		if !strings.Contains(q, "NOT EXISTS (SELECT 1 FROM TED.UGO_EVID e WHERE e.id_sap_ugovor = u.id)") || strings.Contains(q, "e.id_ugo_org") {
 			t.Fatal("must exclude registered contracts globally")
 		}
-		if args[0].Value != "ACME" {
+		if args[0].Value != 3 || args[1].Value != "ACME" {
 			t.Fatal("filter must be bound")
 		}
 		if strings.Contains(q, "SELECT COUNT(*) FROM TED.SAP_UGOVORI") {
@@ -157,9 +168,23 @@ func TestUnregisteredContractsQuery(t *testing.T) {
 		}
 		return editRows(int64(101), int64(20), "460001", "2026", "Oprema", "ACME", "X"), nil
 	}})
-	items, total, err := store.GetUnregisteredContracts(context.Background(), 20, 20, " ACME ")
+	items, total, err := store.GetUnregisteredContracts(context.Background(), 3, 20, 20, " ACME ")
 	if err != nil || total != 25 || len(items) != 1 || items[0].SupplierID != 20 || queries != 2 {
 		t.Fatalf("items=%v total=%d err=%v", items, total, err)
+	}
+}
+
+func TestPreparationRejectsContractOutsideScope(t *testing.T) {
+	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
+		checkBinds(t, q, args)
+		if !strings.Contains(q, registrationScope) || args[1].Value != 3 {
+			return nil, fmt.Errorf("preparation did not apply organization scope")
+		}
+		return &schemaRows{width: 7}, nil
+	}})
+	_, err := store.PrepareContractRegistration(context.Background(), 101, 3)
+	if !errors.Is(err, ErrContractUnavailable) {
+		t.Fatal(err)
 	}
 }
 
