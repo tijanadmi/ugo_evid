@@ -18,6 +18,10 @@ func (server *Server) GetUgoEvidProsireni(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, apiErrorResponse{Error: "neispravan ID evidencije"})
 		return
 	}
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
+		return
+	}
 	item, err := server.store.GetUgoEvidProsireniByID(ctx.Request.Context(), id)
 	if errors.Is(err, sql.ErrNoRows) {
 		ctx.JSON(http.StatusNotFound, apiErrorResponse{Error: "ugovor nije pronađen"})
@@ -26,6 +30,10 @@ func (server *Server) GetUgoEvidProsireni(ctx *gin.Context) {
 	if err != nil {
 		log.Error().Err(err).Msg("cannot get contract details")
 		ctx.JSON(http.StatusInternalServerError, apiErrorResponse{Error: "detalji ugovora trenutno nisu dostupni"})
+		return
+	}
+	if item.IDUgoOrg != orgID {
+		ctx.JSON(http.StatusForbidden, apiErrorResponse{Error: "Nemate pristup ugovoru druge organizacione jedinice."})
 		return
 	}
 	ctx.JSON(http.StatusOK, item)
@@ -52,8 +60,12 @@ func (server *Server) listEvidProsireni(ctx *gin.Context, open bool) {
 		ctx.JSON(http.StatusBadRequest, apiErrorResponse{Error: err.Error()})
 		return
 	}
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
+		return
+	}
 	offset := (int(req.PageID) - 1) * int(req.PageSize)
-	items, total, err := server.store.GetUgoEvidProsireniPaged(ctx.Request.Context(), open, offset, int(req.PageSize), req.OrgID, strings.TrimSpace(req.Supplier))
+	items, total, err := server.store.GetUgoEvidProsireniPaged(ctx.Request.Context(), open, offset, int(req.PageSize), orgID, strings.TrimSpace(req.Supplier))
 	if err != nil {
 		log.Error().Err(err).Msg("cannot list UGO_EVID_PROSIRENI_V")
 		ctx.JSON(http.StatusInternalServerError, apiErrorResponse{Error: "pregled ugovora trenutno nije dostupan"})

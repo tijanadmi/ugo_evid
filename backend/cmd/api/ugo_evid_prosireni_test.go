@@ -21,6 +21,55 @@ type prosireniStore struct {
 	orgID         int
 	offset, limit int
 	err           error
+	orgErr        error
+}
+
+func (s *prosireniStore) GetUserByUsername(context.Context, string) (*models.User, error) {
+	return &models.User{ID: 5, Status: "A"}, nil
+}
+func (s *prosireniStore) GetUserOrganization(context.Context, string, string) (int, error) {
+	return 1, s.orgErr
+}
+
+func (s *prosireniStore) GetUgoEvidPaged(_ context.Context, org, offset, limit int, filter string) ([]*models.UgoEvid, int, error) {
+	s.called = true
+	s.orgID = org
+	return nil, 0, nil
+}
+func (s *prosireniStore) GetUgoEvidById(context.Context, int) (*models.UgoEvid, error) {
+	return &models.UgoEvid{ID: 44, UgoOrg: models.UgoOrg{ID: 44}, Ime: "FOREIGN-CONTACT"}, nil
+}
+func TestContractReadAccessBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		path   string
+		orgErr error
+		status int
+	}{
+		{"/ugo_evid/otvoreni", repository.ErrUserOrganization, 403},
+		{"/ugo_evid/zatvoreni", repository.ErrUserOrganization, 403},
+		{"/ugo_evid?page_id=1&page_size=20&id_ugo_org=44", nil, 200},
+		{"/ugo_evid/44", nil, 403},
+	} {
+		store := &prosireniStore{orgErr: tc.orgErr}
+		server, err := NewServer(util.Config{ActiveUserStatus: "A", TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		access, _, _ := server.tokenMaker.CreateToken("test", "user", time.Minute)
+		req := httptest.NewRequest("GET", tc.path, nil)
+		req.Header.Set("Authorization", "Bearer "+access)
+		rec := httptest.NewRecorder()
+		server.router.ServeHTTP(rec, req)
+		if rec.Code != tc.status || strings.Contains(rec.Body.String(), "FOREIGN-CONTACT") {
+			t.Fatalf("%s: %d %s", tc.path, rec.Code, rec.Body.String())
+		}
+		if tc.orgErr != nil && store.called {
+			t.Fatal("missing role reached contract query")
+		}
+		if tc.status == 200 && (!store.called || store.orgID != 1) {
+			t.Fatal("legacy listing allowed foreign scope")
+		}
+	}
 }
 
 func (s *prosireniStore) GetUgoEvidProsireniPaged(_ context.Context, open bool, offset, limit, orgID int, supplier string) ([]models.UgoEvidProsireni, int, error) {
@@ -52,7 +101,7 @@ func TestProsireniEndpoints(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &prosireniStore{err: tc.dbErr}
-			server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+			server, err := NewServer(util.Config{ActiveUserStatus: "A", TokenSymmetricKey: strings.Repeat("k", 32)}, store)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -70,7 +119,7 @@ func TestProsireniEndpoints(t *testing.T) {
 				t.Fatalf("got %d: %s", rec.Code, rec.Body.String())
 			}
 			if tc.status == 200 || tc.status == 500 {
-				if !store.called || store.open != tc.open || store.offset != tc.offset || store.limit != tc.limit {
+				if !store.called || store.orgID != 1 || store.open != tc.open || store.offset != tc.offset || store.limit != tc.limit {
 					t.Fatalf("wrong repository call: %+v", store)
 				}
 			} else if store.called {
@@ -92,12 +141,12 @@ func TestProsireniOrganizationParameter(t *testing.T) {
 			query         string
 			status, orgID int
 		}{
-			{"", 200, 0}, {"?id_ugo_org=0", 200, 0}, {"?id_ugo_org=7", 200, 7},
+			{"", 200, 1}, {"?id_ugo_org=0", 200, 1}, {"?id_ugo_org=44", 200, 1},
 			{"?id_ugo_org=-1", 400, 0}, {"?id_ugo_org=abc", 400, 0},
 			{"?id_ugo_org=%25", 400, 0}, {"?id_ugo_org=1.5", 400, 0},
 		} {
 			store := &prosireniStore{}
-			server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+			server, err := NewServer(util.Config{ActiveUserStatus: "A", TokenSymmetricKey: strings.Repeat("k", 32)}, store)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -126,7 +175,7 @@ func TestProsireniSupplierParameter(t *testing.T) {
 	for _, path := range []string{"/ugo_evid/otvoreni", "/ugo_evid/zatvoreni"} {
 		for _, long := range []bool{false, true} {
 			store := &prosireniStore{}
-			server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+			server, err := NewServer(util.Config{ActiveUserStatus: "A", TokenSymmetricKey: strings.Repeat("k", 32)}, store)
 			if err != nil {
 				t.Fatal(err)
 			}

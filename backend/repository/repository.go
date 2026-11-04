@@ -62,7 +62,7 @@ type Store interface {
 	DeleteUgoDobLiceById(ctx context.Context, id int, version int64, userID int, token string) error
 
 	GetUgoEvidById(ctx context.Context, id int) (*models.UgoEvid, error)
-	GetUgoEvidPaged(ctx context.Context, offset, limit int, filter string) ([]*models.UgoEvid, int, error)
+	GetUgoEvidPaged(ctx context.Context, orgID, offset, limit int, filter string) ([]*models.UgoEvid, int, error)
 	UpdateUgoEvid(ctx context.Context, m *models.UgoEvid) (*models.UgoEvid, error)
 	DeleteUgoEvidById(ctx context.Context, id int) error
 }

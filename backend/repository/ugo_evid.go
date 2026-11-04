@@ -90,8 +90,11 @@ dl.status AS c25
 	return &e, nil
 }
 
-func (r *OracleStore) GetUgoEvidPaged(ctx context.Context, offset, limit int, filter string) ([]*models.UgoEvid, int, error) {
+func (r *OracleStore) GetUgoEvidPaged(ctx context.Context, orgID, offset, limit int, filter string) ([]*models.UgoEvid, int, error) {
 
+	if orgID < 1 {
+		return nil, 0, ErrUserOrganization
+	}
 	query := `
         SELECT
 e.id AS c0,
@@ -125,11 +128,11 @@ COUNT(*) OVER() AS c26
         JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
         JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
         LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
-        WHERE 1=1
+        WHERE e.id_ugo_org = :p1
     `
 
-	args := []any{}
-	pos := 1
+	args := []any{orgID}
+	pos := 2
 
 	if filter != "" {
 		query += fmt.Sprintf(`

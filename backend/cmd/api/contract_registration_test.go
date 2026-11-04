@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -58,6 +59,20 @@ func TestRegistrationReadsUseAuthenticatedOrganization(t *testing.T) {
 		server.router.ServeHTTP(rec, req)
 		if rec.Code != 200 || store.calls != 1 || store.org != 3 {
 			t.Fatalf("untrusted scope: %d org=%d", rec.Code, store.org)
+		}
+		if strings.Contains(path, "neevidentirani") {
+			var response struct {
+				Org   int                     `json:"id_ugo_org"`
+				Rule  string                  `json:"selection_rule"`
+				Items []models.ContractChoice `json:"items"`
+				Total int                     `json:"total"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			if response.Org != 3 || response.Rule != "open-nosilac-nab-skr-v1" || response.Items == nil || response.Total != 0 {
+				t.Fatal("missing scope metadata or broken empty response")
+			}
 		}
 	}
 }

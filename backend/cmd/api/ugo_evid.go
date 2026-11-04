@@ -41,6 +41,10 @@ func (server *Server) GetUgoEvid(ctx *gin.Context) {
 		return
 	}
 
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
+		return
+	}
 	evid, err := server.store.GetUgoEvidById(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -52,6 +56,10 @@ func (server *Server) GetUgoEvid(ctx *gin.Context) {
 		return
 	}
 
+	if evid.UgoOrg.ID != orgID {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "Nemate pristup ugovoru druge organizacione jedinice."})
+		return
+	}
 	ctx.JSON(http.StatusOK, UgoEvidResponse{Data: evid})
 }
 
@@ -68,10 +76,14 @@ func (server *Server) ListUgoEvid(ctx *gin.Context) {
 		return
 	}
 
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
+		return
+	}
 	limit := int(req.PageSize)
 	offset := int((req.PageID - 1) * req.PageSize)
 
-	items, count, err := server.store.GetUgoEvidPaged(ctx, offset, limit, req.Filter)
+	items, count, err := server.store.GetUgoEvidPaged(ctx, orgID, offset, limit, req.Filter)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -104,6 +116,17 @@ func (server *Server) UpdateUgoEvid(ctx *gin.Context) {
 		return
 	}
 
+	orgID, _, ok := server.registrationIdentity(ctx)
+	if !ok {
+		return
+	}
+	if req.UgoOrgID != orgID {
+		ctx.JSON(403, gin.H{"error": "Nedozvoljena organizaciona jedinica."})
+		return
+	}
+	if _, ok = server.documentAccess(ctx, id, true); !ok {
+		return
+	}
 	evid := &models.UgoEvid{
 		ID:         id,
 		SapUgovor:  models.SapUgovor{ID: req.SapUgovorID},
@@ -142,6 +165,9 @@ func (server *Server) DeleteUgoEvid(ctx *gin.Context) {
 		return
 	}
 
+	if _, ok := server.documentAccess(ctx, id, true); !ok {
+		return
+	}
 	err = server.store.DeleteUgoEvidById(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

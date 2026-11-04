@@ -19,9 +19,20 @@ type detailStore struct {
 	err error
 }
 
+func (s *detailStore) GetUserByUsername(context.Context, string) (*models.User, error) {
+	return &models.User{ID: 5, Status: "A"}, nil
+}
+func (s *detailStore) GetUserOrganization(context.Context, string, string) (int, error) {
+	return 1, nil
+}
+
 func (s *detailStore) GetUgoEvidProsireniByID(_ context.Context, id int) (models.UgoEvidProsireni, error) {
 	s.id = id
-	return models.UgoEvidProsireni{IDUgoEvid: id, LicaDobavljaca: []models.UgoDobLiceKontakt{{Ime: "Kontakt", RolaLica: "SLM"}}}, s.err
+	org := 1
+	if id == 44 {
+		org = 44
+	}
+	return models.UgoEvidProsireni{IDUgoOrg: org, IDUgoEvid: id, LicaDobavljaca: []models.UgoDobLiceKontakt{{Ime: "Kontakt", RolaLica: "SLM"}}}, s.err
 }
 func TestContractDetailEndpoint(t *testing.T) {
 	for _, tc := range []struct {
@@ -31,6 +42,7 @@ func TestContractDetailEndpoint(t *testing.T) {
 		err    error
 	}{
 		{"/ugo_evid/7/detalji", true, 200, nil},
+		{"/ugo_evid/44/detalji", true, 403, nil},
 		{"/ugo_evid/7/detalji", false, 401, nil},
 		{"/ugo_evid/0/detalji", true, 400, nil},
 		{"/ugo_evid/abc/detalji", true, 400, nil},
@@ -38,7 +50,7 @@ func TestContractDetailEndpoint(t *testing.T) {
 		{"/ugo_evid/7/detalji", true, 500, errors.New("private database error")},
 	} {
 		store := &detailStore{err: tc.err}
-		server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32)}, store)
+		server, err := NewServer(util.Config{ActiveUserStatus: "A", TokenSymmetricKey: strings.Repeat("k", 32)}, store)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -60,6 +72,9 @@ func TestContractDetailEndpoint(t *testing.T) {
 		}
 		if tc.status == 200 && !strings.Contains(rec.Body.String(), `"rola_lica":"SLM"`) {
 			t.Fatal("contacts missing")
+		}
+		if tc.status == 403 && strings.Contains(rec.Body.String(), "Kontakt") {
+			t.Fatal("foreign contact leaked")
 		}
 		if strings.Contains(rec.Body.String(), "private database error") {
 			t.Fatal("database error leaked")

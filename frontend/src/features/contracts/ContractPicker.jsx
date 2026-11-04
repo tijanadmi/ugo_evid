@@ -45,8 +45,8 @@ function RegistrationForm({ contract, organizations, onBack, onCreated, onBusy }
     {data && !query.error && <>
       <p>Evidencija se dodaje za organizacionu jedinicu: <strong>{org ? `${org.sifra} — ${org.naziv}` : data.id_ugo_org}</strong>.</p>
       {data.contract.otvoren_ug !== 'X' && <p className="muted">Izabrani ugovor je zatvoren i biće prikazan među zatvorenim ugovorima.</p>}
-      {person ? <section className="registration-contact" aria-label="Postojeće kontakt lice"><h3>Aktivno kontakt lice sa rolom 1</h3><strong>{person.ime}</strong><span>{person.radno_mesto}</span><span>{person.telefon || 'Telefon nije upisan'}</span><span>{person.email || 'Email nije upisan'}</span><p className="muted">Ovi podaci biće preuzeti u evidenciju ugovora.</p></section> : <>
-        <p>Dobavljač nema aktivno lice sa rolom 1. Unesite kontakt; lice i evidencija ugovora biće sačuvani zajedno.</p>
+      {person ? <section className="registration-contact" aria-label="Postojeće kontakt lice"><h3>Aktivni Service Level Manager</h3><strong>{person.ime}</strong><span>{person.radno_mesto}</span><span>{person.telefon || 'Telefon nije upisan'}</span><span>{person.email || 'Email nije upisan'}</span><p className="muted">Ovi podaci biće preuzeti u evidenciju ugovora.</p></section> : <>
+        <p>Dobavljač nema aktivnog Service Level Manager-a. Unesite kontakt; lice i evidencija ugovora biće sačuvani zajedno.</p>
         <fieldset disabled={saving || query.isFetching}>
           <label>Ime i prezime<input aria-label="Ime i prezime" required maxLength={100} value={draft.ime} onChange={e => setDraft({ ...draft, ime: e.target.value })}/></label>
           <label>Radno mesto (opciono)<input aria-label="Radno mesto (opciono)" maxLength={200} value={draft.radno_mesto} onChange={e => setDraft({ ...draft, radno_mesto: e.target.value })}/></label>

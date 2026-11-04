@@ -117,5 +117,23 @@
 
 .contract-picker-body>.partner-filter{flex:0 0 auto}
 .contract-picker-body>.pagination .button{flex:0 0 auto;width:auto;height:auto;min-height:36px;padding:8px 12px;white-space:nowrap}
+.contract-picker.is-registering[open]{width:min(680px,calc(100vw - 24px));height:fit-content;max-height:calc(100dvh - 24px)}
+.contract-picker.is-registering>.contract-registration-form{flex:0 1 auto;align-content:start;gap:14px;padding:16px 20px 20px}
+.contract-picker.is-registering>.detail-header{padding:14px 20px}
+.contract-picker.is-registering>.detail-header h2{font-size:20px}
+.contract-registration-form .registration-contact{align-content:start;gap:5px;padding:12px;font-size:14px}
+.contract-registration-form .registration-contact h3{font-size:15px;margin-bottom:3px}
+.contract-registration-form .registration-contact p{font-size:12px;margin-top:4px}
+.contract-registration-form .contact-actions{align-items:center;justify-content:flex-end;flex:0 0 auto}
+.contract-registration-form .button{flex:0 0 auto;align-self:start;width:auto;height:auto;min-height:36px;padding:8px 12px;font-size:13px}
+.brand-mark{flex-shrink:0}
+.sidebar .brand{font-size:13px;letter-spacing:.8px;gap:9px;line-height:1.4}
+.sidebar .brand small{font-size:9px;letter-spacing:0;font-weight:400}
+.application-card.is-planned{box-shadow:none;background:#f8fafc}
+.application-card.is-planned:hover{transform:none;border-color:var(--line)}
+.application-card .app-card-copy{min-width:0}
+.application-card .subtle-badge{display:inline-block}
+.section-heading{flex-wrap:wrap}
+@media(min-width:1101px){.application-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.application-card{padding:22px;gap:14px}.application-card .app-icon{width:42px;height:42px}}
 
 .maintenance-panel{margin:16px 0}.maintenance-panel>p{margin:12px 0}.maintenance-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:16px}.maintenance-summary dt{color:var(--muted);font-size:12px}.maintenance-summary dd{margin:6px 0 0}

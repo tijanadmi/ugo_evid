@@ -4,12 +4,12 @@ import { useAuth } from '../context/useAuth';
 import Icon from './Icon';
 
 export function Brand() {
-  return <Link to="/" className="brand" aria-label="Portal aplikacija"><span className="brand-mark"><Icon name="file"/></span><span>UGOVORI<small>Informacioni sistem</small></span></Link>;
+  return <Link to="/" className="brand" aria-label="Poslovni portal"><span className="brand-mark"><Icon name="grid"/></span><span>POSLOVNI PORTAL<small>Povezane poslovne aplikacije</small></span></Link>;
 }
 export function Header({ onMenu }) {
   const { user, logout } = useAuth();
   return <header className="header">
-    <div className="header-start">{onMenu && <button className="icon-button mobile-menu" onClick={onMenu} aria-label="Otvori meni"><Icon name="menu"/></button>}<span>Poslovne aplikacije <span className="header-divider">/</span> <strong>Ugovori</strong></span></div>
+    <div className="header-start">{onMenu && <button className="icon-button mobile-menu" onClick={onMenu} aria-label="Otvori meni"><Icon name="menu"/></button>}<span>Poslovni portal{onMenu && <> <span className="header-divider">/</span> <strong>Evidencija ugovora</strong></>}</span></div>
     <div className="user-menu"><span className="avatar">{user.username.slice(0, 2).toUpperCase()}</span><span className="username">{user.username}<small>AD nalog</small></span><button className="icon-button" onClick={logout} title="Odjavi se" aria-label="Odjavi se"><Icon name="logout"/></button></div>
   </header>;
 }
@@ -29,7 +29,7 @@ export function WorkspaceLayout() {
         <NavLink to="/ugovori/partneri" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Moji partneri</NavLink>
         <NavLink to="/ugovori/radni-kalendar" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Radni kalendar</NavLink>
       </nav>
-      <div className="sidebar-bottom"><Link to="/" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Portal aplikacija</Link><small>Evidencija ugovora · 1.0</small></div>
+      <div className="sidebar-bottom"><Link to="/" onClick={() => setMenuOpen(false)}><Icon name="grid"/>Nazad na portal</Link><small>Evidencija ugovora · 1.0</small></div>
     </aside>
     <div className="workspace-body"><Header onMenu={() => setMenuOpen(!menuOpen)}/><main className="workspace-main" id="main-content"><Outlet/></main></div>
   </div>;

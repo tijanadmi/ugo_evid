@@ -79,7 +79,12 @@ func (server *Server) ListUnregisteredContracts(ctx *gin.Context) {
 	if items == nil {
 		items = []models.ContractChoice{}
 	}
-	ctx.JSON(200, gin.H{"items": items, "total": total})
+	log.Debug().Int("id_ugo_org", orgID).Int("total", total).
+		Int("page_id", req.Page).Int("page_size", req.Size).
+		Bool("has_filter", strings.TrimSpace(req.Filter) != "").
+		Str("selection_rule", "open-nosilac-nab-skr-v1").Msg("unregistered contracts selected")
+	ctx.JSON(200, gin.H{"items": items, "total": total,
+		"id_ugo_org": orgID, "selection_rule": "open-nosilac-nab-skr-v1"})
 }
 
 func (server *Server) PrepareContractRegistration(ctx *gin.Context) {

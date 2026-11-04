@@ -63,6 +63,7 @@ test('filter, pagination and register using existing active role-1 contact', asy
   await choose(page);
   await expect(page.getByRole('region', { name: 'Postojeće kontakt lice' })).toContainText('Ana Kontakt');
   await expect(page.getByRole('form', { name: 'Unos ugovora' })).toContainText('Moja organizacija');
+  await page.screenshot({ path: 'test-results/contract-registration-compact.png' });
   await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
   await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toHaveAttribute('href', '/ugovori/detalji/55');
   expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_tip_ugovora: 1, id_ugo_dob_lica: 7, contact_version: '2' }]);
@@ -136,7 +137,9 @@ test('picker keeps actions, filter and pagination accessible with long rows on d
  async function checkSpacing() {
   const filter = await page.locator('.contract-picker-body>.partner-filter').boundingBox();
   const table = await region.boundingBox();
-  expect(table.y - (filter.y + filter.height)).toBeLessThan(70);
+  const hint = await page.locator('.contract-picker-body>p.muted').boundingBox();
+  expect(hint.y - (filter.y + filter.height)).toBeLessThan(20);
+  expect(table.y - (hint.y + hint.height)).toBeLessThan(20);
   for (const button of await nav.getByRole('button').all()) {
    expect(await button.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
    expect((await button.boundingBox()).width).toBeGreaterThan(60);
@@ -163,4 +166,5 @@ test('picker keeps actions, filter and pagination accessible with long rows on d
  expect((await nav.boundingBox()).y + (await nav.boundingBox()).height).toBeLessThan(844);
  await action.click();
  await expect(page.getByRole('form', { name: 'Unos ugovora' })).toBeVisible();
+ await page.screenshot({ path: 'test-results/contract-registration-mobile.png' });
 });

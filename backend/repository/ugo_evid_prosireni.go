@@ -81,7 +81,7 @@ func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, o
 	if offset < 0 || limit < 1 || limit > 100 {
 		return nil, 0, fmt.Errorf("invalid pagination")
 	}
-	if orgID < 0 {
+	if orgID < 1 {
 		return nil, 0, fmt.Errorf("invalid organization ID")
 	}
 	predicate := "v.otvoren_ug = 'X'"
@@ -89,11 +89,8 @@ func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, o
 		predicate = "v.otvoren_ug IS NULL"
 	}
 	from := " FROM TED.UGO_EVID_PROSIRENI_V v WHERE " + predicate
-	args := []any{}
-	if orgID > 0 {
-		from += " AND v.id_ugo_org = :org_id"
-		args = append(args, sql.Named("org_id", orgID))
-	}
+	from += " AND v.id_ugo_org = :org_id"
+	args := []any{sql.Named("org_id", orgID)}
 	supplier = strings.TrimSpace(supplier)
 	if supplier != "" {
 		from += " AND UPPER(v.naziv) LIKE UPPER(:supplier_name) ESCAPE '!'"
