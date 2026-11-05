@@ -83,7 +83,7 @@ test('stale type editor cannot overwrite a change from another session',async({c
  expect(state.type).toBe(2);expect(state.writes).toHaveLength(0);
 });
 
-const existing={id:1,version:'1',pocetak_odrzavanja:'',datum_potpisa:'2025-12-20',datum_kraja:'2026-12-31',ima_razvojnu_podrsku:true,teh_period_meseci:3,id_teh_tip_doc:5,teh_podsetnik_dana:7,raz_podsetnik_dana:3,fondovi:[{id_vrsta_rada:1,ugovoreno_casova:100}]};
+const existing={id:1,version:'1',pocetak_odrzavanja:'',ima_razvojnu_podrsku:true,teh_period_meseci:3,id_teh_tip_doc:5,teh_podsetnik_dana:7,raz_podsetnik_dana:3,fondovi:[{id_vrsta_rada:1,ugovoreno_casova:100}]};
 test('maintenance editing locks other tabs, preserves draft on cancel and saves funds with start override',async({context,page})=>{
  const state=await setup(context,{type:1,maintenance:{...existing}});await open(page);
  await page.getByRole('button',{name:'Izmeni održavanje'}).click();
@@ -101,7 +101,7 @@ test('maintenance editing locks other tabs, preserves draft on cancel and saves 
  await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(state.maintenance.pocetak_odrzavanja).toBe('2026-02-01');
  expect(state.maintenance.fondovi.find(f=>f.id_vrsta_rada===2).ugovoreno_casova).toBe(40);
- expect(state.maintenance.datum_potpisa).toBe('2025-12-20');expect(state.token).toBeNull();
+ expect(state.maintenance).not.toHaveProperty('datum_potpisa');expect(state.token).toBeNull();
  await other.getByRole('button',{name:'Izmeni održavanje'}).click();
  await expect(other.getByLabel('Drugi datum početka',{exact:true})).toHaveValue('01.02.2026');
  await other.getByRole('button',{name:'Odustani',exact:true}).click();
@@ -126,5 +126,5 @@ test('saved custom month period is retained and override can revert to SAP',asyn
  await page.getByRole('button',{name:'Sačuvaj podešavanja'}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(state.maintenance.pocetak_odrzavanja).toBe('');expect(state.maintenance.teh_period_meseci).toBe(2);
- expect(state.maintenance.datum_potpisa).toBe('2025-12-20');
+ expect(state.maintenance).not.toHaveProperty('datum_potpisa');
 });

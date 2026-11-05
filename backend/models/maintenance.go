@@ -20,8 +20,6 @@ type Maintenance struct {
 	Token               string            `json:"lock_token,omitempty"`
 	Funds               []DevelopmentFund `json:"fondovi" binding:"max=3,dive"`
 	ID                  int               `json:"id"`
-	Signed              string            `json:"datum_potpisa"`
-	Ends                string            `json:"datum_kraja"`
 	Development         bool              `json:"ima_razvojnu_podrsku"`
 	Months              *int              `json:"teh_period_meseci" binding:"omitempty,min=1,max=120"`
 	DocumentType        int               `json:"id_teh_tip_doc" binding:"required,min=1"`

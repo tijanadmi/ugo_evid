@@ -80,7 +80,6 @@ export default function Maintenance({ item }) {
    {currentType?.sifra === 'ODRZAVANJE' && !maintenance && <><p>Osnovni podaci održavanja još nisu uneti.</p>{canWrite && <button className="button primary" onClick={() => start('maintenance')}>Unesi održavanje</button>}</>}
    {maintenance && <dl className="maintenance-summary">
     <div><dt>Početak održavanja / kraj ugovora</dt><dd>{formatDate(maintenance.pocetak_odrzavanja || settings.sap_pocetak)} / {formatDate(settings.sap_kraj)}</dd></div>
-    {(maintenance.datum_potpisa || maintenance.datum_kraja) && <div><dt>Ranije uneti datumi (za proveru)</dt><dd>{formatDate(maintenance.datum_potpisa)} / {formatDate(maintenance.datum_kraja)}</dd></div>}
     {maintenance.ima_razvojnu_podrsku && settings.vrste_rada?.filter(type=>maintenance.fondovi?.some(f=>f.id_vrsta_rada===type.id && f.ugovoreno_casova>0)).map(type=><div key={type.id}><dt>{type.naziv} — ugovoreni časovi</dt><dd>{maintenance.fondovi?.find(f=>f.id_vrsta_rada===type.id)?.ugovoreno_casova||0}</dd></div>)}
     <div><dt>Podrška</dt><dd>{maintenance.ima_razvojnu_podrsku ? 'Tehnička i razvojna' : 'Tehnička'}</dd></div>
     <div><dt>Period tehničke podrške</dt><dd>{maintenance.teh_period_meseci ? `${maintenance.teh_period_meseci} meseci` : 'Posebno ugovoreni periodi'}</dd></div>

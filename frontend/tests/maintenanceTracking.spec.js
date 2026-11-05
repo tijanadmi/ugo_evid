@@ -13,7 +13,7 @@ async function setup(context,extra={}){
    const metadata=JSON.parse(req.postData().match(/name="metadata"\r\n\r\n([^\r]+)/)[1]);state.uploads.push(metadata);
    state.docs.push({...metadata,id:100+state.uploads.length,originalni_naziv:'test.pdf',mime_tip:'application/pdf',velicina_bajt:100});return json({id:100+state.uploads.length},201);
   }
-  if(path.endsWith('/dokumenti'))return json({items:[{id:20,naziv:'Potvrda januar',id_tip_doc:5},...state.docs],types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'},...['RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'].map((sifra,i)=>({id:10+i,sifra,naziv:sifra}))]});
+  if(path.endsWith('/dokumenti'))return json({items:[{id:20,id_teh_period:7,naziv:'Potvrda januar',id_tip_doc:5},...state.docs],types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'},...['RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'].map((sifra,i)=>({id:10+i,sifra,naziv:sifra}))]});
   if(path.endsWith('/podesavanja'))return json({settings:{id_tip_ugovora:1,version:'1',odrzavanje:maintenance,sap_pocetak:'2026-01-15',sap_kraj:'2026-02-28',vrste_rada:[{id:1,naziv:'Inženjer/programer'},{id:3,naziv:'Konsultant'}]},document_types:[{id:5,sifra:'POTVRDA_TEH',naziv:'Potvrda'}]});
   if(path.endsWith('/podsetnici'))return json({items:[{id_ugo_evid:9,vrsta:'TEH',id:1,opis:'Januar',rok:'2026-01-31',kasni:false}]});
   if(path.endsWith('/pracenje'))return json({periodi:state.periodi,zahtevi:state.zahtevi,fondovi:[{id_vrsta_rada:1,naziv:'Inženjer/programer',ugovoreno:100,zauzeto:20,preostalo:80}]});
@@ -60,7 +60,7 @@ test('request row uploads multiple details and displays only its own documents',
 });
 
 test('unfinished request can be deleted with confirmation and retained documents',async({page,context})=>{
- const state=await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'U_RADU',id_ugo_doc:20}]});
+ const state=await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',status:'U_RADU'}]});
  await open(page);await page.getByRole('button',{name:'Akcije za zahtev R-7'}).click();
  await page.getByRole('menuitem',{name:'Obriši',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('Dokumenti i evidencija ostaju sačuvani');
@@ -90,8 +90,8 @@ test('dates support typing and calendar selection with the same display format',
  await expect(control.locator('input[type="date"]')).toHaveValue('2026-01-24');
 });
 
-test('technical period upload links automatically and retains legacy documents',async({page,context})=>{
- const state=await setup(context,{periodi:[{id:7,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',id_tip_doc:5,status:'PLANIRAN',id_ugo_doc:20}],docs:[{id:40,id_teh_period:8,naziv:'Drugi period',mime_tip:'application/pdf',velicina_bajt:10}]});
+test('technical period upload links automatically and displays migrated documents',async({page,context})=>{
+ const state=await setup(context,{periodi:[{id:7,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',id_tip_doc:5,status:'PLANIRAN'}],docs:[{id:40,id_teh_period:8,naziv:'Drugi period',mime_tip:'application/pdf',velicina_bajt:10}]});
  await open(page);
  const row=page.getByRole('row').filter({hasText:'15.01.2026 — 31.01.2026'});
  await row.getByRole('button',{name:'Upload',exact:true}).click();
@@ -153,7 +153,7 @@ test('manual period form locks other tab and cancellation keeps draft until conf
  await page.getByRole('button',{name:'Odustani',exact:true}).click();await page.getByRole('button',{name:'Otkaži',exact:true}).click();
  await expect(page.getByLabel('Period od',{exact:true})).toHaveValue('15.01.2026');
  await page.getByLabel('Period do',{exact:true}).fill('2026-01-31');await expect(page.getByLabel('Potvrda / zapisnik')).toHaveCount(0);
- await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.writes[0].items[0].id_ugo_doc).toBe(0);
+ await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);expect(state.writes[0].items[0].id_ugo_doc).toBeUndefined();
 });
 test('development request selects one funded work type and preserves form after rejected hours',async({page,context})=>{
  const state=await setup(context,{error:'Zahtev prekoračuje preostale časove.'});await open(page);

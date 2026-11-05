@@ -38,6 +38,31 @@ func TestPeriodGeneration(t *testing.T) {
 		t.Fatal("invalid date accepted")
 	}
 }
+
+func TestTrackingReadAfterLegacyColumnsRemoved(t *testing.T) {
+	store := testSchemaStore(t, &schemaConn{query: func(q string, a []driver.NamedValue) (driver.Rows, error) {
+		checkBinds(t, q, a)
+		if strings.Contains(q, "id_ugo_doc") || strings.Contains(q, "id_zahtev_doc") {
+			return nil, fmt.Errorf("query uses removed document column")
+		}
+		switch {
+		case strings.Contains(q, "FROM TED.UGO_TEH_PERIOD"):
+			return editRows(int64(1), int64(2), "2026-01-01", "2026-01-31", int64(5), nil, "2026-02-01", "ZAVRSEN", nil), nil
+		case strings.Contains(q, "FROM TED.UGO_RAZ_ZAHTEV z JOIN"):
+			return editRows(int64(3), int64(4), int64(1), "R-3", "2026-01-01", int64(8), int64(10), "2026-01-15", "2026-01-10", "ZAVRSEN", nil, "2026-01-09"), nil
+		case strings.Contains(q, "FROM TED.UGO_RAZ_FOND"):
+			return editRows(int64(1), "Engineer", int64(100), int64(8)), nil
+		}
+		return nil, fmt.Errorf("unexpected query: %s", q)
+	}})
+	data, err := store.GetTracking(context.Background(), 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data.Periods) != 1 || data.Periods[0].Signed != "2026-02-01" || len(data.Requests) != 1 || data.Requests[0].Completed != "2026-01-09" || data.Requests[0].Signed != "2026-01-10" || len(data.Funds) != 1 || data.Funds[0].Remaining != 92 {
+		t.Fatalf("incorrect tracking data: %+v", data)
+	}
+}
 func TestWorkingDeadline(t *testing.T) {
 	calendar := map[string]bool{"2026-02-14": false, "2026-02-15": false, "2026-02-16": false, "2026-02-17": false, "2026-02-18": true, "2026-02-19": true}
 	d, e := requestDeadline("2026-02-13", 2, calendar)
@@ -132,6 +157,9 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				}
 				return nil, fmt.Errorf("unexpected query %s", q)
 			}, func(q string, a []driver.NamedValue) (driver.Result, error) {
+				if strings.Contains(q, "id_ugo_doc") || strings.Contains(q, "id_zahtev_doc") {
+					return nil, fmt.Errorf("write uses removed document column")
+				}
 				if !parentLocked {
 					return nil, fmt.Errorf("parent not locked")
 				}

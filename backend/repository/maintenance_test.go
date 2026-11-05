@@ -98,7 +98,7 @@ func TestMaintenanceTransactions(t *testing.T) {
 				}
 				err = store.SetContractType(context.Background(), 9, 2, version, 3, 7)
 			} else {
-				err = store.CreateMaintenance(context.Background(), 9, models.Maintenance{Signed: "2026-01-01", Ends: "2026-12-31", DocumentType: 5, TechnicalReminder: 7}, 3, 7)
+				err = store.CreateMaintenance(context.Background(), 9, models.Maintenance{DocumentType: 5, TechnicalReminder: 7}, 3, 7)
 			}
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("got %v want %v", err, tc.want)
@@ -253,7 +253,7 @@ func TestMaintenanceLeaseOwnership(t *testing.T) {
 		})
 	}
 }
-func TestMaintenanceReadPreservesLegacyDatesAndFunds(t *testing.T) {
+func TestMaintenanceReadUsesSAPDatesAndFunds(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, a []driver.NamedValue) (driver.Rows, error) {
 		checkBinds(t, q, a)
 		switch {
@@ -262,7 +262,7 @@ func TestMaintenanceReadPreservesLegacyDatesAndFunds(t *testing.T) {
 		case strings.Contains(q, "UGO_RAZ_VRSTA_RADA"):
 			return editRows(int64(1), "INZENJER", "Inzenjer"), nil
 		case strings.Contains(q, "UGO_ODRZAVANJE"):
-			return editRows(int64(10), "2025-12-20", "2026-12-30", int64(1), nil, int64(5), int64(7), int64(3), nil, int64(2)), nil
+			return editRows(int64(10), int64(1), nil, int64(5), int64(7), int64(3), nil, int64(2)), nil
 		case strings.Contains(q, "UGO_RAZ_FOND"):
 			return editRows(int64(1), int64(100)), nil
 		}
@@ -273,7 +273,7 @@ func TestMaintenanceReadPreservesLegacyDatesAndFunds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.SAPStart != "2026-01-01" || m.Maintenance.Start != "" || m.Maintenance.Signed != "2025-12-20" || m.Maintenance.Funds[0].Hours != 100 || m.Maintenance.Months != nil {
+	if m.SAPStart != "2026-01-01" || m.Maintenance.Start != "" || m.SAPEnd != "2026-12-31" || m.Maintenance.Funds[0].Hours != 100 || m.Maintenance.Months != nil {
 		t.Fatalf("incorrect read %+v", m)
 	}
 }

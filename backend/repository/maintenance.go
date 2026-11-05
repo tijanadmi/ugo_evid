@@ -55,7 +55,7 @@ func (r *OracleStore) GetContractSettings(ctx context.Context, id int) (*models.
 	d := &models.Maintenance{}
 	var months sql.NullInt64
 	var development int
-	err = scanNullable(r.DB.QueryRowContext(ctx, `SELECT id,TO_CHAR(datum_potpisa,'YYYY-MM-DD'),TO_CHAR(datum_kraja,'YYYY-MM-DD'),ima_razvojnu_podrsku,teh_period_meseci,id_teh_tip_doc,teh_podsetnik_dana,raz_podsetnik_dana,TO_CHAR(pocetak_odrzavanja,'YYYY-MM-DD'),version FROM TED.UGO_ODRZAVANJE WHERE id_ugo_evid=:id`, sql.Named("id", id)), &d.ID, &d.Signed, &d.Ends, &development, &months, &d.DocumentType, &d.TechnicalReminder, &d.DevelopmentReminder, &d.Start, &d.Version)
+	err = scanNullable(r.DB.QueryRowContext(ctx, `SELECT id,ima_razvojnu_podrsku,teh_period_meseci,id_teh_tip_doc,teh_podsetnik_dana,raz_podsetnik_dana,TO_CHAR(pocetak_odrzavanja,'YYYY-MM-DD'),version FROM TED.UGO_ODRZAVANJE WHERE id_ugo_evid=:id`, sql.Named("id", id)), &d.ID, &development, &months, &d.DocumentType, &d.TechnicalReminder, &d.DevelopmentReminder, &d.Start, &d.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return m, nil
 	}

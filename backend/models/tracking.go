@@ -2,23 +2,21 @@ package models
 
 // A common API envelope; persistence uses separate period and request tables.
 type TrackingItem struct {
-	ID              int    `json:"id"`
-	Version         int64  `json:"version,string"`
-	Start           string `json:"period_od"`
-	End             string `json:"period_do"`
-	DocumentType    int    `json:"id_tip_doc"`
-	WorkType        int    `json:"id_vrsta_rada"`
-	Number          string `json:"broj_zahteva"`
-	Requested       string `json:"datum_zahteva"`
-	Hours           int    `json:"broj_casova"`
-	Days            int    `json:"rok_radnih_dana"`
-	Deadline        string `json:"rok"`
-	Completed       string `json:"datum_realizacije"`
-	Signed          string `json:"datum_potpisa"`
-	Document        int    `json:"id_ugo_doc"`
-	RequestDocument int    `json:"id_zahtev_doc"`
-	Status          string `json:"status"`
-	Note            string `json:"napomena"`
+	ID           int    `json:"id"`
+	Version      int64  `json:"version,string"`
+	Start        string `json:"period_od"`
+	End          string `json:"period_do"`
+	DocumentType int    `json:"id_tip_doc"`
+	WorkType     int    `json:"id_vrsta_rada"`
+	Number       string `json:"broj_zahteva"`
+	Requested    string `json:"datum_zahteva"`
+	Hours        int    `json:"broj_casova"`
+	Days         int    `json:"rok_radnih_dana"`
+	Deadline     string `json:"rok"`
+	Completed    string `json:"datum_realizacije"`
+	Signed       string `json:"datum_potpisa"`
+	Status       string `json:"status"`
+	Note         string `json:"napomena"`
 }
 type TrackingChange struct {
 	Token string         `json:"lock_token"`

@@ -33,7 +33,7 @@ export default function Documents({ item, children, request, period, startUpload
  const requestCodes = ['RAZ_ZAHTEV','RAZ_DETALJI','RAZ_PONUDA','ZAPISNIK_RAZ'];
  const data = query.data && { ...query.data,
    types: request ? query.data.types?.filter(t => requestCodes.includes(t.sifra)) : period ? query.data.types?.filter(t=>['POTVRDA_TEH','ZAPISNIK_TEH'].includes(t.sifra)) : query.data.types,
-   items: request ? query.data.items?.filter(d => d.id_raz_zahtev === request.id || d.id === request.id_ugo_doc || d.id === request.id_zahtev_doc) : period ? query.data.items?.filter(d=>d.id_teh_period===period.id || d.id===period.id_ugo_doc) : query.data.items,
+   items: request ? query.data.items?.filter(d => d.id_raz_zahtev === request.id) : period ? query.data.items?.filter(d=>d.id_teh_period===period.id) : query.data.items,
  };
  const canWrite = item.otvoren_ug === 'X' && data && !data.forbidden && !query.error;
  const uploadStarted = useRef(false);
