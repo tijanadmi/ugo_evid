@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import Icon from './Icon';
+import { useEffect, useId, useRef, useState } from "react";
+import Icon from "./Icon";
 
-export default function RowMenu({ label, actions }) {
+export default function RowMenu({ label, actions, disabled = false }) {
   const id = useId();
   const toggle = useRef(null);
   const menu = useRef(null);
@@ -9,11 +9,11 @@ export default function RowMenu({ label, actions }) {
   useEffect(() => {
     if (!open) return;
     const hide = () => menu.current?.hidePopover();
-    window.addEventListener('resize', hide);
-    window.addEventListener('scroll', hide, true);
+    window.addEventListener("resize", hide);
+    window.addEventListener("scroll", hide, true);
     return () => {
-      window.removeEventListener('resize', hide);
-      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener("resize", hide);
+      window.removeEventListener("scroll", hide, true);
     };
   }, [open]);
   function close() {
@@ -29,30 +29,86 @@ export default function RowMenu({ label, actions }) {
       top: `${Math.max(8, rect.bottom + height + 8 > window.innerHeight ? rect.top - height - 6 : rect.bottom + 6)}px`,
     });
   }
-  return <div className="row-menu">
-    <button ref={toggle} type="button" className="icon-button row-menu-toggle" aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={id} popoverTarget={id} onClick={position} onKeyDown={event => {
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        event.preventDefault();
-        position();
-        menu.current.showPopover();
-      }
-    }}><Icon name="more"/></button>
-    <div ref={menu} id={id} popover="auto" role="menu" aria-label={label} className="row-menu-list" onToggle={event => {
-      const visible = event.newState === 'open';
-      setOpen(visible);
-      if (visible) menu.current.querySelector('[role="menuitem"]')?.focus();
-    }} onKeyDown={event => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
-      if (event.key === 'Tab') { menu.current.hidePopover(); }
-      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-        event.preventDefault();
-        const items = [...menu.current.querySelectorAll('[role="menuitem"]')];
-        const current = items.indexOf(document.activeElement);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
-        items[next]?.focus();
-      }
-    }}>
-      {actions.map(action => <button key={action.label} type="button" role="menuitem" className={action.danger ? 'danger' : ''} onClick={() => { close(); action.onClick(); }}><Icon name={action.icon}/><span>{action.label}</span></button>)}
+  return (
+    <div className="row-menu">
+      <button
+        disabled={disabled}
+        ref={toggle}
+        type="button"
+        className="icon-button row-menu-toggle"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={id}
+        popoverTarget={id}
+        onClick={position}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            position();
+            menu.current.showPopover();
+          }
+        }}
+      >
+        <Icon name="more" />
+      </button>
+      <div
+        ref={menu}
+        id={id}
+        popover="auto"
+        role="menu"
+        aria-label={label}
+        className="row-menu-list"
+        onToggle={(event) => {
+          const visible = event.newState === "open";
+          setOpen(visible);
+          if (visible) menu.current.querySelector('[role="menuitem"]')?.focus();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            close();
+          }
+          if (event.key === "Tab") {
+            menu.current.hidePopover();
+          }
+          if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const items = [
+              ...menu.current.querySelectorAll('[role="menuitem"]'),
+            ];
+            const current = items.indexOf(document.activeElement);
+            const next =
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? items.length - 1
+                  : (current +
+                      (event.key === "ArrowDown" ? 1 : -1) +
+                      items.length) %
+                    items.length;
+            items[next]?.focus();
+          }
+        }}
+      >
+        {actions.map((action) => (
+          <button
+            disabled={disabled}
+            key={action.label}
+            type="button"
+            role="menuitem"
+            className={action.danger ? "danger" : ""}
+            onClick={() => {
+              close();
+              action.onClick();
+            }}
+          >
+            <Icon name={action.icon} />
+            <span>{action.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
-  </div>;
+  );
 }

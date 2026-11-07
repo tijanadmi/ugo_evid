@@ -1,0 +1,26 @@
+export const trackingLabels = {
+  PLANIRAN: "Planiran",
+  PRIPREMA: "U pripremi",
+  NA_POTPISU: "Na potpisu",
+  ZAVRSEN: "Završen",
+  OTKAZAN: "Otkazan",
+  NACRT: "Nacrt",
+  PODNET: "Podnet",
+  U_RADU: "U radu",
+};
+export const emptyTrackingItem = {
+  id: 0,
+  version: "0",
+  period_od: "",
+  period_do: "",
+  id_tip_doc: 0,
+  id_vrsta_rada: 0,
+  broj_zahteva: "",
+  datum_zahteva: "",
+  broj_casova: 1,
+  rok_radnih_dana: 1,
+  rok: "",
+  datum_potpisa: "",
+  datum_realizacije: "",
+  napomena: "",
+};

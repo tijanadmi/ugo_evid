@@ -1,18 +1,20 @@
-import toast from 'react-hot-toast';
-import { announceBusinessChange } from '../../services/DataSync';
-import { useEffect, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import ContractPicker from './ContractPicker';
-import { useLocation, useSearchParams } from 'react-router-dom';
-import Icon from '../../ui/Icon';
-import { number } from '../../utils/contractFormatting';
-import { useContracts } from './useContracts';
-import { useOrganizations } from '../organizations/useOrganizations';
-import ContractRow from './ContractRow';
+import toast from "react-hot-toast";
+import { announceBusinessChange } from "../../services/DataSync";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import ContractPicker from "./ContractPicker";
+import { useLocation, useSearchParams } from "react-router-dom";
+import Icon from "../../ui/Icon";
+import { number } from "../../utils/contractFormatting";
+import { useContracts } from "./useContracts";
+import { useOrganizations } from "../organizations/useOrganizations";
+import ContractRow from "./ContractRow";
 function positive(value, fallback) {
   const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 2147483647 ? parsed : fallback;
+  return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 2147483647
+    ? parsed
+    : fallback;
 }
 
 export default function ContractTable({ status }) {
@@ -23,51 +25,265 @@ export default function ContractTable({ status }) {
   function registered(record) {
     setPicking(false);
     setCreated(record);
-    toast.success('Ugovor je evidentiran.');
+    toast.success("Ugovor je evidentiran.");
     announceBusinessChange(queryClient);
-    queryClient.invalidateQueries({ queryKey: ['contracts'] });
-    queryClient.invalidateQueries({ queryKey: ['partners'] });
-    queryClient.invalidateQueries({ queryKey: ['unregistered-contracts'] });
-    setParams({ page_id: '1', page_size: String(pageSize), id_ugo_org: '0' });
+    queryClient.invalidateQueries({ queryKey: ["contracts"] });
+    queryClient.invalidateQueries({ queryKey: ["partners"] });
+    queryClient.invalidateQueries({ queryKey: ["unregistered-contracts"] });
+    setParams({ page_id: "1", page_size: String(pageSize), id_ugo_org: "0" });
   }
-  const page = positive(params.get('page_id'), 1);
-  const pageSize = Math.min(positive(params.get('page_size'), 20), 100);
+  const page = positive(params.get("page_id"), 1);
+  const pageSize = Math.min(positive(params.get("page_size"), 20), 100);
   const orgID = 0;
-  const supplier = (params.get('dobavljac') || '').trim().slice(0, 200);
+  const supplier = (params.get("dobavljac") || "").trim().slice(0, 200);
   const [supplierDraft, setSupplierDraft] = useState(supplier);
   useEffect(() => setSupplierDraft(supplier), [supplier]);
-  const isOpen = status === 'otvoreni';
-  const title = isOpen ? 'Otvoreni ugovori' : 'Zatvoreni ugovori';
+  const isOpen = status === "otvoreni";
+  const title = isOpen ? "Otvoreni ugovori" : "Zatvoreni ugovori";
   const location = useLocation();
-  const contractsQuery = useContracts({ status, page, pageSize, orgID, supplier });
+  const contractsQuery = useContracts({
+    status,
+    page,
+    pageSize,
+    orgID,
+    supplier,
+  });
   const organizationsQuery = useOrganizations(picking);
   const data = contractsQuery.data || { items: [], total: 0 };
   const loading = contractsQuery.isFetching;
-  const error = contractsQuery.error?.message || '';
+  const error = contractsQuery.error?.message || "";
   const organizations = organizationsQuery.data || [];
-  const updated = contractsQuery.dataUpdatedAt ? new Date(contractsQuery.dataUpdatedAt) : null;
+  const updated = contractsQuery.dataUpdatedAt
+    ? new Date(contractsQuery.dataUpdatedAt)
+    : null;
 
-  function change(values) { setParams({ page_id: '1', page_size: String(pageSize), id_ugo_org: String(orgID), ...(supplier ? { dobavljac: supplier } : {}), ...values }); }
+  function change(values) {
+    setParams({
+      page_id: "1",
+      page_size: String(pageSize),
+      id_ugo_org: String(orgID),
+      ...(supplier ? { dobavljac: supplier } : {}),
+      ...values,
+    });
+  }
   const pages = Math.max(1, Math.ceil(data.total / pageSize));
-  return <>
-    <div className="breadcrumb">Evidencija ugovora <Icon name="chevron" width="14" height="14"/> <span>{title}</span></div>
-    <div className="page-heading"><div><div className="heading-row"><h1>{title}</h1><span className={`status-badge ${isOpen ? 'open' : 'closed'}`}><span/>{isOpen ? 'Otvoreni' : 'Zatvoreni'}</span></div><p>Pregled ugovora, dobavljača i odgovornih lica.</p></div><div className="contract-heading-actions">{isOpen && <button className="button primary" onClick={() => setPicking(true)}>Izaberi ugovor</button>}<button className="button" onClick={() => contractsQuery.refetch()} disabled={loading}><Icon name="refresh"/>Osveži</button></div></div>
-    {created && <p className="registration-success" ><Link to={`/ugovori/detalji/${created.id}`}>Otvori detalje ugovora</Link></p>}
-    {picking && <ContractPicker organizations={organizations} onClose={() => setPicking(false)} onCreated={registered}/>}
-    <section className="contracts-panel" aria-label={title}>
-      <div className="table-toolbar"><form className="partner-filter contract-supplier-filter" onSubmit={event => { event.preventDefault(); change({ dobavljac: supplierDraft.trim() }); }}>
-        <label htmlFor="contract-supplier">Dobavljač</label><div className="partner-filter-controls">
-          <input id="contract-supplier" type="search" maxLength={200} placeholder="Unesite deo naziva dobavljača" value={supplierDraft} onChange={event => setSupplierDraft(event.target.value)}/>
-          <button className="button" type="submit">Pretraži</button>
-          {(supplier || supplierDraft) && <button className="button" type="button" onClick={() => { setSupplierDraft(''); change({ dobavljac: '' }); }}>Poništi filter</button>}
+  return (
+    <>
+      <div className="breadcrumb">
+        Evidencija ugovora <Icon name="chevron" width="14" height="14" />{" "}
+        <span>{title}</span>
+      </div>
+      <div className="page-heading">
+        <div>
+          <div className="heading-row">
+            <h1>{title}</h1>
+            <span className={`status-badge ${isOpen ? "open" : "closed"}`}>
+              <span />
+              {isOpen ? "Otvoreni" : "Zatvoreni"}
+            </span>
+          </div>
+          <p>Pregled ugovora, dobavljača i odgovornih lica.</p>
         </div>
-      </form><div className="results-total" aria-live="polite">{loading ? 'Učitavanje…' : error ? 'Pregled nije dostupan' : <><strong>{number.format(data.total)}</strong> evidencija</>}</div></div>
-      {loading ? <div className="table-state" role="status"><span className="spinner"/>Učitavanje ugovora…</div> : error ? <div className="table-state"><Icon name="file" width="36" height="36"/><h3>Pregled trenutno nije dostupan</h3><button className="button" onClick={() => contractsQuery.refetch()}>Pokušaj ponovo</button></div> : data.items.length === 0 ? <div className="table-state"><span className="empty-icon"><Icon name={isOpen ? 'open' : 'closed'} width="32" height="32"/></span><h3>Nema ugovora za prikaz</h3><p>{page > 1 ? 'Na ovoj stranici nema rezultata.' : 'Nema ugovora koji odgovaraju zadatom filteru.'}</p>{page > 1 && <button className="button" onClick={() => change({ page_id: '1' })}>Prva stranica</button>}</div> : <div className="table-scroll" tabIndex="0" aria-label="Tabela ugovora, horizontalno pomeranje"><table>
-        <caption className="sr-only">{title} — stranica {page}</caption><thead><tr><th scope="col">Broj ugovora</th><th scope="col">Predmet ugovora</th><th scope="col">Dobavljač</th><th scope="col">Služba</th><th scope="col">Početak</th><th scope="col">Završetak</th><th scope="col">Odgovorna lica</th><th scope="col">Kontakt</th><th scope="col"><span className="sr-only">Detalji</span></th></tr></thead>
-        <tbody>{data.items.map(item => <ContractRow key={item.id_ugo_evid} item={item} returnTo={location.pathname + location.search}/>)}</tbody>
-      </table></div>}
-      <div className="table-footer"><label className="page-size">Po stranici <select aria-label="Broj redova po stranici" value={pageSize} onChange={e => change({ page_size: e.target.value })}>{[...new Set([10, 20, 50, 100, pageSize])].sort((a,b) => a-b).map(n => <option key={n} value={n}>{n}</option>)}</select></label><nav className="pagination" aria-label="Paginacija"><span>{!loading && !error ? `Stranica ${page} od ${pages}` : '…'}</span><button className="icon-button previous" disabled={page <= 1 || loading} aria-label="Prethodna stranica" onClick={() => change({ page_id: String(page - 1) })}><Icon name="chevron"/></button><button className="icon-button" disabled={page >= pages || loading || !!error} aria-label="Sledeća stranica" onClick={() => change({ page_id: String(page + 1) })}><Icon name="chevron"/></button></nav></div>
-    </section>
-    <div className="page-note"><span>Prikazane su evidencije ugovora iz poslovne baze.</span>{updated && !loading && !error && <span>Poslednje osvežavanje: {updated.toLocaleTimeString('sr-Latn-RS', { hour: '2-digit', minute: '2-digit' })}</span>}</div>
-  </>;
+        <div className="contract-heading-actions">
+          {isOpen && (
+            <button className="button primary" onClick={() => setPicking(true)}>
+              Izaberi ugovor
+            </button>
+          )}
+          <button
+            className="button"
+            onClick={() => contractsQuery.refetch()}
+            disabled={loading}
+          >
+            <Icon name="refresh" />
+            Osveži
+          </button>
+        </div>
+      </div>
+      {created && (
+        <p className="registration-success">
+          <Link to={`/ugovori/detalji/${created.id}`}>
+            Otvori detalje ugovora
+          </Link>
+        </p>
+      )}
+      {picking && (
+        <ContractPicker
+          organizations={organizations}
+          onClose={() => setPicking(false)}
+          onCreated={registered}
+        />
+      )}
+      <section className="contracts-panel" aria-label={title}>
+        <div className="table-toolbar">
+          <form
+            className="partner-filter contract-supplier-filter"
+            onSubmit={(event) => {
+              event.preventDefault();
+              change({ dobavljac: supplierDraft.trim() });
+            }}
+          >
+            <label htmlFor="contract-supplier">Dobavljač</label>
+            <div className="partner-filter-controls">
+              <input
+                id="contract-supplier"
+                type="search"
+                maxLength={200}
+                placeholder="Unesite deo naziva dobavljača"
+                value={supplierDraft}
+                onChange={(event) => setSupplierDraft(event.target.value)}
+              />
+              <button className="button" type="submit">
+                Pretraži
+              </button>
+              {(supplier || supplierDraft) && (
+                <button
+                  className="button"
+                  type="button"
+                  onClick={() => {
+                    setSupplierDraft("");
+                    change({ dobavljac: "" });
+                  }}
+                >
+                  Poništi filter
+                </button>
+              )}
+            </div>
+          </form>
+          <div className="results-total" aria-live="polite">
+            {loading ? (
+              "Učitavanje…"
+            ) : error ? (
+              "Pregled nije dostupan"
+            ) : (
+              <>
+                <strong>{number.format(data.total)}</strong> evidencija
+              </>
+            )}
+          </div>
+        </div>
+        {loading ? (
+          <div className="table-state" role="status">
+            <span className="spinner" />
+            Učitavanje ugovora…
+          </div>
+        ) : error ? (
+          <div className="table-state">
+            <Icon name="file" width="36" height="36" />
+            <h3>Pregled trenutno nije dostupan</h3>
+            <button className="button" onClick={() => contractsQuery.refetch()}>
+              Pokušaj ponovo
+            </button>
+          </div>
+        ) : data.items.length === 0 ? (
+          <div className="table-state">
+            <span className="empty-icon">
+              <Icon name={isOpen ? "open" : "closed"} width="32" height="32" />
+            </span>
+            <h3>Nema ugovora za prikaz</h3>
+            <p>
+              {page > 1
+                ? "Na ovoj stranici nema rezultata."
+                : "Nema ugovora koji odgovaraju zadatom filteru."}
+            </p>
+            {page > 1 && (
+              <button
+                className="button"
+                onClick={() => change({ page_id: "1" })}
+              >
+                Prva stranica
+              </button>
+            )}
+          </div>
+        ) : (
+          <div
+            className="table-scroll"
+            tabIndex="0"
+            aria-label="Tabela ugovora, horizontalno pomeranje"
+          >
+            <table>
+              <caption className="sr-only">
+                {title} — stranica {page}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Broj ugovora</th>
+                  <th scope="col">Predmet ugovora</th>
+                  <th scope="col">Dobavljač</th>
+                  <th scope="col">Služba</th>
+                  <th scope="col">Početak</th>
+                  <th scope="col">Završetak</th>
+                  <th scope="col">Odgovorna lica</th>
+                  <th scope="col">Kontakt</th>
+                  <th scope="col">
+                    <span className="sr-only">Detalji</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.items.map((item) => (
+                  <ContractRow
+                    key={item.id_ugo_evid}
+                    item={item}
+                    returnTo={location.pathname + location.search}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="table-footer">
+          <label className="page-size">
+            Po stranici{" "}
+            <select
+              aria-label="Broj redova po stranici"
+              value={pageSize}
+              onChange={(e) => change({ page_size: e.target.value })}
+            >
+              {[...new Set([10, 20, 50, 100, pageSize])]
+                .sort((a, b) => a - b)
+                .map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <nav className="pagination" aria-label="Paginacija">
+            <span>
+              {!loading && !error ? `Stranica ${page} od ${pages}` : "…"}
+            </span>
+            <button
+              className="icon-button previous"
+              disabled={page <= 1 || loading}
+              aria-label="Prethodna stranica"
+              onClick={() => change({ page_id: String(page - 1) })}
+            >
+              <Icon name="chevron" />
+            </button>
+            <button
+              className="icon-button"
+              disabled={page >= pages || loading || !!error}
+              aria-label="Sledeća stranica"
+              onClick={() => change({ page_id: String(page + 1) })}
+            >
+              <Icon name="chevron" />
+            </button>
+          </nav>
+        </div>
+      </section>
+      <div className="page-note">
+        <span>Prikazane su evidencije ugovora iz poslovne baze.</span>
+        {updated && !loading && !error && (
+          <span>
+            Poslednje osvežavanje:{" "}
+            {updated.toLocaleTimeString("sr-Latn-RS", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        )}
+      </div>
+    </>
+  );
 }

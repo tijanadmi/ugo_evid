@@ -1,34 +1,113 @@
-import toast from 'react-hot-toast';
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/useAuth';
-import { Brand } from '../../ui/AppLayout';
-import Icon from '../../ui/Icon';
+import toast from "react-hot-toast";
+import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/useAuth";
+import { Brand } from "../../ui/AppLayout";
+import Icon from "../../ui/Icon";
 
 export default function LoginForm() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (user) return <Navigate to="/" replace/>;
+  if (user) return <Navigate to="/" replace />;
   async function submit(event) {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
-    try { await login(username.trim(), password); navigate('/', { replace: true }); }
-    catch (error) { toast.error(error.status === 401 || error.status === 403 ? 'Korisničko ime ili lozinka nisu ispravni, ili nalog nema pristup aplikaciji.' : error.message); }
-    finally { setBusy(false); setPassword(''); }
+    try {
+      await login(username.trim(), password);
+      navigate("/", { replace: true });
+    } catch (error) {
+      toast.error(
+        error.status === 401 || error.status === 403
+          ? "Korisničko ime ili lozinka nisu ispravni, ili nalog nema pristup aplikaciji."
+          : error.message,
+      );
+    } finally {
+      setBusy(false);
+      setPassword("");
+    }
   }
-  return <main className="login-page">
-    <section className="login-intro"><Brand/><div className="login-copy"><span className="eyebrow">POVEZANE POSLOVNE APLIKACIJE</span><h1>Vaši poslovni procesi<br/>na jednom mestu.</h1><p>Planirajte nabavke, pratite realizaciju ugovora i pripremajte kolaudacione elaborate kroz povezane poslovne aplikacije.</p><div className="intro-note"><Icon name="grid"/><span>Nabavke · Ugovori · Kolaudacija</span></div></div><small>Poslovni portal · Interna upotreba</small></section>
-    <section className="login-form-section"><div className="login-card"><span className="section-icon"><Icon name="lock"/></span><h2>Prijava na poslovni portal</h2><p className="muted">Prijavite se svojim poslovnim nalogom.</p>
-      <form onSubmit={submit}>
-        <label htmlFor="username">Korisničko ime</label><input id="username" autoComplete="username" value={username} onChange={e => setUsername(e.target.value)} required disabled={busy} autoFocus placeholder="ime.prezime"/>
-        <label htmlFor="password">Lozinka</label><div className="password-field"><input id="password" type={visible ? 'text' : 'password'} autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required disabled={busy}/><button type="button" className="icon-button" aria-label={visible ? 'Sakrij lozinku' : 'Prikaži lozinku'} aria-pressed={visible} onClick={() => setVisible(!visible)}><Icon name="eye"/></button></div>
-        <button className="button primary login-submit" disabled={busy || !username.trim()}>{busy ? 'Prijavljivanje…' : 'Prijavi se'}{!busy && <Icon name="arrow"/>}</button>
-      </form><p className="login-help">Za pristup koristite korisničko ime i lozinku<br/>sa poslovne mreže.</p>
-    </div></section>
-  </main>;
+  return (
+    <main className="login-page">
+      <section className="login-intro">
+        <Brand />
+        <div className="login-copy">
+          <span className="eyebrow">POVEZANE POSLOVNE APLIKACIJE</span>
+          <h1>
+            Vaši poslovni procesi
+            <br />
+            na jednom mestu.
+          </h1>
+          <p>
+            Planirajte nabavke, pratite realizaciju ugovora i pripremajte
+            kolaudacione elaborate kroz povezane poslovne aplikacije.
+          </p>
+          <div className="intro-note">
+            <Icon name="grid" />
+            <span>Nabavke · Ugovori · Kolaudacija</span>
+          </div>
+        </div>
+        <small>Poslovni portal · Interna upotreba</small>
+      </section>
+      <section className="login-form-section">
+        <div className="login-card">
+          <span className="section-icon">
+            <Icon name="lock" />
+          </span>
+          <h2>Prijava na poslovni portal</h2>
+          <p className="muted">Prijavite se svojim poslovnim nalogom.</p>
+          <form onSubmit={submit}>
+            <label htmlFor="username">Korisničko ime</label>
+            <input
+              id="username"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+              disabled={busy}
+              autoFocus
+              placeholder="ime.prezime"
+            />
+            <label htmlFor="password">Lozinka</label>
+            <div className="password-field">
+              <input
+                id="password"
+                type={visible ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={visible ? "Sakrij lozinku" : "Prikaži lozinku"}
+                aria-pressed={visible}
+                onClick={() => setVisible(!visible)}
+              >
+                <Icon name="eye" />
+              </button>
+            </div>
+            <button
+              className="button primary login-submit"
+              disabled={busy || !username.trim()}
+            >
+              {busy ? "Prijavljivanje…" : "Prijavi se"}
+              {!busy && <Icon name="arrow" />}
+            </button>
+          </form>
+          <p className="login-help">
+            Za pristup koristite korisničko ime i lozinku
+            <br />
+            sa poslovne mreže.
+          </p>
+        </div>
+      </section>
+    </main>
+  );
 }

@@ -43,7 +43,8 @@ test('request row uploads multiple details and displays only its own documents',
  await open(page);
  const row=page.getByRole('row').filter({hasText:'R-7'});
  await expect(row).toContainText('29.01.2026');await expect(row).toContainText('30.01.2026');
- await row.getByRole('button',{name:'Upload',exact:true}).click();
+ await row.getByRole('button',{name:/Akcije za/}).click();
+ await page.getByRole('menuitem',{name:'Dodaj dokument',exact:true}).click();
  for(let i=1;i<=2;i++){
   const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
   await form.getByLabel('Tip dokumenta').selectOption('11');
@@ -94,7 +95,8 @@ test('technical period upload links automatically and displays migrated document
  const state=await setup(context,{periodi:[{id:7,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',id_tip_doc:5,status:'PLANIRAN'}],docs:[{id:40,id_teh_period:8,naziv:'Drugi period',mime_tip:'application/pdf',velicina_bajt:10}]});
  await open(page);
  const row=page.getByRole('row').filter({hasText:'15.01.2026 — 31.01.2026'});
- await row.getByRole('button',{name:'Upload',exact:true}).click();
+ await row.getByRole('button',{name:/Akcije za/}).click();
+ await page.getByRole('menuitem',{name:'Dodaj dokument',exact:true}).click();
  const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
  await expect(form.getByLabel('Tip dokumenta')).toHaveValue('Potvrda');
  await form.getByLabel('Fajl',{exact:true}).setInputFiles({name:'potvrda.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')});
@@ -166,6 +168,30 @@ test('development request selects one funded work type and preserves form after 
  await page.getByLabel('Broj časova',{exact:true}).fill('20');await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(state.writes[0].items[0]).toMatchObject({id_vrsta_rada:1,broj_casova:20,rok_radnih_dana:15,status:'PODNET'});
 });
+test('closed contracts keep document viewing in row menus without write actions',async({page,context})=>{
+ await setup(context,{
+  closed:true,
+  periodi:[{id:7,version:'1',period_od:'2026-01-15',period_do:'2026-01-31',status:'ZAVRSEN',id_tip_doc:5}],
+  zahtevi:[{id:8,version:'1',broj_zahteva:'R-8',status:'ZAVRSEN'}],
+  docs:[{id:41,id_raz_zahtev:8,naziv:'Zapisnik R-8',mime_tip:'application/pdf',velicina_bajt:10}],
+ });
+ await open(page);
+ await expect(page.getByRole('columnheader',{name:'Dokumenta',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Upload',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Prikaži',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'}).click();
+ await expect(page.getByRole('menuitem')).toHaveCount(1);
+ await page.getByRole('menuitem',{name:'Prikaži dokumenta',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Potvrda januar');
+ await page.keyboard.press('Escape');
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:'Akcije za zahtev R-8'}).click();
+ await expect(page.getByRole('menuitem')).toHaveCount(1);
+ await page.getByRole('menuitem',{name:'Prikaži dokumenta',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Zapisnik R-8');
+ await expect(page.getByRole('dialog')).not.toContainText('Potvrda januar');
+});
+
 test('closed maintenance is read only and home shows reminders',async({page,context})=>{
  await setup(context,{closed:true});await open(page);await expect(page.getByRole('button',{name:'Dodaj period'})).toHaveCount(0);
  await page.goto('/');await expect(page.getByRole('region',{name:'Podsetnici za održavanje'})).toContainText('Januar');

@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '../../context/useAuth';
-import { getMyPartners } from '../../services/apiPartners';
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../../context/useAuth";
+import { getMyPartners } from "../../services/apiPartners";
 
 export function usePartners(page, pageSize, naziv) {
   const { user, api } = useAuth();
   return useQuery({
-    queryKey: ['partners', user?.username, page, pageSize, naziv],
+    queryKey: ["partners", user?.username, page, pageSize, naziv],
     queryFn: ({ signal }) => getMyPartners(api, page, pageSize, naziv, signal),
     enabled: !!user,
     refetchOnWindowFocus: true,
