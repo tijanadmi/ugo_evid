@@ -1,4 +1,5 @@
 import DocumentList from "./DocumentList";
+import ContractDocumentList from "./ContractDocumentList";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
@@ -27,6 +28,7 @@ export default function Documents({
   const [confirmClose, setConfirmClose] = useState(false);
   const [preview, setPreview] = useState(null);
   const [imageZoom, setImageZoom] = useState(100);
+  const [showContractDocuments, setShowContractDocuments] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -234,7 +236,36 @@ export default function Documents({
   }
   return (
     <>
-      {children?.(upload, !!canWrite && !busy)}
+      {children?.(
+        upload,
+        !!canWrite && !busy,
+        () => setShowContractDocuments("UGOVOR"),
+        () => setShowContractDocuments("RESENJE"),
+      )}
+      {showContractDocuments && (
+        <DocumentDialog
+          title={
+            showContractDocuments === "UGOVOR"
+              ? "Dokumenta ugovora"
+              : "Rešenja za operativno praćenje ugovora"
+          }
+          onClose={() => setShowContractDocuments(false)}
+          busy={busy}
+        >
+          {query.isPending ? (
+            <p role="status">Učitavanje dokumenata…</p>
+          ) : data?.forbidden || query.error ? (
+            <p role="alert">Dokumenta trenutno nisu dostupna.</p>
+          ) : (
+            <ContractDocumentList
+              data={data}
+              busy={busy}
+              content={content}
+              code={showContractDocuments}
+            />
+          )}
+        </DocumentDialog>
+      )}
       <section
         className="contract-card documents-panel"
         aria-label="Dokumenta ugovora"

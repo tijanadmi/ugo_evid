@@ -17,7 +17,11 @@ const fields = [
   ["kraj_ug", "Važi do"],
 ];
 
-export default function ContractDetails({ item, onUploadResolution }) {
+export default function ContractDetails({
+  item,
+  onUploadResolution,
+  onViewResolutions,
+}) {
   const [addingContact, setAddingContact] = useState(false);
   const actions = useContactActions(item.id_sap_dobavljac);
   const contacts = supplierContacts(item, {
@@ -62,6 +66,17 @@ export default function ContractDetails({ item, onUploadResolution }) {
               onClick={onUploadResolution}
             >
               <Icon name="upload" />
+            </button>
+          )}
+          {onViewResolutions && (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Prikaži rešenja za operativno praćenje"
+              title="Prikaži rešenja za operativno praćenje"
+              onClick={onViewResolutions}
+            >
+              <Icon name="eye" />
             </button>
           )}
         </h2>

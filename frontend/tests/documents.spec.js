@@ -58,6 +58,41 @@ async function setup(context, overrides = {}) {
 async function open(page) { await page.goto('/ugovori/detalji/9'); await expect(page.getByRole('region', { name: 'Dokumenta ugovora' })).toBeVisible(); }
 async function edit(page) { await page.getByRole('button', { name: 'Akcije za dokument Potpisani ugovor' }).click(); await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click(); }
 
+test('heading opens contract documents and their preview, including empty state', async ({context, page}) => {
+ const state = await setup(context);
+ state.docs.push({...state.docs[0], id:22, id_tip_doc:2, naziv:'Resenje za pracenje'});
+ await open(page);
+ await page.getByRole('button', {name:'Prikaži dokumenta ugovora', exact:true}).click();
+ const list = page.getByRole('dialog', {name:'Dokumenta ugovora', exact:true});
+ await expect(list).toContainText('Potpisani ugovor');
+ await expect(list).not.toContainText('Resenje za pracenje');
+ await list.getByRole('button', {name:'Pregled', exact:true}).click();
+ await expect(page.locator('iframe')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(list).toBeVisible();
+ await page.keyboard.press('Escape');
+ state.docs=[];
+ await page.reload();
+ await page.getByRole('button', {name:'Prikaži dokumenta ugovora', exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Nema dodatih dokumenata tipa Ugovor.');
+});
+
+test('responsible persons heading shows only resolutions, also on closed contracts', async ({context, page}) => {
+ const state = await setup(context, {closed:true});
+ state.docs.push({...state.docs[0], id:22, id_tip_doc:2, naziv:'Resenje OPU'});
+ await open(page);
+ await page.getByRole('button',{name:'Prikaži rešenja za operativno praćenje',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Rešenja za operativno praćenje ugovora',exact:true});
+ await expect(dialog).toContainText('Resenje OPU');
+ await expect(dialog).not.toContainText('Potpisani ugovor');
+ await expect(dialog.getByRole('button',{name:'Pregled',exact:true})).toBeVisible();
+ await page.keyboard.press('Escape');
+ state.docs=[];
+ await page.reload();
+ await page.getByRole('button',{name:'Prikaži rešenja za operativno praćenje',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('Nema dodatih rešenja za operativno praćenje ugovora.');
+});
+
 test('upload entry points preselect document types and refresh the list', async ({ context, page }) => {
  const state = await setup(context); await open(page);
  await page.getByRole('button', { name: 'Dodaj ugovor', exact: true }).click();

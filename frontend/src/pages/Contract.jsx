@@ -50,7 +50,7 @@ export default function Contract() {
         </div>
       ) : (
         <Documents key={item.id_ugo_evid} item={item}>
-          {(upload, canWrite) => (
+          {(upload, canWrite, viewContractDocuments, viewResolutions) => (
             <>
               <div className="compact-contract-heading">
                 <div className="contract-heading-meta">
@@ -77,12 +77,22 @@ export default function Contract() {
                       <Icon name="upload" />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className="icon-button"
+                    aria-label="Prikaži dokumenta ugovora"
+                    title="Prikaži dokumenta ugovora"
+                    onClick={viewContractDocuments}
+                  >
+                    <Icon name="eye" />
+                  </button>
                 </h1>
               </div>
               <Maintenance key={item.id_ugo_evid} item={item} />
               <ContractDetails
                 item={item}
                 onUploadResolution={canWrite ? () => upload("RESENJE") : null}
+                onViewResolutions={viewResolutions}
               />
             </>
           )}
