@@ -10,6 +10,7 @@ import { number } from "../../utils/contractFormatting";
 import { useContracts } from "./useContracts";
 import { useOrganizations } from "../organizations/useOrganizations";
 import ContractRow from "./ContractRow";
+import ExportContractsButton from "./ExportContractsButton";
 function positive(value, fallback) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= 2147483647
@@ -85,6 +86,9 @@ export default function ContractTable({ status }) {
           <p>Pregled ugovora, dobavljača i odgovornih lica.</p>
         </div>
         <div className="contract-heading-actions">
+          {isOpen && (
+            <ExportContractsButton supplier={supplier} disabled={loading || !!error} />
+          )}
           {isOpen && (
             <button className="button primary" onClick={() => setPicking(true)}>
               Izaberi ugovor

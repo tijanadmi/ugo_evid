@@ -7,6 +7,7 @@ import (
 )
 
 type Store interface {
+	ExportOpenContracts(ctx context.Context, orgID int, supplier string) ([]models.UgoEvidProsireni, error)
 	GetCalendar(context.Context, int) (*models.CalendarYear, error)
 	ChangeCalendar(context.Context, int, models.CalendarChange) error
 	GetTracking(context.Context, int) (*models.TrackingData, error)

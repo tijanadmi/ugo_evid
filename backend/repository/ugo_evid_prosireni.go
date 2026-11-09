@@ -81,6 +81,16 @@ func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, o
 	if offset < 0 || limit < 1 || limit > 100 {
 		return nil, 0, fmt.Errorf("invalid pagination")
 	}
+	return r.listContracts(ctx, open, offset, limit, orgID, supplier, true)
+}
+
+// Read export rows in one ordered query; never combine independently paged snapshots.
+func (r *OracleStore) ExportOpenContracts(ctx context.Context, orgID int, supplier string) ([]models.UgoEvidProsireni, error) {
+	items, _, err := r.listContracts(ctx, true, 0, 10001, orgID, supplier, false)
+	return items, err
+}
+
+func (r *OracleStore) listContracts(ctx context.Context, open bool, offset, limit, orgID int, supplier string, contacts bool) ([]models.UgoEvidProsireni, int, error) {
 	if orgID < 1 {
 		return nil, 0, fmt.Errorf("invalid organization ID")
 	}
@@ -124,8 +134,10 @@ func (r *OracleStore) GetUgoEvidProsireniPaged(ctx context.Context, open bool, o
 	if err := rows.Close(); err != nil {
 		return nil, 0, err
 	}
-	if err := r.loadProsireniContacts(ctx, items); err != nil {
-		return nil, 0, err
+	if contacts {
+		if err := r.loadProsireniContacts(ctx, items); err != nil {
+			return nil, 0, err
+		}
 	}
 	return items, total, nil
 }

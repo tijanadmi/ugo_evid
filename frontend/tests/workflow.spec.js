@@ -43,6 +43,10 @@ async function mockAPI(page, options = {}) {
       return json({ access_token: 'renewed', access_token_expires_at: future(15) });
     }
     expect(req.headers().authorization).toBe(`Bearer ${options.expired ? 'renewed' : 'access'}`);
+    if (url.pathname === '/api/ugo_evid/otvoreni/excel') {
+      if (options.exportFails) return json({error:'Izvoz nije dostupan'},500);
+      return route.fulfill({contentType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',body:Buffer.from('mock-xlsx')});
+    }
     if (url.pathname === '/api/moji_partneri') {
       expect(url.searchParams.has('id_ugo_org')).toBe(false);
       if (options.partnerError) return json({ error: 'Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica.' }, 403);
@@ -72,6 +76,22 @@ async function login(page) {
   await page.getByRole('button', { name: 'Prijavi se', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Aplikacije', exact: true })).toBeVisible();
 }
+
+test('Excel export uses active supplier filter, downloads and reports failure', async ({ page }) => {
+  const options={};const {calls}=await mockAPI(page,options);await login(page);
+  await page.goto('/ugovori/otvoreni?dobavljac=Primer&page_id=2');
+  const button=page.getByRole('button',{name:'Izvezi u Excel',exact:true});
+  await expect(button).toBeEnabled();
+  const downloaded=page.waitForEvent('download');await button.click();
+  expect((await downloaded).suggestedFilename()).toBe('otvoreni-ugovori.xlsx');
+  const request=calls.find(url=>url.pathname.endsWith('/excel'));
+  expect(request.searchParams.get('dobavljac')).toBe('Primer');
+  expect(request.searchParams.has('page_id')).toBe(false);
+  options.exportFails=true;await button.click();
+  await expect(page.getByRole('alert')).toContainText('Izvoz nije dostupan');
+  await expect(button).toBeEnabled();
+  await page.goto('/ugovori/zatvoreni');await expect(button).toHaveCount(0);
+});
 
 test('my partners navigation, contacts, pagination, empty and denied organization', async ({ page }) => {
   const options = {};

@@ -70,6 +70,7 @@ func (server *Server) setupRouter() {
 	authRoutes.GET("/sapugovori/neevidentirani", server.ListUnregisteredContracts)
 	authRoutes.GET("/sapugovori/:id/priprema", server.PrepareContractRegistration)
 	authRoutes.GET("/ugo_evid/otvoreni", server.ListOtvoreniUgovori)
+	authRoutes.GET("/ugo_evid/otvoreni/excel", server.ExportOpenContracts)
 	authRoutes.GET("/moji_partneri", server.ListMyPartners)
 	authRoutes.GET("/ugo_evid/zatvoreni", server.ListZatvoreniUgovori)
 	authRoutes.GET("/ugo_evid/:id/detalji", server.GetUgoEvidProsireni)
