@@ -38,7 +38,13 @@ export default function TechnicalPeriodsTable({
               <td>
                 {formatDate(p.period_od)} — {formatDate(p.period_do)}
               </td>
-              <td>{labels[p.status]}</td>
+              <td>
+                {p.status === "ZAVRSEN" ? (
+                  <strong>{labels[p.status]}</strong>
+                ) : (
+                  labels[p.status]
+                )}
+              </td>
               <td>{formatDate(p.rok)}</td>
               <td>{formatDate(p.datum_potpisa)}</td>
             </tr>

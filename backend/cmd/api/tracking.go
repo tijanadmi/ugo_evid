@@ -76,7 +76,7 @@ func (s *Server) SaveTracking(c *gin.Context) {
 		maintenanceError(c, e)
 		return
 	}
-	c.JSON(200, gin.H{"status": "ok"})
+	c.JSON(200, gin.H{"status": "ok", "id": req.Items[0].ID})
 }
 func (s *Server) ListReminders(c *gin.Context) {
 	org, _, ok := s.registrationIdentity(c)

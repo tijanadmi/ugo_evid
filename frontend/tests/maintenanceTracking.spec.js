@@ -31,12 +31,49 @@ async function setup(context,extra={}){
    if(req.method()==='DELETE' && kind==='zahtevi'){state.zahtevi=state.zahtevi.filter(p=>p.id!==body.items[0].id);state.token=null;return json({status:'ok'});}
    if(req.method()==='DELETE'){const p=state.periodi.find(p=>p.id===body.items[0].id);if(!p||p.status!=='PLANIRAN'||p.version!==body.items[0].version)return json({error:'Period nije vise planiran ili je promenjen.'},409);state.periodi=state.periodi.filter(x=>x.id!==p.id);state.token=null;return json({status:'ok'});}
    for(const p of body.items){const current=state[kind].find(x=>x.id===p.id);if(current)Object.assign(current,p,{version:String(Number(p.version)+1)});else state[kind].push({...p,id:state[kind].length+1,version:'1',rok:p.rok||'2026-02-10'});}
-   state.token=null;return json({status:'ok'});
+   state.token=null;return json({status:'ok',id:body.items[0].id || state[kind].at(-1).id});
   }
   return json({error:'Unknown route'},404);
  });return state;
 }
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('heading',{name:'Praćenje održavanja'})).toBeVisible();}
+
+test('save and upload creates a period first and opens its document form',async({page,context})=>{
+ const state=await setup(context);await open(page);
+ await page.getByRole('button',{name:'Dodaj period',exact:true}).click();
+ await page.getByRole('button',{name:'Sačuvaj i dodaj dokument',exact:true}).click();
+ expect(state.writes).toHaveLength(0);
+ await page.getByLabel('Period od',{exact:true}).fill('2026-01-15');
+ await page.getByLabel('Period do',{exact:true}).fill('2026-01-31');
+ await page.getByRole('button',{name:'Sačuvaj i dodaj dokument',exact:true}).click();
+ const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
+ await expect(form).toBeVisible();
+ expect(state.writes).toHaveLength(1);expect(state.token).toBeNull();
+ await form.getByLabel('Fajl',{exact:true}).setInputFiles({name:'period.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')});
+ await form.getByRole('button',{name:'Sačuvaj dokument'}).click();
+ await expect(form).toHaveCount(0);
+ expect(state.uploads[0].id_teh_period).toBe(state.periodi[0].id);
+});
+
+test('failed request save keeps editor; successful retry opens upload for saved request',async({page,context})=>{
+ const state=await setup(context,{error:'Prekoracen fond'});await open(page);
+ await page.getByRole('button',{name:'Dodaj razvojni zahtev'}).click();
+ await page.getByLabel('Broj zahteva',{exact:true}).fill('R-NEW');
+ await page.getByLabel('Datum zahteva',{exact:true}).fill('2026-01-20');
+ await page.getByLabel('Vrsta rada',{exact:true}).selectOption('1');
+ await page.getByRole('button',{name:'Sačuvaj i dodaj dokument',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Prekoracen fond');
+ await expect(page.getByRole('form',{name:'Dodavanje dokumenta'})).toHaveCount(0);
+ state.error=null;
+ await page.getByRole('button',{name:'Sačuvaj i dodaj dokument',exact:true}).click();
+ const form=page.getByRole('form',{name:'Dodavanje dokumenta'});
+ await expect(form).toBeVisible();
+ await form.getByLabel('Tip dokumenta').selectOption('10');
+ await form.getByLabel('Fajl',{exact:true}).setInputFiles({name:'zahtev.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 test')});
+ await form.getByRole('button',{name:'Sačuvaj dokument'}).click();
+ await expect(form).toHaveCount(0);
+ expect(state.uploads[0].id_raz_zahtev).toBe(state.zahtevi[0].id);
+});
 
 test('request row uploads multiple details and displays only its own documents',async({page,context})=>{
  const state=await setup(context,{zahtevi:[{id:7,version:'1',broj_zahteva:'R-7',datum_zahteva:'2026-01-20',datum_realizacije:'2026-01-29',datum_potpisa:'2026-01-30',status:'ZAVRSEN',id_vrsta_rada:1}],docs:[{id:30,id_raz_zahtev:99,naziv:'Drugi zahtev',velicina_bajt:10,mime_tip:'application/pdf'}]});

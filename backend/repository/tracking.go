@@ -143,7 +143,8 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 		return tx.Commit()
 	}
 	seen := map[int]bool{}
-	for _, p := range change.Items {
+	for i := range change.Items {
+		p := &change.Items[i]
 		if p.ID < 0 || (p.ID > 0 && (seen[p.ID] || p.Version < 1)) || utf8.RuneCountInString(p.Note) > 2000 {
 			return ErrTrackingInput
 		}
@@ -179,7 +180,7 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 }
 
 // Document associations are stored exclusively in UGO_DOC by row upload.
-func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p models.TrackingItem) error {
+func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p *models.TrackingItem) error {
 	if _, e := date(p.Start); e != nil {
 		return ErrTrackingInput
 	}
@@ -215,7 +216,7 @@ func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end strin
 	}
 	args := []any{sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("dtype", p.DocumentType), sql.Named("deadline", p.Deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user), sql.Named("mid", mid)}
 	if p.ID == 0 {
-		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,status,napomena,id_korisnika,id_odrzavanja) VALUES(TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id,:mid)`, args...)
+		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,status,napomena,id_korisnika,id_odrzavanja) VALUES(TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id,:mid) RETURNING id INTO :new_id`, append(args, sql.Named("new_id", sql.Out{Dest: &p.ID}))...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
@@ -233,7 +234,7 @@ func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end strin
 	return nil
 }
 
-func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p models.TrackingItem) error {
+func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p *models.TrackingItem) error {
 	if _, e := date(p.Requested); e != nil {
 		return ErrTrackingInput
 	}
@@ -308,7 +309,7 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	}
 	args := []any{sql.Named("completed", p.Completed), sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
 	if p.ID == 0 {
-		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(datum_realizacije,id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,status,napomena,id_korisnika) VALUES(TO_DATE(:completed,'YYYY-MM-DD'),:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id)`, args...)
+		_, e = tx.ExecContext(ctx, `INSERT INTO TED.UGO_RAZ_ZAHTEV(datum_realizacije,id_raz_fonda,broj_zahteva,datum_zahteva,broj_casova,rok_radnih_dana,rok_potpisa,datum_potpisa,status,napomena,id_korisnika) VALUES(TO_DATE(:completed,'YYYY-MM-DD'),:fid,:request_number,TO_DATE(:requested,'YYYY-MM-DD'),:hours,:days,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id) RETURNING id INTO :new_id`, append(args, sql.Named("new_id", sql.Out{Dest: &p.ID}))...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))

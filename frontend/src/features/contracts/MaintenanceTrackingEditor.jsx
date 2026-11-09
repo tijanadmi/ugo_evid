@@ -1,4 +1,5 @@
 import DateInput from "../../ui/DateInput";
+import Icon from "../../ui/Icon";
 import { Link } from "react-router-dom";
 import { formatDate } from "../../utils/contractFormatting";
 import DocumentDialog from "../documents/DocumentDialog";
@@ -323,8 +324,8 @@ export default function MaintenanceTrackingEditor({
                       </p>
                     )}
                   <p className="muted">
-                    Dokumenta dodajte opcijom Dodaj dokument u meniju sačuvanog
-                    perioda ili zahteva. Povezivanje je automatsko.
+                    Dokument možete dodati odmah nakon čuvanja ili kasnije iz
+                    menija reda.
                   </p>
                   <label>
                     Napomena
@@ -363,6 +364,18 @@ export default function MaintenanceTrackingEditor({
               >
                 Sačuvaj
               </button>
+              {!editor.generate && (
+                <button
+                  className="button primary"
+                  type="submit"
+                  name="action"
+                  value="upload"
+                  disabled={busy || blocked || lost}
+                >
+                  <Icon name="upload" />
+                  Sačuvaj i dodaj dokument
+                </button>
+              )}
             </div>
           </form>
           {confirm && (

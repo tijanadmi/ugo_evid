@@ -42,6 +42,24 @@
 }
 .tracking-editor fieldset {
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+.contact-editor.tracking-editor {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(90dvh - 100px);
+  overflow: hidden;
+}
+.tracking-editor fieldset p {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  margin: 0.35rem 0;
+}
+.tracking-editor > .contact-actions {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  background: var(--color-grey-0, #fff);
 }
 .tracking-editor textarea {
   width: 100%;

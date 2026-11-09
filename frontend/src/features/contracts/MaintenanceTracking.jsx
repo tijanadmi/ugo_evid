@@ -115,12 +115,13 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
   }
   async function save(event) {
     event?.preventDefault();
+    const uploadAfterSave = event?.nativeEvent?.submitter?.value === "upload";
     if (pending.current || owner.lost || blocked) return;
     pending.current = true;
     setBusy(true);
     try {
       if (!(await owner.renew())) return;
-      await api(`/ugo_evid/${id}/pracenje/${editor.kind}`, {
+      const response = await api(`/ugo_evid/${id}/pracenje/${editor.kind}`, {
         method: editor.remove ? "DELETE" : "POST",
         body: {
           lock_token: owner.session.token,
@@ -131,6 +132,18 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
       setEditor(null);
       toast.success("Podaci su sačuvani.");
       announceBusinessChange(client);
+      if (uploadAfterSave && !editor.generate && !editor.remove) {
+        const savedID = response.id || editor.row.id;
+        if (!savedID) {
+          toast.error(
+            "Podaci su sačuvani, ali dokument dodajte iz menija reda nakon osvežavanja liste.",
+          );
+          return;
+        }
+        const documents = { row: { ...editor.row, id: savedID }, upload: true };
+        if (editor.kind === "periodi") setPeriodDocuments(documents);
+        else setRequestDocuments(documents);
+      }
     } catch (e) {
       toast.error(e.message);
       if ([0, 404, 409, 423].includes(e.status) || e.status >= 500)
@@ -231,7 +244,9 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
                         <td>{f.naziv}</td>
                         <td>{f.ugovoreno}</td>
                         <td>{f.zauzeto}</td>
-                        <td>{f.preostalo}</td>
+                        <td>
+                          <strong>{f.preostalo}</strong>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

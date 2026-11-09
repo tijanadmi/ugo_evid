@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -180,6 +181,16 @@ func TestTrackingTransactionGuards(t *testing.T) {
 					return nil, fmt.Errorf("unsafe request deletion")
 				}
 				writes++
+				if strings.Contains(q, "INSERT INTO") {
+					if !strings.Contains(q, "RETURNING id INTO :new_id") {
+						return nil, fmt.Errorf("insert must return saved row ID")
+					}
+					for _, arg := range a {
+						if arg.Name == "new_id" {
+							*arg.Value.(sql.Out).Dest.(*int) = 123
+						}
+					}
+				}
 				if tc.stale || (tc.kind == "obrisi-zahtev" && tc.status == "ZAVRSEN") {
 					return driver.RowsAffected(0), nil
 				}
@@ -198,11 +209,15 @@ func TestTrackingTransactionGuards(t *testing.T) {
 				p.ID = 2
 				p.Version = 1
 			}
-			e := store.SaveTracking(context.Background(), 9, 3, 7, tc.kind, models.TrackingChange{Token: strings.Repeat("a", 64), Items: []models.TrackingItem{p}})
+			change := models.TrackingChange{Token: strings.Repeat("a", 64), Items: []models.TrackingItem{p}}
+			e := store.SaveTracking(context.Background(), 9, 3, 7, tc.kind, change)
 			if !errors.Is(e, tc.want) {
 				t.Fatalf("got %v want %v", e, tc.want)
 			}
 			if e == nil {
+				if p.ID == 0 && change.Items[0].ID != 123 {
+					t.Fatal("saved row ID was not returned to caller")
+				}
 				if !tx.committed || writes != 1 || releases != 1 {
 					t.Fatal("incomplete commit")
 				}
