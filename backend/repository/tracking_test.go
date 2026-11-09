@@ -104,6 +104,8 @@ func TestTrackingTransactionGuards(t *testing.T) {
 		{name: "stale period", kind: "periodi", lease: 1, stale: true, status: "PLANIRAN", want: ErrMaintenanceConflict},
 		{name: "request reserve", kind: "zahtevi", lease: 1, used: 80, status: "PODNET"},
 		{name: "completed historical request", kind: "zahtevi", lease: 1, used: 80, status: "ZAVRSEN", signed: "2026-01-05"},
+		{name: "completion on deadline signature later", kind: "zahtevi", lease: 1, status: "ZAVRSEN", completed: "2026-01-06", signed: "2026-01-08"},
+		{name: "completion after deadline rejected", kind: "zahtevi", lease: 1, status: "ZAVRSEN", completed: "2026-01-07", signed: "2026-01-08", want: ErrTrackingInput},
 		{name: "completed date required", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", missingCompleted: true, want: ErrTrackingInput},
 		{name: "completion before request", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", completed: "2026-01-04", want: ErrTrackingInput},
 		{name: "completion after signature", kind: "zahtevi", lease: 1, status: "ZAVRSEN", signed: "2026-01-05", completed: "2026-01-06", want: ErrTrackingInput},

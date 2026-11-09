@@ -246,8 +246,9 @@ export default function MaintenanceTrackingEditor({
                       </label>
                       <p>
                         Rok se računa pri čuvanju iz kalendara radnih dana,
-                        počev od narednog dana. Zapisnik mora biti potpisan pre
-                        datuma roka.
+                        počev od narednog dana. Usluga mora biti realizovana
+                        najkasnije na dan roka. Zapisnik može biti potpisan kasnije,
+                        ali ne pre realizacije.
                         {editor.row.rok &&
                           ` Sačuvani rok: ${formatDate(editor.row.rok)}.`}
                       </p>

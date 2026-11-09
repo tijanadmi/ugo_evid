@@ -19,7 +19,7 @@ export default function DevelopmentRequestsTable({
             <th>Zahtev / datum</th>
             <th>Vrsta rada</th>
             <th>Časovi / radni dani</th>
-            <th>Potpisati pre</th>
+            <th>Rok realizacije</th>
             <th>Realizovan</th>
             <th>Zapisnik potpisan</th>
             <th>Status</th>

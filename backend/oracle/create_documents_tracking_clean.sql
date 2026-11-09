@@ -125,7 +125,7 @@ CREATE TABLE TED.UGO_RAZ_ZAHTEV
   DATUM_REALIZACIJE  DATE
 );
 
-COMMENT ON COLUMN TED.UGO_RAZ_ZAHTEV.ROK_POTPISA IS 'Snapshot calculated using approved work calendar; counting starts the day after request date. Signature must be strictly before this date.';
+COMMENT ON COLUMN TED.UGO_RAZ_ZAHTEV.ROK_POTPISA IS 'Snapshot calculated using approved work calendar; counting starts the day after request date. Service completion is due on or before this date; signature may follow.';
 
 COMMENT ON COLUMN TED.UGO_RAZ_ZAHTEV.STATUS IS 'NACRT/OTKAZAN/OBRISAN do not consume hours; all other statuses reserve or consume hours.';
 
@@ -151,7 +151,7 @@ DATUM_REALIZACIJE IS NULL OR
 AND (DATUM_POTPISA IS NULL OR DATUM_REALIZACIJE<=DATUM_POTPISA)))
   ENABLE VALIDATE,
   CONSTRAINT CK_RAZ_ROK_POTPISA
-  CHECK (DATUM_POTPISA IS NULL OR (DATUM_POTPISA>=DATUM_ZAHTEVA AND DATUM_POTPISA<ROK_POTPISA))
+  CHECK ((DATUM_POTPISA IS NULL OR DATUM_POTPISA>=DATUM_ZAHTEVA) AND (DATUM_REALIZACIJE IS NULL OR DATUM_REALIZACIJE<=ROK_POTPISA))
   ENABLE VALIDATE,
   CONSTRAINT CK_RAZ_STATUS
   CHECK (STATUS IN ('NACRT','PODNET','U_RADU','NA_POTPISU','ZAVRSEN','OTKAZAN','OBRISAN'))

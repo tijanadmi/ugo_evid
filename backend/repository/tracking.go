@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/tijanadmi/ugo_evid/models"
 	"strings"
 	"time"
@@ -304,7 +305,11 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 	if p.Status == "ZAVRSEN" && p.Completed == "" {
 		return ErrTrackingInput
 	}
-	if p.Signed != "" && (p.Signed < p.Requested || p.Signed >= deadline) {
+	if p.Completed != "" && p.Completed > deadline {
+		d, _ := date(deadline)
+		return fmt.Errorf("Datum realizacije mora biti najkasnije %s (ukljucujuci taj dan). %w", d.Format("02.01.2006"), ErrTrackingInput)
+	}
+	if p.Signed != "" && p.Signed < p.Requested {
 		return ErrTrackingInput
 	}
 	args := []any{sql.Named("completed", p.Completed), sql.Named("fid", fid), sql.Named("request_number", strings.TrimSpace(p.Number)), sql.Named("requested", p.Requested), sql.Named("hours", p.Hours), sql.Named("days", p.Days), sql.Named("deadline", deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user)}
@@ -333,9 +338,9 @@ func (r *OracleStore) ListReminders(ctx context.Context, org int) ([]models.Remi
  FROM TED.UGO_TEH_PERIOD p JOIN TED.UGO_ODRZAVANJE o ON o.id=p.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
  WHERE e.id_ugo_org=:org AND s.otvoren_ug='X' AND p.status NOT IN ('ZAVRSEN','OTKAZAN') AND TRUNC(SYSDATE)>=p.period_do-o.teh_podsetnik_dana
  UNION ALL
- SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>=z.rok_potpisa THEN 1 ELSE 0 END
+ SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>z.rok_potpisa THEN 1 ELSE 0 END
  FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
- WHERE e.id_ugo_org=:org2 AND s.otvoren_ug='X' AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
+ WHERE e.id_ugo_org=:org2 AND s.otvoren_ug='X' AND z.datum_realizacije IS NULL AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
  ) ORDER BY rok,id_ugo_evid,id`, sql.Named("org", org), sql.Named("org2", org))
 	if e != nil {
 		return nil, e

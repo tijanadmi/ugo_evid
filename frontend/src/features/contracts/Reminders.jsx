@@ -38,7 +38,7 @@ export default function Reminders({ contractID }) {
                 Ugovor #{p.id_ugo_evid}
               </Link>{" "}
               — {p.vrsta === "TEH" ? "Tehnička podrška" : "Razvojni zahtev"}:{" "}
-              {p.opis}; {p.vrsta === "RAZ" ? "potpisati pre" : "period / rok"}{" "}
+              {p.opis}; {p.vrsta === "RAZ" ? "rok realizacije" : "period / rok"}{" "}
               {formatDate(p.rok)}
               {p.kasni && <strong> — Rok je istekao</strong>}
             </li>
