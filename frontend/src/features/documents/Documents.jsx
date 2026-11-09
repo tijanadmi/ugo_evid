@@ -252,18 +252,20 @@ export default function Documents({
           onClose={() => setShowContractDocuments(false)}
           busy={busy}
         >
-          {query.isPending ? (
-            <p role="status">Učitavanje dokumenata…</p>
-          ) : data?.forbidden || query.error ? (
-            <p role="alert">Dokumenta trenutno nisu dostupna.</p>
-          ) : (
-            <ContractDocumentList
-              data={data}
-              busy={busy}
-              content={content}
-              code={showContractDocuments}
-            />
-          )}
+          <div className="document-browser-body">
+            {query.isPending ? (
+              <p role="status">Učitavanje dokumenata…</p>
+            ) : data?.forbidden || query.error ? (
+              <p role="alert">Dokumenta trenutno nisu dostupna.</p>
+            ) : (
+              <ContractDocumentList
+                data={data}
+                busy={busy}
+                content={content}
+                code={showContractDocuments}
+              />
+            )}
+          </div>
         </DocumentDialog>
       )}
       <section

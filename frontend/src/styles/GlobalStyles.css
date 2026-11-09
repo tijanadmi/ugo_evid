@@ -1835,6 +1835,20 @@ table small {
 .document-dialog {
   width: min(680px, calc(100% - 24px));
 }
+.document-browser-body {
+  padding: 24px 28px;
+}
+
+.document-browser-body > p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .document-browser-body {
+    padding: 20px;
+  }
+}
 .document-dialog textarea {
   width: 100%;
   font: inherit;

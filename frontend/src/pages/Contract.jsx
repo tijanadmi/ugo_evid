@@ -88,12 +88,12 @@ export default function Contract() {
                   </button>
                 </h1>
               </div>
-              <Maintenance key={item.id_ugo_evid} item={item} />
               <ContractDetails
                 item={item}
                 onUploadResolution={canWrite ? () => upload("RESENJE") : null}
                 onViewResolutions={viewResolutions}
               />
+              <Maintenance key={item.id_ugo_evid} item={item} />
             </>
           )}
         </Documents>
