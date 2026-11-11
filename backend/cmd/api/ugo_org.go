@@ -41,7 +41,7 @@ func (server *Server) GetUgoOrg(ctx *gin.Context) {
 		return
 	}
 
-	org, err := server.store.GetUgoOrgById(ctx, id)
+	org, err := server.store.GetUgoOrgById(ctx.Request.Context(), id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -73,7 +73,7 @@ func (server *Server) ListUgoOrg(ctx *gin.Context) {
 	offset := int((req.PageID - 1) * req.PageSize)
 
 	// Poziv repo funkcije koja vraća slice i ukupan broj
-	orgs, count, err := server.store.GetUgoOrgPaged(ctx, offset, limit, req.Filter)
+	orgs, count, err := server.store.GetUgoOrgPaged(ctx.Request.Context(), offset, limit, req.Filter)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -103,7 +103,7 @@ func (server *Server) InsertUgoOrg(ctx *gin.Context) {
 		Status:   req.Status,
 	}
 
-	org, err := server.store.InsertUgoOrg(ctx, org)
+	org, err := server.store.InsertUgoOrg(ctx.Request.Context(), org)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -127,7 +127,7 @@ func (server *Server) UpdateUgoOrg(ctx *gin.Context) {
 		Status:   req.Status,
 	}
 
-	org, err := server.store.UpdateUgoOrg(ctx, org)
+	org, err := server.store.UpdateUgoOrg(ctx.Request.Context(), org)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -153,7 +153,7 @@ func (server *Server) DeleteUgoOrg(ctx *gin.Context) {
 		return
 	}
 
-	err = server.store.DeleteUgoOrgById(ctx, id)
+	err = server.store.DeleteUgoOrgById(ctx.Request.Context(), id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

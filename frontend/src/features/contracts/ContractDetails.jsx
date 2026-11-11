@@ -1,3 +1,4 @@
+import { usePermissions } from "../../context/usePermissions";
 import Icon from "../../ui/Icon";
 import RowMenu from "../../ui/RowMenu";
 import { useContactActions } from "../partners/useContactActions";
@@ -22,6 +23,7 @@ export default function ContractDetails({
   onUploadResolution,
   onViewResolutions,
 }) {
+  const permissions = usePermissions();
   const [addingContact, setAddingContact] = useState(false);
   const actions = useContactActions(item.id_sap_dobavljac);
   const contacts = supplierContacts(item, {
@@ -94,18 +96,20 @@ export default function ContractDetails({
           </div>
           <span className="partner-count">Kontakti: {contacts.length}</span>
         </div>
-        {item.otvoren_ug === "X" && item.id_sap_dobavljac > 0 && (
-          <div className="partner-add">
-            <button
-              type="button"
-              className="button primary"
-              disabled={actions.busy}
-              onClick={() => setAddingContact(true)}
-            >
-              + Unos novog lica
-            </button>
-          </div>
-        )}
+        {permissions.canWrite(item.id_ugo_org) &&
+          item.otvoren_ug === "X" &&
+          item.id_sap_dobavljac > 0 && (
+            <div className="partner-add">
+              <button
+                type="button"
+                className="button primary"
+                disabled={actions.busy}
+                onClick={() => setAddingContact(true)}
+              >
+                + Unos novog lica
+              </button>
+            </div>
+          )}
         {actions.dialog}
         {addingContact && (
           <AddContactDialog
@@ -157,24 +161,26 @@ export default function ContractDetails({
                     <span>{value(person, "email")}</span>
                     <span>{value(person, "telefon")}</span>
                   </div>
-                  {item.otvoren_ug === "X" && actionPerson?.id > 0 && (
-                    <RowMenu
-                      label={`Akcije za lice ${person.ime}`}
-                      actions={[
-                        {
-                          label: "Izmeni",
-                          icon: "edit",
-                          onClick: () => actions.open(actionPerson, "edit"),
-                        },
-                        {
-                          label: "Obriši",
-                          icon: "trash",
-                          danger: true,
-                          onClick: () => actions.open(actionPerson, "delete"),
-                        },
-                      ]}
-                    />
-                  )}
+                  {permissions.canWrite(item.id_ugo_org) &&
+                    item.otvoren_ug === "X" &&
+                    actionPerson?.id > 0 && (
+                      <RowMenu
+                        label={`Akcije za lice ${person.ime}`}
+                        actions={[
+                          {
+                            label: "Izmeni",
+                            icon: "edit",
+                            onClick: () => actions.open(actionPerson, "edit"),
+                          },
+                          {
+                            label: "Obriši",
+                            icon: "trash",
+                            danger: true,
+                            onClick: () => actions.open(actionPerson, "delete"),
+                          },
+                        ]}
+                      />
+                    )}
                 </li>
               );
             })}

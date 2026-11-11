@@ -36,7 +36,7 @@ func TestMyPartnersScope(t *testing.T) {
 		status          int
 		orgErr, listErr error
 	}{
-		{"/moji_partneri?id_ugo_org=99&naziv=ACME", true, 200, nil, nil},
+		{"/moji_partneri?id_ugo_org=3&naziv=ACME", true, 200, nil, nil},
 		{"/moji_partneri", false, 401, nil, nil},
 		{"/moji_partneri?page_size=101", true, 400, nil, nil},
 		{"/moji_partneri", true, 403, repository.ErrUserOrganization, nil},

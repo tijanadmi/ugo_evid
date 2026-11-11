@@ -3,7 +3,11 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../context/useAuth";
 import Icon from "../../ui/Icon";
 
-export default function ExportContractsButton({ supplier, disabled }) {
+export default function ExportContractsButton({
+  supplier,
+  orgID = 0,
+  disabled,
+}) {
   const { api } = useAuth();
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
@@ -13,7 +17,10 @@ export default function ExportContractsButton({ supplier, disabled }) {
     pending.current = true;
     setBusy(true);
     try {
-      const params = new URLSearchParams({ dobavljac: supplier });
+      const params = new URLSearchParams({
+        dobavljac: supplier,
+        id_ugo_org: orgID,
+      });
       const blob = await api(`/ugo_evid/otvoreni/excel?${params}`, {
         responseType: "blob",
       });

@@ -1,3 +1,4 @@
+import { usePermissions } from "../context/usePermissions";
 import CalendarMonth from "../features/calendar/CalendarMonth";
 import HolidayImportDialog from "../features/calendar/HolidayImportDialog";
 import CalendarDaysEditor from "../features/calendar/CalendarDaysEditor";
@@ -49,7 +50,9 @@ export default function WorkCalendar() {
     byDate = new Map(items.map((d) => [d.datum, d])),
     total = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000,
     approved = items.filter((d) => d.potvrdjen === "D").length;
-  const canWrite = !!query.data && !query.error && !busy,
+  const permissions = usePermissions();
+  const canWrite =
+      permissions.calendarAdmin && !!query.data && !query.error && !busy,
     hasDialog = !!draft || !!action || !!preview;
   const selectedDate = selection.startsWith(iso(year, month, 1).slice(0, 7))
     ? selection

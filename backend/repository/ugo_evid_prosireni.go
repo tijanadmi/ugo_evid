@@ -99,7 +99,7 @@ func (r *OracleStore) listContracts(ctx context.Context, open bool, offset, limi
 		predicate = "v.otvoren_ug IS NULL"
 	}
 	from := " FROM TED.UGO_EVID_PROSIRENI_V v WHERE " + predicate
-	from += " AND v.id_ugo_org = :org_id"
+	from += " AND " + accessPredicate(ctx, "v.id_ugo_org", "v.id_ugo_org = :org_id")
 	args := []any{sql.Named("org_id", orgID)}
 	supplier = strings.TrimSpace(supplier)
 	if supplier != "" {

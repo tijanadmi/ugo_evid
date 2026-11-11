@@ -64,7 +64,7 @@ func (s *Server) documentAccess(ctx *gin.Context, contractID int, write bool) (i
 		documentError(ctx, err)
 		return 0, false
 	}
-	if contract.IDUgoOrg != org {
+	if !allowsContract(ctx, contract.IDUgoOrg, org, write) {
 		ctx.JSON(403, gin.H{"error": "Dokumenta pripadaju drugoj organizacionoj jedinici."})
 		return 0, false
 	}
@@ -72,6 +72,7 @@ func (s *Server) documentAccess(ctx *gin.Context, contractID int, write bool) (i
 		documentError(ctx, repository.ErrDocumentClosed)
 		return 0, false
 	}
+	ctx.Set("contract_org", contract.IDUgoOrg)
 	return user.ID, true
 }
 func documentID(ctx *gin.Context) (int, bool) {

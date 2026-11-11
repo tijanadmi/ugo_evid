@@ -1,3 +1,4 @@
+import { usePermissions } from "../../context/usePermissions";
 import DocumentList from "./DocumentList";
 import ContractDocumentList from "./ContractDocumentList";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +21,7 @@ export default function Documents({
   startUpload = false,
 }) {
   const { api, user } = useAuth();
+  const permissions = usePermissions();
   const client = useQueryClient();
   const owner = useContactSession(api, documentSessionService);
   const [editor, setEditor] = useState(null);
@@ -79,7 +81,11 @@ export default function Documents({
         : query.data.items,
   };
   const canWrite =
-    item.otvoren_ug === "X" && data && !data.forbidden && !query.error;
+    permissions.canWrite(item.id_ugo_org) &&
+    item.otvoren_ug === "X" &&
+    data &&
+    !data.forbidden &&
+    !query.error;
   const uploadStarted = useRef(false);
   useEffect(() => {
     if (startUpload && canWrite && !uploadStarted.current) {

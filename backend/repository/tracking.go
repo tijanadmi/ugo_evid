@@ -336,11 +336,11 @@ func (r *OracleStore) ListReminders(ctx context.Context, org int) ([]models.Remi
 	rows, e := r.DB.QueryContext(ctx, `SELECT id_ugo_evid,vrsta,id,opis,TO_CHAR(rok,'YYYY-MM-DD'),kasni FROM (
  SELECT e.id id_ugo_evid,'TEH' vrsta,p.id,TO_CHAR(p.period_od,'DD.MM.YYYY')||' - '||TO_CHAR(p.period_do,'DD.MM.YYYY') opis,NVL(p.rok_dokumenta,p.period_do) rok,CASE WHEN p.rok_dokumenta IS NOT NULL AND TRUNC(SYSDATE)>p.rok_dokumenta THEN 1 ELSE 0 END kasni
  FROM TED.UGO_TEH_PERIOD p JOIN TED.UGO_ODRZAVANJE o ON o.id=p.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
- WHERE e.id_ugo_org=:org AND s.otvoren_ug='X' AND p.status NOT IN ('ZAVRSEN','OTKAZAN') AND TRUNC(SYSDATE)>=p.period_do-o.teh_podsetnik_dana
+ WHERE `+accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org=:org")+` AND s.otvoren_ug='X' AND p.status NOT IN ('ZAVRSEN','OTKAZAN') AND TRUNC(SYSDATE)>=p.period_do-o.teh_podsetnik_dana
  UNION ALL
  SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>z.rok_potpisa THEN 1 ELSE 0 END
  FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
- WHERE e.id_ugo_org=:org2 AND s.otvoren_ug='X' AND z.datum_realizacije IS NULL AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
+ WHERE `+accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org=:org2")+` AND s.otvoren_ug='X' AND z.datum_realizacije IS NULL AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
  ) ORDER BY rok,id_ugo_evid,id`, sql.Named("org", org), sql.Named("org2", org))
 	if e != nil {
 		return nil, e

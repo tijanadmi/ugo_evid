@@ -17,6 +17,7 @@ async function setup(context, overrides = {}) {
  const state = { docs: [{ id: 11, id_ugo_evid: 9, id_tip_doc: 1, tip_naziv: 'Ugovor', naziv: 'Potpisani ugovor', originalni_naziv: 'ugovor.pdf', mime_tip: 'application/pdf', velicina_bajt: 100, version: '1' }], token: null, uploads: [], writes: [], closed: false, forbidden: false, expired: false, types, ...overrides };
  await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token: 'access', refresh_token: 'refresh', access_token_expires_at: new Date(Date.now() + 3600000).toISOString(), refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(), user: { username: 'test.user' } })));
  await context.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
   const req = route.request(), url = new URL(req.url()), method = req.method();
   const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (new URL(route.request().url()).pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });

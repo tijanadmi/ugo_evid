@@ -3,6 +3,7 @@ async function setup(context){
  const state={items:[],version:1,writes:[],holidayError:false,previews:0};
  await context.addInitScript(()=>sessionStorage.setItem('ugo-evid-session',JSON.stringify({access_token:'access',refresh_token:'refresh',access_token_expires_at:new Date(Date.now()+3600000).toISOString(),refresh_token_expires_at:new Date(Date.now()+7200000).toISOString(),user:{username:'test.user'}})));
  await context.route('**/api/**',async route=>{
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
   const req=route.request();if(!req.url().includes('/radni_kalendar/'))return route.fulfill({status:404,json:{error:'Unknown route'}});
   if(req.url().endsWith('/praznici')){state.previews++;return route.fulfill(state.holidayError?{status:502,json:{error:'Preuzimanje praznika nije uspelo.'}}:{json:{items:[{datum:'2026-01-01',naziv:'Nova godina',poreklo:'Nager.Date'},{datum:'2026-01-02',naziv:'Nova godina',poreklo:'Nager.Date'}]}});}
   if(req.method()==='GET')return route.fulfill({json:{items:state.items,version:String(state.version)}});

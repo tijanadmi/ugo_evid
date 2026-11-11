@@ -1,6 +1,7 @@
 package models
 
 type Partner struct {
+	CanWrite       bool                `json:"can_write"`
 	ID             int                 `json:"id"`
 	Sifra          string              `json:"sifra"`
 	Naziv          string              `json:"naziv"`

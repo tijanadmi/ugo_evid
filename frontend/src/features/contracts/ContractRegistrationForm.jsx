@@ -9,6 +9,7 @@ import {
 
 export default function ContractRegistrationForm({
   contract,
+  orgID,
   organizations,
   onBack,
   onCreated,
@@ -16,8 +17,8 @@ export default function ContractRegistrationForm({
 }) {
   const { api, user } = useAuth();
   const query = useQuery({
-    queryKey: ["contract-preparation", user.username, contract.id],
-    queryFn: ({ signal }) => prepareContract(api, contract.id, signal),
+    queryKey: ["contract-preparation", user.username, contract.id, orgID],
+    queryFn: ({ signal }) => prepareContract(api, contract.id, signal, orgID),
     retry: false,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -53,13 +54,17 @@ export default function ContractRegistrationForm({
     setSaving(true);
     onBusy(true);
     try {
-      const response = await registerContract(api, {
-        id_sap_ugovor: contract.id,
-        id_tip_ugovora: Number(typeID),
-        ...(person
-          ? { id_ugo_dob_lica: person.id, contact_version: person.version }
-          : { novo_lice: draft }),
-      });
+      const response = await registerContract(
+        api,
+        {
+          id_sap_ugovor: contract.id,
+          id_tip_ugovora: Number(typeID),
+          ...(person
+            ? { id_ugo_dob_lica: person.id, contact_version: person.version }
+            : { novo_lice: draft }),
+        },
+        orgID,
+      );
       onCreated(response.data);
     } catch (failure) {
       toast.error(failure.message, { id: "operation-error" });

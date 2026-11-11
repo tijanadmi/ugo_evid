@@ -8,7 +8,8 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import Icon from "../../ui/Icon";
 import { number } from "../../utils/contractFormatting";
 import { useContracts } from "./useContracts";
-import { useOrganizations } from "../organizations/useOrganizations";
+import { usePermissions } from "../../context/usePermissions";
+import OrganizationSelect from "../organizations/OrganizationSelect";
 import ContractRow from "./ContractRow";
 import ExportContractsButton from "./ExportContractsButton";
 function positive(value, fallback) {
@@ -35,7 +36,7 @@ export default function ContractTable({ status }) {
   }
   const page = positive(params.get("page_id"), 1);
   const pageSize = Math.min(positive(params.get("page_size"), 20), 100);
-  const orgID = 0;
+  const orgID = positive(params.get("id_ugo_org"), 0);
   const supplier = (params.get("dobavljac") || "").trim().slice(0, 200);
   const [supplierDraft, setSupplierDraft] = useState(supplier);
   useEffect(() => setSupplierDraft(supplier), [supplier]);
@@ -49,11 +50,11 @@ export default function ContractTable({ status }) {
     orgID,
     supplier,
   });
-  const organizationsQuery = useOrganizations(picking);
+  const permissions = usePermissions();
   const data = contractsQuery.data || { items: [], total: 0 };
   const loading = contractsQuery.isFetching;
   const error = contractsQuery.error?.message || "";
-  const organizations = organizationsQuery.data || [];
+  const organizations = permissions.organizations;
   const updated = contractsQuery.dataUpdatedAt
     ? new Date(contractsQuery.dataUpdatedAt)
     : null;
@@ -87,9 +88,13 @@ export default function ContractTable({ status }) {
         </div>
         <div className="contract-heading-actions">
           {isOpen && (
-            <ExportContractsButton supplier={supplier} disabled={loading || !!error} />
+            <ExportContractsButton
+              orgID={orgID}
+              supplier={supplier}
+              disabled={loading || !!error}
+            />
           )}
-          {isOpen && (
+          {isOpen && permissions.writableOrganizations.length > 0 && (
             <button className="button primary" onClick={() => setPicking(true)}>
               Izaberi ugovor
             </button>
@@ -113,13 +118,22 @@ export default function ContractTable({ status }) {
       )}
       {picking && (
         <ContractPicker
-          organizations={organizations}
+          organizations={permissions.writableOrganizations}
           onClose={() => setPicking(false)}
           onCreated={registered}
         />
       )}
       <section className="contracts-panel" aria-label={title}>
         <div className="table-toolbar">
+          {organizations.length > 1 && (
+            <OrganizationSelect
+              organizations={organizations}
+              value={orgID}
+              all
+              onChange={(id) => change({ id_ugo_org: String(id) })}
+            />
+          )}
+          {permissions.error && <p role="alert">{permissions.error.message}</p>}
           <form
             className="partner-filter contract-supplier-filter"
             onSubmit={(event) => {

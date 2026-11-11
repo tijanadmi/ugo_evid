@@ -7,9 +7,7 @@ import (
 )
 
 func (s *Server) Calendar(c *gin.Context) {
-	if _, _, ok := s.registrationIdentity(c); !ok {
-		return
-	}
+	// accessMiddleware checks calendar rights independently of OJ membership.
 	year, e := strconv.Atoi(c.Param("year"))
 	if e != nil || year < 1900 || year > 2200 {
 		c.JSON(400, gin.H{"error": "Godina mora biti izmedju 1900 i 2200."})
@@ -37,9 +35,7 @@ func (s *Server) Calendar(c *gin.Context) {
 }
 
 func (s *Server) CalendarHolidays(c *gin.Context) {
-	if _, _, ok := s.registrationIdentity(c); !ok {
-		return
-	}
+	// External holiday import also requires ADM_KALENDAR in accessMiddleware.
 	year, e := strconv.Atoi(c.Param("year"))
 	if e != nil || year < 1900 || year > 2200 {
 		c.JSON(400, gin.H{"error": "Neispravna godina."})

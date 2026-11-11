@@ -32,7 +32,7 @@ func (server *Server) GetUgoEvidProsireni(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, apiErrorResponse{Error: "detalji ugovora trenutno nisu dostupni"})
 		return
 	}
-	if item.IDUgoOrg != orgID {
+	if !allowsContract(ctx, item.IDUgoOrg, orgID, false) {
 		ctx.JSON(http.StatusForbidden, apiErrorResponse{Error: "Nemate pristup ugovoru druge organizacione jedinice."})
 		return
 	}

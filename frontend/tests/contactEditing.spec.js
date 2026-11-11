@@ -4,6 +4,7 @@ async function setup(context, sharedState) {
   const state = sharedState || { people: [{ id: 7, ime: 'Ana', radno_mesto: 'Menadžer', telefon: '011', email: 'ana@example.test', status: 'A', version: '1', sap_dobavljac: { id: 20 }, ugo_dob_lica_rola: { id: 1 } }], token: null, renewFail: false, conflict: false, linked: false, writes: [], releases: 0, acquisitions: 0 };
   await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token: 'access', refresh_token: 'refresh', access_token_expires_at: new Date(Date.now() + 3600000).toISOString(), refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(), user: { username: 'test.user' } })));
   await context.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
     const req = route.request();
     const path = new URL(req.url()).pathname;
     const method = req.method();
@@ -12,7 +13,7 @@ async function setup(context, sharedState) {
     if (new URL(route.request().url()).pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
     if (new URL(route.request().url()).pathname.endsWith('/podesavanja')) return json({ settings: {id_tip_ugovora:0,version:'1',odrzavanje:null}, document_types:[] });
     if (new URL(req.url()).pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
-    if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
+    if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, can_write: true, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
     if (path === '/api/ugo_dob_lica_rola') {
       const size = Number(new URL(req.url()).searchParams.get('page_size'));
       if (!Number.isInteger(size) || size < 5 || size > 100) return json({ error: 'Invalid role page size' }, 400);
@@ -264,7 +265,7 @@ test('open contract adds contact for its supplier, preserves cancelled draft and
   const state = await setup(context);
   let open = true;
   await context.route('**/api/ugo_evid/*/detalji', route => route.fulfill({ json: {
-    id_ugo_evid: 2, id_sap_dobavljac: 20, otvoren_ug: open ? 'X' : '',
+    id_ugo_evid: 2, id_ugo_org: 3, id_sap_dobavljac: 20, otvoren_ug: open ? 'X' : '',
     br_ugovor: '4600012345', naziv: 'Moj partner', lica_dobavljaca: state.people,
   } }));
   await page.goto('/ugovori/detalji/2');
@@ -289,7 +290,7 @@ test('open contract adds contact for its supplier, preserves cancelled draft and
 test('contract contact menus edit and delete with shared locking and refreshed data', async ({ context, page }) => {
   const state = await setup(context);
   await context.route('**/api/ugo_evid/*/detalji', route => route.fulfill({ json: {
-    id_ugo_evid: 2, id_sap_dobavljac: 20, otvoren_ug: 'X',
+    id_ugo_evid: 2, id_ugo_org: 3, id_sap_dobavljac: 20, otvoren_ug: 'X',
     br_ugovor: '4600012345', naziv: 'Moj partner', lica_dobavljaca: state.people,
     ime: 'Istorijski kontakt', email: 'snapshot@example.test',
   } }));

@@ -128,7 +128,7 @@ COUNT(*) OVER() AS c26
         JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
         JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
         LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
-        WHERE e.id_ugo_org = :p1
+        WHERE ` + accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org = :p1") + `
     `
 
 	args := []any{orgID}

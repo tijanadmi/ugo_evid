@@ -49,7 +49,7 @@ func TestPartnersScopedAndBatched(t *testing.T) {
 		if args[1].Value != 0 || args[2].Value != 20 {
 			t.Fatal("pagination")
 		}
-		return &schemaRows{width: 6, values: [][]driver.Value{{int64(20), "S1", "Partner 1", "Ulica", "Grad", nil}, {int64(21), "S2", "Partner 2", nil, nil, nil}}}, nil
+		return &schemaRows{width: 7, values: [][]driver.Value{{int64(20), "S1", "Partner 1", "Ulica", "Grad", nil, int64(1)}, {int64(21), "S2", "Partner 2", nil, nil, nil, int64(0)}}}, nil
 	}})
 	store.DB.SetMaxOpenConns(1)
 	items, total, err := store.GetPartnersPaged(context.Background(), 3, 0, 20, "")
@@ -72,7 +72,7 @@ func TestPartnersNameFilter(t *testing.T) {
 		if strings.HasPrefix(q, "SELECT COUNT(*)") {
 			return &schemaRows{width: 1, values: [][]driver.Value{{int64(5)}}}, nil
 		}
-		return &schemaRows{width: 6}, nil
+		return &schemaRows{width: 7}, nil
 	}})
 	items, total, err := store.GetPartnersPaged(context.Background(), 3, 100, 20, "  ACME%_  ")
 	if err != nil || total != 5 || len(items) != 0 || calls != 2 {
@@ -85,7 +85,7 @@ func TestPartnersEmptyPage(t *testing.T) {
 		if strings.HasPrefix(q, "SELECT COUNT(*)") {
 			return &schemaRows{width: 1, values: [][]driver.Value{{int64(2)}}}, nil
 		}
-		return &schemaRows{width: 6}, nil
+		return &schemaRows{width: 7}, nil
 	}})
 	items, total, err := store.GetPartnersPaged(context.Background(), 3, 100, 20, "")
 	if err != nil || total != 2 || items == nil || len(items) != 0 {

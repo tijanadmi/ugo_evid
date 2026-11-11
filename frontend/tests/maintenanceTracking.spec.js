@@ -5,6 +5,7 @@ async function setup(context,extra={}){
  const maintenance={id:1,version:'1',pocetak_odrzavanja:'',ima_razvojnu_podrsku:true,teh_period_meseci:1,id_teh_tip_doc:5,teh_podsetnik_dana:7,raz_podsetnik_dana:3,fondovi:[{id_vrsta_rada:1,ugovoreno_casova:100},{id_vrsta_rada:3,ugovoreno_casova:0}]};
  await context.addInitScript(()=>sessionStorage.setItem('ugo-evid-session',JSON.stringify({access_token:'access',refresh_token:'refresh',access_token_expires_at:new Date(Date.now()+3600000).toISOString(),refresh_token_expires_at:new Date(Date.now()+7200000).toISOString(),user:{username:'test.user'}})));
  await context.route('**/api/**',async route=>{
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
   const req=route.request(),path=new URL(req.url()).pathname,body=req.postData() && !req.headers()['content-type']?.includes('multipart/form-data')?req.postDataJSON():{};
   const json=(data,status=200)=>route.fulfill({status,json:data});
   if(path.endsWith('/detalji'))return json({id_ugo_evid:9,id_ugo_org:3,br_ugovor:'460',predmet_ugovora:'Održavanje',otvoren_ug:state.closed?'':'X',lica_dobavljaca:[]});

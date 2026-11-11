@@ -1,3 +1,4 @@
+import { usePermissions } from "../../context/usePermissions";
 import TechnicalPeriodsTable from "./TechnicalPeriodsTable";
 import DevelopmentRequestsTable from "./DevelopmentRequestsTable";
 import MaintenanceTrackingEditor from "./MaintenanceTrackingEditor";
@@ -17,6 +18,7 @@ import "./maintenanceTracking.css";
 
 export default function MaintenanceTracking({ item, settings, documentTypes }) {
   const { api, user } = useAuth();
+  const permissions = usePermissions();
   const client = useQueryClient();
   const owner = useContactSession(api, maintenanceService);
   const [editor, setEditor] = useState(null),
@@ -35,7 +37,11 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
     refetchOnWindowFocus: true,
   });
   const data = query.data,
-    canWrite = item.otvoren_ug === "X" && !!data && !query.error;
+    canWrite =
+      permissions.canWrite(item.id_ugo_org) &&
+      item.otvoren_ug === "X" &&
+      !!data &&
+      !query.error;
   async function open(
     kind,
     row,

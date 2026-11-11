@@ -138,19 +138,25 @@ export default function PartnerDetails({ partner, onClose, onRefresh }) {
         />
       ) : (
         <>
-          <div className="partner-add">
-            <button
-              className="button primary"
-              disabled={busy}
-              onClick={() => setEditor({ mode: "add" })}
-            >
-              + Dodaj lice
-            </button>
-          </div>
+          {partner.can_write && (
+            <div className="partner-add">
+              <button
+                className="button primary"
+                disabled={busy}
+                onClick={() => setEditor({ mode: "add" })}
+              >
+                + Dodaj lice
+              </button>
+            </div>
+          )}
           <PartnerCard
             partner={partner}
-            onEdit={(person) => open(person, "edit")}
-            onDelete={(person) => open(person, "delete")}
+            onEdit={
+              partner.can_write ? (person) => open(person, "edit") : undefined
+            }
+            onDelete={
+              partner.can_write ? (person) => open(person, "delete") : undefined
+            }
           />
         </>
       )}

@@ -59,8 +59,8 @@ status AS c5,
 datpri AS c6,
 datizm AS c7,
 COUNT(*) OVER() AS c8
- FROM TED.UGO_ORG
-        WHERE 1=1
+ FROM TED.UGO_ORG o
+        WHERE ` + accessPredicate(ctx, "o.id", "1=1") + `
     `
 
 	args := []any{}

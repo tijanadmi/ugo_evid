@@ -39,6 +39,16 @@ func registrationError(ctx *gin.Context, err error) {
 }
 
 func (server *Server) registrationIdentity(ctx *gin.Context) (int, int, bool) {
+	if a := models.AccessFrom(ctx.Request.Context()); a != nil {
+		org := a.SelectedOrg
+		if actual, exists := ctx.Get("contract_org"); exists {
+			org = actual.(int)
+		}
+		if org == 0 && len(a.Organizations) > 0 {
+			org = a.Organizations[0].ID
+		}
+		return org, a.UserID, org > 0
+	}
 	username := ctx.MustGet(authorizationPayloadKey).(*token.Payload).Username
 	user, err := server.store.GetUserByUsername(ctx.Request.Context(), username)
 	if err != nil {
@@ -53,6 +63,9 @@ func (server *Server) registrationIdentity(ctx *gin.Context) (int, int, bool) {
 	if err != nil {
 		registrationError(ctx, err)
 		return 0, 0, false
+	}
+	if actual, exists := ctx.Get("contract_org"); exists {
+		orgID = actual.(int)
 	}
 	return orgID, user.ID, true
 }

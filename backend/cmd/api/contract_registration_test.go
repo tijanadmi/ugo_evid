@@ -46,7 +46,7 @@ func (s *registrationStore) PrepareContractRegistration(_ context.Context, id, o
 	return &models.ContractPreparation{}, s.failure
 }
 func TestRegistrationReadsUseAuthenticatedOrganization(t *testing.T) {
-	for _, path := range []string{"/sapugovori/neevidentirani?id_ugo_org=999", "/sapugovori/101/priprema?id_ugo_org=999"} {
+	for _, path := range []string{"/sapugovori/neevidentirani?id_ugo_org=3", "/sapugovori/101/priprema?id_ugo_org=3"} {
 		store := &registrationStore{}
 		server, err := NewServer(util.Config{TokenSymmetricKey: strings.Repeat("k", 32), ActiveUserStatus: "A"}, store)
 		if err != nil {

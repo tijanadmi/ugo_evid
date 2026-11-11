@@ -64,8 +64,9 @@ func (server *Server) setupRouter() {
 	}))
 
 	router.POST("/users/login", server.loginUser)
-	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker))
+	authRoutes := router.Group("/").Use(authMiddleware(server.tokenMaker), server.accessMiddleware)
 
+	authRoutes.GET("/users/prava", server.UserAccess)
 	authRoutes.GET("/sapugovori", server.GetSapUgovoriPaged)
 	authRoutes.GET("/sapugovori/neevidentirani", server.ListUnregisteredContracts)
 	authRoutes.GET("/sapugovori/:id/priprema", server.PrepareContractRegistration)

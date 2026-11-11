@@ -1,3 +1,4 @@
+import OrganizationSelect from "../organizations/OrganizationSelect";
 import ContractRegistrationForm from "./ContractRegistrationForm";
 import ConfirmAction from "../../ui/ConfirmAction";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +10,9 @@ import { getUnregisteredContracts } from "../../services/apiContractRegistration
 export default function ContractPicker({ organizations, onClose, onCreated }) {
   const { api, user } = useAuth();
   const dialog = useRef(null);
+  const [orgID, setOrgID] = useState(
+    organizations.length === 1 ? organizations[0].id : 0,
+  );
   const [draftFilter, setDraftFilter] = useState("");
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
@@ -16,10 +20,10 @@ export default function ContractPicker({ organizations, onClose, onCreated }) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [busy, setBusy] = useState(false);
   const query = useQuery({
-    queryKey: ["unregistered-contracts", user.username, page, filter],
+    queryKey: ["unregistered-contracts", user.username, orgID, page, filter],
     queryFn: ({ signal }) =>
-      getUnregisteredContracts(api, page, filter, signal),
-    enabled: !selected,
+      getUnregisteredContracts(api, page, filter, signal, orgID),
+    enabled: !selected && orgID > 0,
     retry: false,
   });
   useEffect(() => {
@@ -75,6 +79,7 @@ export default function ContractPicker({ organizations, onClose, onCreated }) {
         <ContractRegistrationForm
           key={selected.id}
           contract={selected}
+          orgID={orgID}
           organizations={organizations}
           onBusy={setBusy}
           onCreated={onCreated}
@@ -85,6 +90,17 @@ export default function ContractPicker({ organizations, onClose, onCreated }) {
         />
       ) : (
         <div className="contract-picker-body">
+          {organizations.length > 1 && (
+            <OrganizationSelect
+              organizations={organizations}
+              value={orgID}
+              onChange={(id) => {
+                setOrgID(id);
+                setPage(1);
+              }}
+            />
+          )}
+          {!orgID && <p>Izaberite organizacionu jedinicu za unos ugovora.</p>}
           <form
             className="partner-filter"
             onSubmit={(event) => {

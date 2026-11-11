@@ -47,7 +47,7 @@ func TestContractReadAccessBoundaries(t *testing.T) {
 	}{
 		{"/ugo_evid/otvoreni", repository.ErrUserOrganization, 403},
 		{"/ugo_evid/zatvoreni", repository.ErrUserOrganization, 403},
-		{"/ugo_evid?page_id=1&page_size=20&id_ugo_org=44", nil, 200},
+		{"/ugo_evid?page_id=1&page_size=20&id_ugo_org=44", nil, 403},
 		{"/ugo_evid/44", nil, 403},
 	} {
 		store := &prosireniStore{orgErr: tc.orgErr}
@@ -141,7 +141,7 @@ func TestProsireniOrganizationParameter(t *testing.T) {
 			query         string
 			status, orgID int
 		}{
-			{"", 200, 1}, {"?id_ugo_org=0", 200, 1}, {"?id_ugo_org=44", 200, 1},
+			{"", 200, 1}, {"?id_ugo_org=0", 200, 1}, {"?id_ugo_org=44", 403, 0},
 			{"?id_ugo_org=-1", 400, 0}, {"?id_ugo_org=abc", 400, 0},
 			{"?id_ugo_org=%25", 400, 0}, {"?id_ugo_org=1.5", 400, 0},
 		} {

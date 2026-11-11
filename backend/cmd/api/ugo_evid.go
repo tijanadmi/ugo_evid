@@ -45,7 +45,7 @@ func (server *Server) GetUgoEvid(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-	evid, err := server.store.GetUgoEvidById(ctx, id)
+	evid, err := server.store.GetUgoEvidById(ctx.Request.Context(), id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -56,7 +56,7 @@ func (server *Server) GetUgoEvid(ctx *gin.Context) {
 		return
 	}
 
-	if evid.UgoOrg.ID != orgID {
+	if !allowsContract(ctx, evid.UgoOrg.ID, orgID, false) {
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "Nemate pristup ugovoru druge organizacione jedinice."})
 		return
 	}
@@ -83,7 +83,7 @@ func (server *Server) ListUgoEvid(ctx *gin.Context) {
 	limit := int(req.PageSize)
 	offset := int((req.PageID - 1) * req.PageSize)
 
-	items, count, err := server.store.GetUgoEvidPaged(ctx, orgID, offset, limit, req.Filter)
+	items, count, err := server.store.GetUgoEvidPaged(ctx.Request.Context(), orgID, offset, limit, req.Filter)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -120,6 +120,12 @@ func (server *Server) UpdateUgoEvid(ctx *gin.Context) {
 	if !ok {
 		return
 	}
+	if a := models.AccessFrom(ctx.Request.Context()); a != nil {
+		if _, ok := server.documentAccess(ctx, id, true); !ok {
+			return
+		}
+		orgID = ctx.GetInt("contract_org")
+	}
 	if req.UgoOrgID != orgID {
 		ctx.JSON(403, gin.H{"error": "Nedozvoljena organizaciona jedinica."})
 		return
@@ -138,7 +144,7 @@ func (server *Server) UpdateUgoEvid(ctx *gin.Context) {
 		UgoDobLice: models.UgoDobLice{ID: req.UgoDobLiceID},
 	}
 
-	evid, err = server.store.UpdateUgoEvid(ctx, evid)
+	evid, err = server.store.UpdateUgoEvid(ctx.Request.Context(), evid)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -168,7 +174,7 @@ func (server *Server) DeleteUgoEvid(ctx *gin.Context) {
 	if _, ok := server.documentAccess(ctx, id, true); !ok {
 		return
 	}
-	err = server.store.DeleteUgoEvidById(ctx, id)
+	err = server.store.DeleteUgoEvidById(ctx.Request.Context(), id)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

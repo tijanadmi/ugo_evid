@@ -4,6 +4,7 @@ async function setup(context, overrides = {}) {
  const state = { type: 0, version: 1, maintenance: null, token:null, expired:false, writes: [], closed: false, conflict: false, ...overrides };
  await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token:'access',refresh_token:'refresh',access_token_expires_at:new Date(Date.now()+3600000).toISOString(),refresh_token_expires_at:new Date(Date.now()+7200000).toISOString(),user:{username:'test.user'} })));
  await context.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
   const req = route.request(), path = new URL(req.url()).pathname;
   const json = (body,status=200) => route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
     if(new URL(route.request().url()).pathname.endsWith('/podsetnici')) return json({items:[]});

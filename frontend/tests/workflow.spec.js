@@ -21,6 +21,7 @@ async function mockAPI(page, options = {}) {
   const calls = [];
   let renewals = 0;
   await page.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
     const req = route.request();
     const url = new URL(req.url());
     calls.push(url);
@@ -51,7 +52,7 @@ async function mockAPI(page, options = {}) {
       expect(url.searchParams.has('id_ugo_org')).toBe(false);
       if (options.partnerError) return json({ error: 'Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica.' }, 403);
       if (options.noPartners || url.searchParams.get('naziv') === 'Nema') return json({ items: [], total: 0, id_ugo_org: 3 });
-      return json({ total: 21, id_ugo_org: 3, items: [{ id: 20, naziv: url.searchParams.get('page_id') === '2' ? 'Drugi partner' : 'Moj partner', adresa: 'Ulica 12', grad: 'Beograd', lica_dobavljaca: [{ id: 7, ime: 'Ana Anić', rola_lica: 'Service Level Manager', telefon: '011 999', email: 'ana@example.test' }] }] });
+      return json({ total: 21, id_ugo_org: 3, items: [{ id: 20, can_write: true, naziv: url.searchParams.get('page_id') === '2' ? 'Drugi partner' : 'Moj partner', adresa: 'Ulica 12', grad: 'Beograd', lica_dobavljaca: [{ id: 7, ime: 'Ana Anić', rola_lica: 'Service Level Manager', telefon: '011 999', email: 'ana@example.test' }] }] });
     }
     if (url.pathname === '/api/ugo_org') return json({ total: 2, items: [{ id: 3, sifra: 'CTKS', naziv: 'Centar za telekomunikacione sisteme' }, { id: 4, sifra: 'CITI', naziv: 'Centar za IT infrastrukturu' }] });
     if (url.pathname.startsWith('/api/ugo_evid/')) {

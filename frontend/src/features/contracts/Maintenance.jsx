@@ -1,3 +1,4 @@
+import { usePermissions } from "../../context/usePermissions";
 import DateInput from "../../ui/DateInput";
 import { formatDate } from "../../utils/contractFormatting";
 import MaintenanceTracking from "./MaintenanceTracking";
@@ -13,6 +14,7 @@ import ConfirmAction from "../../ui/ConfirmAction";
 
 export default function Maintenance({ item }) {
   const { api, user } = useAuth();
+  const permissions = usePermissions();
   const client = useQueryClient();
   const owner = useContactSession(api, maintenanceService);
   const [editor, setEditor] = useState(null);
@@ -39,7 +41,11 @@ export default function Maintenance({ item }) {
   );
   const maintenance = settings?.odrzavanje;
   const canWrite =
-    item.otvoren_ug === "X" && settings && !query.error && !types.error;
+    permissions.canWrite(item.id_ugo_org) &&
+    item.otvoren_ug === "X" &&
+    settings &&
+    !query.error &&
+    !types.error;
   async function start(mode) {
     if (pending.current || editor) return;
     if (
