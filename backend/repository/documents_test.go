@@ -40,6 +40,9 @@ func TestDocumentMutationGuards(t *testing.T) {
 				t.Fatal(q)
 				return nil, nil
 			}, func(q string, a []driver.NamedValue) (driver.Result, error) {
+				if strings.Contains(q, "INSERT INTO TED.UGO_DOC_BRISANJE") {
+					return driver.RowsAffected(1), nil
+				}
 				if strings.Contains(q, "DELETE FROM TED.UGO_EDIT_LOCK") {
 					releases++
 					return driver.RowsAffected(1), nil

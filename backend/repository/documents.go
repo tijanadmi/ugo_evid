@@ -246,6 +246,20 @@ func (r *OracleStore) ChangeDocument(ctx context.Context, d *models.Document, us
 	if n != 1 {
 		return ErrDocumentVersion
 	}
+	if remove {
+		intent, err := tx.ExecContext(ctx, `INSERT INTO TED.UGO_DOC_BRISANJE (id_doc,id_ugo_evid,originalni_naziv,id_korisnika)
+ SELECT id,id_ugo_evid,originalni_naziv,:actor FROM TED.UGO_DOC WHERE id=:doc_id AND status='D'`, sql.Named("actor", userID), sql.Named("doc_id", d.ID))
+		if err != nil {
+			return err
+		}
+		count, err := intent.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if count != 1 {
+			return errors.New("document deletion intent was not saved")
+		}
+	}
 	if err = releaseDocumentLease(ctx, tx, d.ID, userID, token); err != nil {
 		return err
 	}

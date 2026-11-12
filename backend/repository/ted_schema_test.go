@@ -89,6 +89,8 @@ func checkBinds(t *testing.T, q string, args []driver.NamedValue) {
 	for _, a := range args {
 		names[a.Name] = true
 	}
+	// Colons inside SQL strings (for example HH24:MI:SS) are not binds.
+	q = regexp.MustCompile(`'([^']|'')*'`).ReplaceAllString(q, "''")
 	for _, m := range regexp.MustCompile(`:(\w+)`).FindAllStringSubmatch(q, -1) {
 		if !names[m[1]] {
 			t.Fatalf("missing bind %s", m[1])

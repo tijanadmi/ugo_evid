@@ -1,3 +1,4 @@
+import AdminLink from "../features/admin/AdminLink";
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
@@ -41,6 +42,7 @@ export function Header({ onMenu }) {
         </span>
       </div>
       <div className="user-menu">
+        <AdminLink />
         <span className="avatar">
           {user.username.slice(0, 2).toUpperCase()}
         </span>

@@ -50,7 +50,10 @@ async function setup(context, overrides = {}) {
   if (method === 'GET') return json(doc);
   if (body.lock_token !== state.token || body.version !== doc.version) return json({ error: 'Dokument je promenjen.' }, 409);
   state.writes.push(body); state.token = null;
-  if (method === 'DELETE') state.docs = state.docs.filter(doc => doc.id !== id);
+  if (method === 'DELETE') {
+   state.docs = state.docs.filter(doc => doc.id !== id);
+   if (state.pendingDelete) return json({ status: 'pending_deletion', message: 'Brisanje nije zavrseno. Server ce automatski ponoviti pokusaj.' }, 202);
+  }
   else Object.assign(doc, body, { version: String(Number(doc.version) + 1) });
   return json({ status: 'ok' });
  });
@@ -243,4 +246,18 @@ test('image preview supports zoom and fit to width', async ({ context, page }) =
  await expect(page.getByRole('group', { name: 'Zum slike' })).toContainText('100%');
  await page.getByRole('button', { name: 'Zatvori dokument', exact: true }).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);
+});
+
+
+test('pending physical deletion reports retry without a success toast', async ({context,page}) => {
+ const state=await setup(context); state.pendingDelete=true; await open(page);
+ await page.getByRole('button',{name:'Akcije za dokument Potpisani ugovor'}).click();
+ await page.getByRole('menuitem',{name:'Obri\u0161i',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('trajno obrisani');
+ await page.getByRole('button',{name:'Potvrdi brisanje'}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByRole('alert')).toContainText('Brisanje nije zavrseno');
+ await expect(page.getByText('Dokument je obrisan sa servera i iz evidencije.')).toHaveCount(0);
+ await expect(page.getByText('Nema dodatih dokumenata.')).toBeVisible();
+ expect(state.docs).toHaveLength(0);
 });

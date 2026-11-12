@@ -1,3 +1,7 @@
+import AdminLayout from "./features/admin/AdminLayout";
+import AdminUsers from "./features/admin/AdminUsers";
+import AdminNotifications from "./features/admin/AdminNotifications";
+import AdminHistory from "./features/admin/AdminHistory";
 import WorkCalendar from "./pages/WorkCalendar";
 import AppToaster from "./ui/AppToaster";
 import DataSync from "./services/DataSync";
@@ -28,6 +32,12 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<PortalLayout />}>
                 <Route index element={<Portal />} />
+                <Route path="administracija" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="korisnici" replace />} />
+                  <Route path="korisnici" element={<AdminUsers />} />
+                  <Route path="obavestenja" element={<AdminNotifications />} />
+                  <Route path="istorija" element={<AdminHistory />} />
+                </Route>
               </Route>
               <Route path="/ugovori" element={<WorkspaceLayout />}>
                 <Route path="radni-kalendar" element={<WorkCalendar />} />

@@ -66,16 +66,17 @@ func main() {
 	}
 	store := db.NewStore(connPool)
 	fmt.Println("Connected to Oracle successfully!")
-	runGinServer(config, store)
+	runGinServer(ctx, config, store)
 
 }
 
-func runGinServer(config util.Config, store db.Store) {
+func runGinServer(ctx context.Context, config util.Config, store db.Store) {
 	server, err := api.NewServer(config, store)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot create server")
 	}
 
+	go server.RunDocumentDeletionWorker(ctx)
 	err = server.Start(config.HTTPServerAddress)
 	if err != nil {
 		log.Fatal().Err(err).Msg("cannot start server")

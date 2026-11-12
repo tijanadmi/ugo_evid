@@ -1,8 +1,10 @@
+import { usePermissions } from "../context/usePermissions";
 import Reminders from "../features/contracts/Reminders";
 import { Link } from "react-router-dom";
 import Icon from "../ui/Icon";
 
 export default function Portal() {
+  const permissions = usePermissions();
   return (
     <main className="portal-main" id="main-content">
       <section className="portal-hero">
@@ -64,7 +66,7 @@ export default function Portal() {
           </div>
         </article>
       </div>
-      <Reminders />
+      {permissions.organizations.length > 0 && <Reminders />}
     </main>
   );
 }

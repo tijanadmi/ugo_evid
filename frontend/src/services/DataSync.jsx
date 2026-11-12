@@ -10,6 +10,8 @@ export function invalidateBusinessData(client) {
   });
   return Promise.all(
     [
+      "permissions",
+      "admin",
       "partners",
       "contracts",
       "contract",

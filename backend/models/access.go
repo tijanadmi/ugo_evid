@@ -11,6 +11,7 @@ type OrganizationAccess struct {
 
 // Access is resolved from active database assignments on every HTTP request.
 type Access struct {
+	Admin         bool                 `json:"admin"`
 	UserID        int                  `json:"-"`
 	Organizations []OrganizationAccess `json:"organizations"`
 	CalendarAdmin bool                 `json:"calendar_admin"`

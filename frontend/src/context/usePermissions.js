@@ -22,5 +22,6 @@ export function usePermissions() {
     canWrite: (orgID) =>
       organizations.some((org) => org.id === Number(orgID) && org.can_write),
     calendarAdmin: data?.calendar_admin === true,
+    admin: data?.admin === true,
   };
 }

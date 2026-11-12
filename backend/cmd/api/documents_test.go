@@ -23,6 +23,7 @@ type documentTestStore struct {
 	repository.Store
 	doc                        *models.Document
 	foreign, closed, failFinal bool
+	failDelete                 bool
 	writes                     int
 }
 
@@ -164,12 +165,13 @@ func TestDocumentUploadAndDownload(t *testing.T) {
 	if rec.Code != 200 || strings.Contains(rec.Body.String(), store.doc.Path) {
 		t.Fatal("storage path leaked")
 	}
+	deletedPath := store.doc.Path
 	rec = docRequest(t, server, "DELETE", "/ugo_doc/11", strings.NewReader(`{"version":"1","lock_token":"`+strings.Repeat("a", 64)+`"}`), "application/json")
-	if rec.Code != 200 || store.doc.Status != "D" {
+	if rec.Code != 200 || store.doc != nil {
 		t.Fatal(rec.Body.String())
 	}
-	if _, err := os.Stat(filepath.Join(root, store.doc.Path)); err != nil {
-		t.Fatal("logical delete removed physical file")
+	if _, err := os.Stat(filepath.Join(root, deletedPath)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("physical file was not deleted")
 	}
 	rec = docRequest(t, server, "GET", "/ugo_doc/11/sadrzaj", nil, "")
 	if rec.Code != 404 {

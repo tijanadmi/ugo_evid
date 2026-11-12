@@ -329,5 +329,12 @@ func (s *Server) ChangeDocument(ctx *gin.Context) {
 		documentError(ctx, err)
 		return
 	}
+	if remove {
+		if err := s.finishDocumentDeletion(ctx.Request.Context(), d.ID); err != nil {
+			log.Error().Err(err).Int("document_id", d.ID).Msg("document marked for deletion; retry scheduled")
+			ctx.JSON(202, gin.H{"status": "pending_deletion", "message": "Brisanje nije završeno. Dokument više nije dostupan; server će automatski ponoviti pokušaj."})
+			return
+		}
+	}
 	ctx.JSON(200, gin.H{"status": "ok"})
 }

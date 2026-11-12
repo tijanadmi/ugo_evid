@@ -15,16 +15,19 @@ type AccessStore interface {
 
 func (r *OracleStore) LoadAccess(ctx context.Context, username, status string) (*models.Access, error) {
 	a := &models.Access{Organizations: []models.OrganizationAccess{}}
-	var admin int
+	var calendar, admin int
 	err := r.DB.QueryRowContext(ctx, `SELECT k.id,
  CASE WHEN EXISTS (SELECT 1 FROM TED.UGO_KOR_ROLE kr JOIN TED.UGO_ROLA r ON r.id=kr.id_ugo_rola
- WHERE kr.id_ugo_kor=k.id AND kr.status='A' AND r.sifra='ADM_KALENDAR' AND kr.opseg='GLOBALNO') THEN 1 ELSE 0 END
+ WHERE kr.id_ugo_kor=k.id AND kr.status='A' AND r.sifra IN ('ADM_KALENDAR','ADMIN') AND kr.opseg='GLOBALNO') THEN 1 ELSE 0 END,
+ CASE WHEN EXISTS (SELECT 1 FROM TED.UGO_KOR_ROLE kr JOIN TED.UGO_ROLA r ON r.id=kr.id_ugo_rola
+ WHERE kr.id_ugo_kor=k.id AND kr.status='A' AND r.sifra='ADMIN' AND kr.opseg='GLOBALNO') THEN 1 ELSE 0 END
  FROM TED.UGO_KOR k WHERE LOWER(k.ad_sifra)=LOWER(:username) AND k.status=:status`,
-		sql.Named("username", username), sql.Named("status", status)).Scan(&a.UserID, &admin)
+		sql.Named("username", username), sql.Named("status", status)).Scan(&a.UserID, &calendar, &admin)
 	if err != nil {
 		return nil, err
 	}
-	a.CalendarAdmin = admin == 1
+	a.CalendarAdmin = calendar == 1
+	a.Admin = admin == 1
 	rows, err := r.DB.QueryContext(ctx, `SELECT o.id,o.sifra,o.naziv,
  MAX(CASE WHEN r.sifra='IUD' THEN 1 ELSE 0 END)
  FROM TED.UGO_ORG o JOIN TED.UGO_KOR_ROLE kr ON

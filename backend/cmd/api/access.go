@@ -37,6 +37,18 @@ func (s *Server) accessMiddleware(c *gin.Context) {
 	deny := func() {
 		c.AbortWithStatusJSON(403, gin.H{"error": "Nemate pravo za ovu akciju ili organizacionu jedinicu."})
 	}
+	if strings.HasPrefix(path, "/admin/") {
+		if !a.Admin {
+			deny()
+			return
+		}
+		c.Next()
+		return
+	}
+	if path == "/users" && !a.Admin {
+		deny()
+		return
+	}
 	if path == "/users/prava" || path == "/users" {
 		c.Next()
 		return

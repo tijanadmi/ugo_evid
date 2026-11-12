@@ -1,0 +1,150 @@
+.admin-page {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: 24px;
+}
+.admin-tabs,
+.admin-toolbar,
+.admin-toolbar form,
+.admin-actions,
+.admin-pagination {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-tabs {
+  margin: 20px 0;
+}
+.admin-tabs a {
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fff;
+}
+.admin-tabs a.active {
+  background: #e8edfc;
+  font-weight: 700;
+}
+.admin-panel {
+  background: #fff;
+  border: 1px solid #dce3ec;
+  border-radius: 10px;
+  padding: 24px;
+}
+.admin-toolbar {
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.admin-panel label,
+.admin-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  min-width: 0;
+}
+.admin-panel input,
+.admin-panel select,
+.admin-editor input,
+.admin-editor select {
+  padding: 9px;
+  border: 1px solid #cad3df;
+  border-radius: 5px;
+  max-width: 100%;
+}
+.admin-table-scroll {
+  overflow-x: auto;
+}
+.admin-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-panel td,
+.admin-panel th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e3e8ee;
+  vertical-align: top;
+}
+.admin-pagination {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.admin-editor {
+  padding: 22px;
+  min-height: 0;
+  overflow: auto;
+}
+.admin-editor form {
+  display: flex;
+  flex-direction: column;
+  max-height: 65dvh;
+}
+.admin-editor fieldset {
+  border: 0;
+  padding: 0 8px 12px 0;
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  overflow: auto;
+}
+.admin-editor p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.admin-role {
+  display: grid;
+  grid-template-columns:
+    minmax(120px, 1fr) minmax(130px, 1fr) minmax(140px, 2fr)
+    auto;
+  gap: 10px;
+  align-items: end;
+  margin: 12px 0;
+}
+.admin-actions {
+  justify-content: flex-end;
+  padding-top: 14px;
+  flex-shrink: 0;
+}
+.admin-notification {
+  border: 1px solid #dce3ec;
+  border-radius: 8px;
+  padding: 18px;
+  margin: 16px 0;
+}
+.admin-notification h2 {
+  font-size: 18px;
+}
+.admin-notification dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+}
+.admin-notification dd {
+  margin: 4px 0;
+}
+.admin-notification dt {
+  font-size: 12px;
+  color: #536276;
+}
+.admin-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 700px;
+  padding: 12px;
+  background: #f4f6fa;
+}
+.admin-effective {
+  padding: 12px;
+  background: #f4f6fa;
+}
+@media (max-width: 700px) {
+  .admin-page,
+  .admin-panel,
+  .admin-editor {
+    padding: 14px;
+  }
+  .admin-role {
+    grid-template-columns: 1fr;
+  }
+}

@@ -167,6 +167,7 @@ export default function Documents({
     pending.current = true;
     setBusy(true);
     try {
+      let result;
       if (editor.mode === "add")
         await uploadDocument(
           api,
@@ -180,7 +181,7 @@ export default function Documents({
         );
       else {
         if (!(await owner.renew())) return;
-        await api(`/ugo_doc/${editor.initial.id}`, {
+        result = await api(`/ugo_doc/${editor.initial.id}`, {
           method: editor.mode === "delete" ? "DELETE" : "PUT",
           body: {
             ...(metadata || {}),
@@ -189,9 +190,17 @@ export default function Documents({
           },
         });
       }
+      if (result?.status === "pending_deletion") {
+        owner.committed();
+        setEditor(null);
+        setBlocked(false);
+        announceBusinessChange(client);
+        toast.error(result.message, { duration: 7000 });
+        return;
+      }
       saved(
         editor.mode === "delete"
-          ? "Dokument je uklonjen iz prikaza."
+          ? "Dokument je obrisan sa servera i iz evidencije."
           : "Dokument je sačuvan.",
       );
     } catch (error) {
@@ -376,8 +385,9 @@ export default function Documents({
               cancelLabel="Odustani"
             >
               <p>
-                Dokument će biti uklonjen iz aktivnog prikaza. Fajl i evidencija
-                o unosu ostaju sačuvani.
+                Fajl i zapis dokumenta biće trajno obrisani. Ostaje samo trag o
+                tome ko je i kada zatražio brisanje. Ova radnja se ne može
+                opozvati.
               </p>
             </ConfirmAction>
           ) : (

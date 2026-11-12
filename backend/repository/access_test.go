@@ -18,7 +18,7 @@ func TestLoadAccessMergesOrganizationRights(t *testing.T) {
 			if !strings.Contains(q, "k.status=:status") || !strings.Contains(q, "kr.status='A'") || !strings.Contains(q, "GLOBALNO") {
 				t.Fatal("missing active-user/calendar checks")
 			}
-			return &schemaRows{width: 2, values: [][]driver.Value{{int64(2), int64(1)}}}, nil
+			return &schemaRows{width: 3, values: [][]driver.Value{{int64(2), int64(1), int64(0)}}}, nil
 		}
 		if !strings.Contains(q, "MAX(CASE") || !strings.Contains(q, "kr.opseg='SVE_OJ'") || !strings.Contains(q, "GROUP BY") {
 			t.Fatal("grants must be additive, including all OJ")
