@@ -148,23 +148,55 @@ async function setup(context, options = {}) {
   return { state, calls };
 }
 
-test("administrator can add IUD to their own account while retaining ADMIN", async ({ context, page }) => {
+test("administrator can add IUD to their own account while retaining ADMIN", async ({
+  context,
+  page,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
   const { state } = await setup(context, {
-    users: [{ id: 1, ad_sifra: "admin", ime: "Administrator", status: "A", version: "1",
-      roles: [{ id_ugo_rola: 4, opseg: "GLOBALNO", id_ugo_org: 0 }] }],
+    users: [
+      {
+        id: 1,
+        ad_sifra: "admin",
+        ime: "Administrator",
+        status: "A",
+        version: "1",
+        roles: [
+          { id_ugo_rola: 4, opseg: "GLOBALNO", id_ugo_org: 0 },
+          { id_ugo_rola: 3, opseg: "GLOBALNO", id_ugo_org: 0 },
+          { id_ugo_rola: 1, opseg: "OJ", id_ugo_org: 1 },
+        ],
+      },
+    ],
   });
   await page.goto("/administracija/korisnici");
-  await page.getByRole("button", { name: "Korisnik i prava", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Korisnik i prava", exact: true })
+    .click();
   const dialog = page.getByRole("dialog", { name: "Korisnik i prava" });
   const add = dialog.getByRole("button", { name: "Dodaj pravo", exact: true });
   await expect(add).toBeEnabled();
+  for (const viewport of [
+    { width: 1366, height: 768 },
+    { width: 900, height: 560 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await add.click({ trial: true });
+  }
   await add.click();
-  await dialog.getByRole("combobox", { name: "Rola 2", exact: true }).selectOption("2");
-  await dialog.getByRole("combobox", { name: "OJ 2", exact: true }).selectOption("4");
+  await dialog
+    .getByRole("combobox", { name: "Rola 4", exact: true })
+    .selectOption("2");
+  await dialog
+    .getByRole("combobox", { name: "OJ 4", exact: true })
+    .selectOption("4");
   await dialog.getByRole("button", { name: "Sačuvaj korisnika" }).click();
   await expect(dialog).toHaveCount(0);
   expect(state.writes[0].roles).toEqual([
     { id_ugo_rola: 4, opseg: "GLOBALNO", id_ugo_org: 0 },
+    { id_ugo_rola: 3, opseg: "GLOBALNO", id_ugo_org: 0 },
+    { id_ugo_rola: 1, opseg: "OJ", id_ugo_org: 1 },
     { id_ugo_rola: 2, opseg: "OJ", id_ugo_org: 4 },
   ]);
 });

@@ -6,7 +6,24 @@ export default function RoleAssignments({ roles, onChange, catalog }) {
   }
   return (
     <section className="admin-roles" aria-label="Dodeljena prava">
-      <h3>Dodeljena prava</h3>
+      <div className="admin-roles-heading">
+        <h3>Dodeljena prava</h3>
+        <button
+          className="button"
+          type="button"
+          disabled={roles.length >= 50}
+          onClick={() =>
+            onChange([...roles, { id_ugo_rola: 1, opseg: "OJ", id_ugo_org: 0 }])
+          }
+        >
+          Dodaj pravo
+        </button>
+      </div>
+      {roles.length >= 50 && (
+        <p role="status">
+          Dostignut je maksimalan broj od 50 dodeljenih prava.
+        </p>
+      )}
       {roles.map((grant, i) => (
         <div className="admin-role" key={i}>
           <label>
@@ -76,16 +93,6 @@ export default function RoleAssignments({ roles, onChange, catalog }) {
           </button>
         </div>
       ))}
-      <button
-        className="button"
-        type="button"
-        disabled={roles.length >= 50}
-        onClick={() =>
-          onChange([...roles, { id_ugo_rola: 1, opseg: "OJ", id_ugo_org: 0 }])
-        }
-      >
-        Dodaj pravo
-      </button>
     </section>
   );
 }

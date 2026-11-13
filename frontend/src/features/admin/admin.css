@@ -83,10 +83,25 @@
 .admin-editor fieldset {
   border: 0;
   padding: 0 8px 12px 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
+  min-width: 0;
   min-height: 0;
   overflow: auto;
+}
+.admin-editor fieldset > * {
+  flex-shrink: 0;
+}
+.admin-roles-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.admin-roles-heading h3 {
+  margin: 0;
 }
 .admin-editor p {
   font-size: 13px;
