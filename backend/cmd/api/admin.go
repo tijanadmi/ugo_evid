@@ -1,11 +1,13 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
@@ -16,6 +18,8 @@ import (
 func adminError(c *gin.Context, err error) {
 	status, message := 500, "Administrativna operacija nije uspela."
 	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		status, message = 504, "Isteklo je vreme za čuvanje. Proverite aktuelne podatke pre ponavljanja; moguće je čekanje na zaključane slogove u bazi."
 	case errors.Is(err, repository.ErrAdminForbidden):
 		status, message = 403, err.Error()
 	case errors.Is(err, repository.ErrAdminInput):
@@ -103,7 +107,12 @@ func (s *Server) AdminUsers(c *gin.Context) {
 			return
 		}
 	}
-	if err := store.SaveAdminUser(c.Request.Context(), actor, s.config.ActiveUserStatus, &u); err != nil {
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
+	defer cancel()
+	if err := store.SaveAdminUser(ctx, actor, s.config.ActiveUserStatus, &u); err != nil {
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
 		adminError(c, err)
 		return
 	}

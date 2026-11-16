@@ -42,18 +42,29 @@ export default function AdminUserEditor({ id, onClose, onSaved }) {
     }
     pending.current = true;
     setBusy(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       await api(id ? `/admin/korisnici/${id}` : "/admin/korisnici", {
         method: id ? "PUT" : "POST",
         body: draft,
+        signal: controller.signal,
       });
       toast.success("Korisnik i prava su sačuvani.");
       onSaved();
     } catch (error) {
+      if (controller.signal.aborted) {
+        toast.error(
+          "Server nije potvrdio čuvanje u roku od 30 sekundi. Proverite aktuelne podatke pre ponavljanja.",
+        );
+        setBlocked(true);
+        return;
+      }
       toast.error(error.message);
       if (error.status === 409 || error.status === 0 || error.status >= 500)
         setBlocked(true);
     } finally {
+      clearTimeout(timeout);
       pending.current = false;
       setBusy(false);
     }
@@ -81,50 +92,52 @@ export default function AdminUserEditor({ id, onClose, onSaved }) {
         )}
         {draft && catalog.data ? (
           <form onSubmit={save}>
-            <fieldset disabled={busy}>
-              <label>
-                AD korisničko ime
-                <input
-                  required
-                  maxLength={200}
-                  disabled={id > 0}
-                  value={draft.ad_sifra}
-                  onChange={(e) => change({ ad_sifra: e.target.value })}
+            <div className="admin-editor-scroll">
+              <fieldset disabled={busy}>
+                <label>
+                  AD korisničko ime
+                  <input
+                    required
+                    maxLength={200}
+                    disabled={id > 0}
+                    value={draft.ad_sifra}
+                    onChange={(e) => change({ ad_sifra: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Ime i prezime
+                  <input
+                    maxLength={100}
+                    value={draft.ime || ""}
+                    onChange={(e) => change({ ime: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Status korisnika
+                  <select
+                    value={draft.status}
+                    onChange={(e) => change({ status: e.target.value })}
+                  >
+                    <option value="A">Aktivan</option>
+                    <option value="N">Neaktivan</option>
+                  </select>
+                </label>
+                <p>
+                  Unesite postojeći AD nalog. Identitet i lozinka proveravaju se
+                  pri prijavi kroz AD.
+                </p>
+                <RoleAssignments
+                  roles={draft.roles || []}
+                  onChange={(roles) => change({ roles })}
+                  catalog={catalog.data}
                 />
-              </label>
-              <label>
-                Ime i prezime
-                <input
-                  maxLength={100}
-                  value={draft.ime || ""}
-                  onChange={(e) => change({ ime: e.target.value })}
+                <EffectiveAccess
+                  roles={draft.roles || []}
+                  status={draft.status}
+                  organizations={catalog.data.organizations}
                 />
-              </label>
-              <label>
-                Status korisnika
-                <select
-                  value={draft.status}
-                  onChange={(e) => change({ status: e.target.value })}
-                >
-                  <option value="A">Aktivan</option>
-                  <option value="N">Neaktivan</option>
-                </select>
-              </label>
-              <p>
-                Unesite postojeći AD nalog. Identitet i lozinka proveravaju se
-                pri prijavi kroz AD.
-              </p>
-              <RoleAssignments
-                roles={draft.roles || []}
-                onChange={(roles) => change({ roles })}
-                catalog={catalog.data}
-              />
-              <EffectiveAccess
-                roles={draft.roles || []}
-                status={draft.status}
-                organizations={catalog.data.organizations}
-              />
-            </fieldset>
+              </fieldset>
+            </div>
             {blocked && (
               <p role="alert">
                 Proverite aktuelne podatke pre novog pokušaja. Uneti podaci su
@@ -165,7 +178,7 @@ export default function AdminUserEditor({ id, onClose, onSaved }) {
                 className="button primary"
                 disabled={busy || blocked || !!query.error || !!catalog.error}
               >
-                Sačuvaj korisnika
+                {busy ? "Čuvanje…" : "Sačuvaj korisnika"}
               </button>
             </div>
           </form>

@@ -183,6 +183,12 @@ test("administrator can add IUD to their own account while retaining ADMIN", asy
   ]) {
     await page.setViewportSize(viewport);
     await add.click({ trial: true });
+    const body = await dialog.locator(".admin-editor-scroll").boundingBox();
+    const footer = await dialog.locator(".admin-actions").boundingBox();
+    expect(footer.y).toBeGreaterThanOrEqual(body.y + body.height - 1);
+    await dialog.locator(".admin-editor-scroll").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    const afterScroll = await dialog.locator(".admin-actions").boundingBox();
+    expect(Math.abs(afterScroll.y - footer.y)).toBeLessThan(1);
   }
   await add.click();
   await dialog
