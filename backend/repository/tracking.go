@@ -273,25 +273,7 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 		}
 	}
 	if p.Requested != oldDate || p.Days != oldDays {
-		rows, e := tx.QueryContext(ctx, `SELECT TO_CHAR(datum,'YYYY-MM-DD'),radni FROM TED.UGO_RADNI_KALENDAR WHERE potvrdjen='D' AND datum>TO_DATE(:start_date,'YYYY-MM-DD') AND datum<=TO_DATE(:limit_date,'YYYY-MM-DD')+20000 ORDER BY datum`, sql.Named("start_date", p.Requested), sql.Named("limit_date", p.Requested))
-		if e != nil {
-			return e
-		}
-		calendar := map[string]bool{}
-		for rows.Next() {
-			var d, w string
-			if e = rows.Scan(&d, &w); e != nil {
-				rows.Close()
-				return e
-			}
-			calendar[d] = w == "D"
-		}
-		e = rows.Err()
-		rows.Close()
-		if e != nil {
-			return e
-		}
-		deadline, e = requestDeadline(p.Requested, p.Days, calendar)
+		deadline, e = calculateRequestDeadline(ctx, tx, p.Requested, p.Days)
 		if e != nil {
 			return e
 		}
@@ -390,4 +372,33 @@ func validateTrackingSettings(ctx context.Context, tx *sql.Tx, mid int, start, e
 		}
 	}
 	return rows.Err()
+}
+
+func calculateRequestDeadline(ctx context.Context, q adminQuerier, start string, days int) (string, error) {
+	if _, err := date(start); err != nil || days < 1 || days > 3660 {
+		return "", ErrTrackingInput
+	}
+	rows, e := q.QueryContext(ctx, `SELECT TO_CHAR(datum,'YYYY-MM-DD'),radni FROM TED.UGO_RADNI_KALENDAR WHERE potvrdjen='D' AND datum>TO_DATE(:start_date,'YYYY-MM-DD') AND datum<=TO_DATE(:limit_date,'YYYY-MM-DD')+20000 ORDER BY datum`, sql.Named("start_date", start), sql.Named("limit_date", start))
+	if e != nil {
+		return "", e
+	}
+	calendar := map[string]bool{}
+	for rows.Next() {
+		var d, w string
+		if e = rows.Scan(&d, &w); e != nil {
+			rows.Close()
+			return "", e
+		}
+		calendar[d] = w == "D"
+	}
+	e = rows.Err()
+	rows.Close()
+	if e != nil {
+		return "", e
+	}
+	return requestDeadline(start, days, calendar)
+}
+
+func (r *OracleStore) PreviewRequestDeadline(ctx context.Context, start string, days int) (string, error) {
+	return calculateRequestDeadline(ctx, r.DB, start, days)
 }

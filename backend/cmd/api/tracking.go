@@ -1,9 +1,41 @@
 package api
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"github.com/tijanadmi/ugo_evid/models"
 )
+
+func (s *Server) PreviewRequestDeadline(c *gin.Context) {
+	id, ok := documentID(c)
+	if !ok {
+		return
+	}
+	if _, ok = s.documentAccess(c, id, true); !ok {
+		return
+	}
+	var req struct {
+		Start string `form:"datum_zahteva" binding:"required"`
+		Days  int    `form:"rok_radnih_dana" binding:"min=1,max=3660"`
+	}
+	if c.ShouldBindQuery(&req) != nil {
+		c.JSON(400, gin.H{"error": "Unesite datum zahteva i broj radnih dana."})
+		return
+	}
+	store, ok := s.store.(interface {
+		PreviewRequestDeadline(context.Context, string, int) (string, error)
+	})
+	if !ok {
+		c.JSON(500, gin.H{"error": "Obračun roka nije dostupan."})
+		return
+	}
+	deadline, err := store.PreviewRequestDeadline(c.Request.Context(), req.Start, req.Days)
+	if err != nil {
+		maintenanceError(c, err)
+		return
+	}
+	c.JSON(200, gin.H{"rok": deadline})
+}
 
 func (s *Server) GetTracking(c *gin.Context) {
 	id, ok := documentID(c)

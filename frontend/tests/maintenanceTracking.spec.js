@@ -25,6 +25,7 @@ async function setup(context,extra={}){
    return json({lock_token:state.token});
   }
   if(path.endsWith('/preview'))return json({items:[{period_od:'2026-01-15',period_do:'2026-01-31',status:'PLANIRAN',id_tip_doc:5},{period_od:'2026-02-01',period_do:'2026-02-28',status:'PLANIRAN',id_tip_doc:5}]});
+  if(path.endsWith('/pracenje/rok')) return json({rok:'2026-11-23'});
   if(path.includes('/pracenje/')){
    if(state.error)return json({error:state.error},400);
    if(body.lock_token!==state.token)return json({error:'Zaključavanje nije važeće.'},409);
@@ -38,6 +39,16 @@ async function setup(context,extra={}){
  });return state;
 }
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('heading',{name:'Praćenje održavanja'})).toBeVisible();}
+
+test('request shows calculated deadline and reminder without filling completion date',async({page,context})=>{
+ await setup(context); await open(page);
+ await page.getByRole('button',{name:'Dodaj razvojni zahtev'}).click();
+ await page.getByLabel('Datum zahteva',{exact:true}).fill('18.11.2026');
+ await page.getByLabel('Rok u radnim danima',{exact:true}).fill('3');
+ await expect(page.getByText('Krajnji rok realizacije: 23.11.2026')).toBeVisible();
+ await expect(page.getByText(/Podsetnik od 20.11.2026/)).toBeVisible();
+ await expect(page.getByLabel('Stvarni datum realizacije',{exact:true})).toHaveValue('');
+});
 
 test('save and upload creates a period first and opens its document form',async({page,context})=>{
  const state=await setup(context);await open(page);
@@ -165,7 +176,7 @@ test('records a completed development request with its original dates',async({pa
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
  expect(state.writes).toHaveLength(0);
  await expect(page.getByLabel('Datum potpisa zapisnika',{exact:true})).toHaveAttribute('required','');
- await page.getByLabel('Datum realizacije',{exact:true}).fill('29.01.2026');
+ await page.getByLabel('Stvarni datum realizacije',{exact:true}).fill('29.01.2026');
  await page.getByLabel('Datum potpisa zapisnika',{exact:true}).fill('30.01.2026');
  await page.getByRole('button',{name:'Sačuvaj',exact:true}).click();
  await expect(page.getByRole('dialog')).toHaveCount(0);

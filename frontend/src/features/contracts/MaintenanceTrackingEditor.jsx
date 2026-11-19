@@ -1,4 +1,5 @@
 import DateInput from "../../ui/DateInput";
+import RequestDeadline from "./RequestDeadline";
 import Icon from "../../ui/Icon";
 import { Link } from "react-router-dom";
 import { formatDate } from "../../utils/contractFormatting";
@@ -7,6 +8,7 @@ import ConfirmAction from "../../ui/ConfirmAction";
 import { trackingLabels as labels } from "./trackingConstants";
 
 export default function MaintenanceTrackingEditor({
+  contractID,
   editor,
   setEditor,
   busy,
@@ -244,14 +246,14 @@ export default function MaintenanceTrackingEditor({
                           }
                         />
                       </label>
-                      <p>
-                        Rok se računa pri čuvanju iz kalendara radnih dana,
-                        počev od narednog dana. Usluga mora biti realizovana
-                        najkasnije na dan roka. Zapisnik može biti potpisan kasnije,
-                        ali ne pre realizacije.
-                        {editor.row.rok &&
-                          ` Sačuvani rok: ${formatDate(editor.row.rok)}.`}
-                      </p>
+                      <RequestDeadline
+                        contractID={contractID}
+                        row={editor.row}
+                        original={editor.originalRequest}
+                        reminderDays={
+                          editor.settings.odrzavanje.raz_podsetnik_dana
+                        }
+                      />
                       <p>
                         <Link
                           target="_blank"
@@ -295,7 +297,7 @@ export default function MaintenanceTrackingEditor({
                   </label>
                   {editor.kind === "zahtevi" && (
                     <label>
-                      Datum realizacije
+                      Stvarni datum realizacije
                       <DateInput
                         required={editor.row.status === "ZAVRSEN"}
                         value={editor.row.datum_realizacije || ""}

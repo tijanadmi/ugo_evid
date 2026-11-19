@@ -76,6 +76,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
           : "anchor",
         preview: null,
         settings: current,
+        originalRequest: source ? { ...source } : null,
         row: source || {
           ...empty,
           status:
@@ -323,6 +324,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
         </DocumentDialog>
       )}
       <MaintenanceTrackingEditor
+        contractID={id}
         editor={editor}
         setEditor={setEditor}
         busy={busy}

@@ -298,3 +298,17 @@ func TestRemindersAreOrganizationScoped(t *testing.T) {
 		t.Fatalf("%+v %v", items, e)
 	}
 }
+
+func TestNovemberRequestDeadline(t *testing.T) {
+	calendar := map[string]bool{"2026-11-19": true, "2026-11-20": true, "2026-11-21": false, "2026-11-22": false, "2026-11-23": true}
+	got, err := requestDeadline("2026-11-18", 3, calendar)
+	if err != nil || got != "2026-11-23" {
+		t.Fatalf("deadline=%s err=%v", got, err)
+	}
+	calendar["2026-11-20"] = false
+	calendar["2026-11-24"] = true
+	got, err = requestDeadline("2026-11-18", 3, calendar)
+	if err != nil || got != "2026-11-24" {
+		t.Fatalf("deadline with non-working day=%s err=%v", got, err)
+	}
+}
