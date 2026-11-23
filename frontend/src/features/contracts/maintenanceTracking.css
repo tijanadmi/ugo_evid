@@ -40,15 +40,28 @@
   max-height: 18rem;
   overflow: auto;
 }
-.tracking-editor fieldset {
-  min-width: 0;
+.tracking-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+.tracking-dialog > .detail-header {
+  flex-shrink: 0;
+  position: static;
+}
+.tracking-editor-scroll {
   min-height: 0;
   overflow-y: auto;
+  flex: 1 1 auto;
+}
+.tracking-editor fieldset {
+  min-width: 0;
 }
 .contact-editor.tracking-editor {
   display: flex;
   flex-direction: column;
-  max-height: calc(90dvh - 100px);
+  min-height: 0;
   overflow: hidden;
 }
 .tracking-editor fieldset p {

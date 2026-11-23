@@ -7,6 +7,7 @@ export default function DocumentDialog({
   busy,
   children,
   wide = false,
+  className = "",
 }) {
   const ref = useRef(null);
   const id = useId();
@@ -24,7 +25,7 @@ export default function DocumentDialog({
   return (
     <dialog
       ref={ref}
-      className={`detail-dialog document-dialog${wide ? " document-preview" : ""}${wide && expanded ? " is-expanded" : ""}`}
+      className={`detail-dialog document-dialog${wide ? " document-preview" : ""}${wide && expanded ? " is-expanded" : ""} ${className}`}
       aria-labelledby={id}
       onCancel={(event) => {
         event.preventDefault();

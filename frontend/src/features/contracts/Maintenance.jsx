@@ -1,5 +1,6 @@
 import { usePermissions } from "../../context/usePermissions";
 import DateInput from "../../ui/DateInput";
+import Icon from "../../ui/Icon";
 import { formatDate } from "../../utils/contractFormatting";
 import MaintenanceTracking from "./MaintenanceTracking";
 import { useContactSession } from "../partners/useContactSession";
@@ -230,7 +231,8 @@ export default function Maintenance({ item }) {
             </strong>
           </p>
           {canWrite && !maintenance && (
-            <button className="button" onClick={() => start("type")}>
+            <button className="button secondary" onClick={() => start("type")}>
+              <Icon name="edit" />
               Odredi tip ugovora
             </button>
           )}
@@ -242,6 +244,7 @@ export default function Maintenance({ item }) {
                   className="button primary"
                   onClick={() => start("maintenance")}
                 >
+                  <Icon name="plus" />
                   Unesi održavanje
                 </button>
               )}
@@ -316,10 +319,11 @@ export default function Maintenance({ item }) {
           )}
           {canWrite && maintenance && (
             <button
-              className="button"
+              className="button secondary"
               disabled={busy}
               onClick={() => start("edit")}
             >
+              <Icon name="edit" />
               Izmeni održavanje
             </button>
           )}

@@ -114,6 +114,18 @@ small {
 .button.primary:hover:not(:disabled) {
   background: #4338ca;
 }
+.button.secondary {
+  background: #e8eeff;
+  color: #243b80;
+  border-color: #a5b4e8;
+}
+.button.secondary:hover:not(:disabled) {
+  background: #dbe4ff;
+  border-color: #7489cd;
+}
+.button > svg {
+  flex-shrink: 0;
+}
 .icon-button {
   background: transparent;
   border: 0;

@@ -48,6 +48,21 @@ test('request shows calculated deadline and reminder without filling completion 
  await expect(page.getByText('Krajnji rok realizacije: 23.11.2026')).toBeVisible();
  await expect(page.getByText(/Podsetnik od 20.11.2026/)).toBeVisible();
  await expect(page.getByLabel('Stvarni datum realizacije',{exact:true})).toHaveValue('');
+ for (const viewport of [{width:1280,height:900},{width:760,height:650},{width:390,height:600}]) {
+  await page.setViewportSize(viewport);
+  const dialog=page.getByRole('dialog',{name:'Razvojni zahtev',exact:true});
+  const scroll=dialog.locator('.tracking-editor-scroll');
+  const actions=dialog.locator('.contact-actions');
+  await expect(actions.getByRole('button',{name:'Sačuvaj',exact:true})).toBeInViewport();
+  const body=await scroll.boundingBox(), footer=await actions.boundingBox();
+  expect(footer.y).toBeGreaterThanOrEqual(body.y+body.height-1);
+  await scroll.evaluate(el=>{el.scrollTop=el.scrollHeight;});
+  const after=await actions.boundingBox();
+  expect(Math.abs(after.y-footer.y)).toBeLessThan(1);
+  await expect(dialog.getByRole('textbox',{name:/^Napomena/})).toBeInViewport();
+  await dialog.getByRole('textbox',{name:/^Napomena/}).fill('Provera na malom ekranu');
+  await actions.getByRole('button',{name:'Sačuvaj i dodaj dokument',exact:true}).click({trial:true});
+ }
 });
 
 test('save and upload creates a period first and opens its document form',async({page,context})=>{

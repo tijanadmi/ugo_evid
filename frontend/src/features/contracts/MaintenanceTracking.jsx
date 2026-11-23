@@ -1,3 +1,4 @@
+import Icon from "../../ui/Icon";
 import { usePermissions } from "../../context/usePermissions";
 import TechnicalPeriodsTable from "./TechnicalPeriodsTable";
 import DevelopmentRequestsTable from "./DevelopmentRequestsTable";
@@ -195,14 +196,15 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
           {canWrite && (
             <div className="tracking-actions">
               <button
-                className="button"
+                className="button primary"
                 disabled={busy}
                 onClick={() => open("periodi")}
               >
+                <Icon name="plus" />
                 Dodaj period
               </button>
               <button
-                className="button"
+                className="button secondary"
                 disabled={
                   busy ||
                   periods.length > 0 ||
@@ -210,6 +212,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
                 }
                 onClick={() => open("periodi", null, true)}
               >
+                <Icon name="refresh" />
                 Generiši periode
               </button>
             </div>
@@ -266,17 +269,19 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
               {canWrite && (
                 <div className="tracking-actions">
                   <button
-                    className="button"
+                    className="button primary"
                     disabled={busy || !data.fondovi.length}
                     onClick={() => open("zahtevi")}
                   >
+                    <Icon name="plus" />
                     Dodaj razvojni zahtev
                   </button>
                   <button
-                    className="button"
+                    className="button primary"
                     disabled={busy || !data.fondovi.length}
                     onClick={() => open("zahtevi", null, false, false, true)}
                   >
+                    <Icon name="plus" />
                     Unesi završen zahtev
                   </button>
                 </div>
