@@ -315,12 +315,12 @@ func saveRequest(ctx context.Context, tx *sql.Tx, mid, user int, start, end stri
 }
 
 func (r *OracleStore) ListReminders(ctx context.Context, org int) ([]models.Reminder, error) {
-	rows, e := r.DB.QueryContext(ctx, `SELECT id_ugo_evid,vrsta,id,opis,TO_CHAR(rok,'YYYY-MM-DD'),kasni FROM (
- SELECT e.id id_ugo_evid,'TEH' vrsta,p.id,TO_CHAR(p.period_od,'DD.MM.YYYY')||' - '||TO_CHAR(p.period_do,'DD.MM.YYYY') opis,NVL(p.rok_dokumenta,p.period_do) rok,CASE WHEN p.rok_dokumenta IS NOT NULL AND TRUNC(SYSDATE)>p.rok_dokumenta THEN 1 ELSE 0 END kasni
+	rows, e := r.DB.QueryContext(ctx, `SELECT id_ugo_evid,vrsta,id,opis,TO_CHAR(rok,'YYYY-MM-DD'),kasni,predmet_ugovora FROM (
+ SELECT e.id id_ugo_evid,'TEH' vrsta,p.id,TO_CHAR(p.period_od,'DD.MM.YYYY')||' - '||TO_CHAR(p.period_do,'DD.MM.YYYY') opis,NVL(p.rok_dokumenta,p.period_do) rok,CASE WHEN p.rok_dokumenta IS NOT NULL AND TRUNC(SYSDATE)>p.rok_dokumenta THEN 1 ELSE 0 END kasni,s.predmet_ugovora
  FROM TED.UGO_TEH_PERIOD p JOIN TED.UGO_ODRZAVANJE o ON o.id=p.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
  WHERE `+accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org=:org")+` AND s.otvoren_ug='X' AND p.status NOT IN ('ZAVRSEN','OTKAZAN') AND TRUNC(SYSDATE)>=p.period_do-o.teh_podsetnik_dana
  UNION ALL
- SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>z.rok_potpisa THEN 1 ELSE 0 END
+ SELECT e.id,'RAZ',z.id,z.broj_zahteva,z.rok_potpisa,CASE WHEN TRUNC(SYSDATE)>z.rok_potpisa THEN 1 ELSE 0 END,s.predmet_ugovora
  FROM TED.UGO_RAZ_ZAHTEV z JOIN TED.UGO_RAZ_FOND f ON f.id=z.id_raz_fonda JOIN TED.UGO_ODRZAVANJE o ON o.id=f.id_odrzavanja JOIN TED.UGO_EVID e ON e.id=o.id_ugo_evid JOIN TED.SAP_UGOVORI s ON s.id=e.id_sap_ugovor
  WHERE `+accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org=:org2")+` AND s.otvoren_ug='X' AND z.datum_realizacije IS NULL AND z.status NOT IN ('NACRT','ZAVRSEN','OTKAZAN','OBRISAN') AND TRUNC(SYSDATE)>=z.rok_potpisa-o.raz_podsetnik_dana
  ) ORDER BY rok,id_ugo_evid,id`, sql.Named("org", org), sql.Named("org2", org))
@@ -332,7 +332,7 @@ func (r *OracleStore) ListReminders(ctx context.Context, org int) ([]models.Remi
 	for rows.Next() {
 		var p models.Reminder
 		var late int
-		if e = rows.Scan(&p.ContractID, &p.Kind, &p.ID, &p.Label, &p.Due, &late); e != nil {
+		if e = scanNullable(rows, &p.ContractID, &p.Kind, &p.ID, &p.Label, &p.Due, &late, &p.Subject); e != nil {
 			return nil, e
 		}
 		p.Overdue = late == 1

@@ -38,6 +38,7 @@ type TrackingData struct {
 	Funds    []FundBalance  `json:"fondovi"`
 }
 type Reminder struct {
+	Subject    string `json:"predmet_ugovora"`
 	ContractID int    `json:"id_ugo_evid"`
 	Kind       string `json:"vrsta"`
 	ID         int    `json:"id"`

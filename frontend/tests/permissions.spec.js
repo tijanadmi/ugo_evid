@@ -1,5 +1,34 @@
 import { test, expect } from "@playwright/test";
 
+test("partners filter includes readable OJ and preserves selection during search and paging", async ({
+  context,
+  page,
+}) => {
+  const { calls } = await setup(context);
+  await page.goto("/ugovori/partneri");
+  const select = page.getByLabel("Organizaciona jedinica", { exact: true });
+  await expect(select.locator("option")).toHaveCount(5);
+  await select.selectOption("2");
+  await expect(page).toHaveURL(/id_ugo_org=2/);
+  await page.getByLabel("Naziv dobavljača").fill("Partner");
+  await page.getByRole("button", { name: "Pretraži", exact: true }).click();
+  await page.getByLabel("Broj partnera po stranici").selectOption("10");
+  await expect
+    .poll(() =>
+      calls.some(
+        (u) =>
+          u.pathname.endsWith("/moji_partneri") &&
+          u.searchParams.get("id_ugo_org") === "2" &&
+          u.searchParams.get("naziv") === "Partner" &&
+          u.searchParams.get("page_size") === "10",
+      ),
+    )
+    .toBe(true);
+  await select.selectOption("0");
+  await expect(page).not.toHaveURL(/id_ugo_org=/);
+  await expect(select).toHaveValue("0");
+});
+
 async function setup(context, options = {}) {
   const state = {
     organizations: [1, 2, 3, 4].map((id) => ({
@@ -178,7 +207,9 @@ test("read-only user and failed rights lookup cannot register contracts", async 
   ).toHaveCount(0);
   state.fail = true;
   await page.reload();
-  await expect(page.getByRole("region", { name: "Otvoreni ugovori" }).getByRole("alert")).toContainText("Prava nisu dostupna");
+  await expect(
+    page.getByRole("region", { name: "Otvoreni ugovori" }).getByRole("alert"),
+  ).toContainText("Prava nisu dostupna");
   await expect(
     page.getByRole("button", { name: "Izaberi ugovor", exact: true }),
   ).toHaveCount(0);

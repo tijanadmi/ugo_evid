@@ -1111,6 +1111,20 @@ table small {
   min-width: 0;
   flex: 1;
 }
+.partner-org-filter {
+  min-width: 0;
+  max-width: 100%;
+}
+.partner-org-filter select {
+  width: 100%;
+  max-width: 420px;
+  min-height: 40px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: inherit;
+}
 .partner-filter label {
   display: block;
   font-size: 12px;

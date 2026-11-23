@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { usePartners } from "./usePartners";
 import PartnerDetails from "./PartnerDetails";
 import Icon from "../../ui/Icon";
+import { usePermissions } from "../../context/usePermissions";
 
 const positive = (raw, fallback) =>
   Number.isSafeInteger(Number(raw)) &&
@@ -57,7 +58,14 @@ export default function PartnersList() {
   const page = positive(params.get("page_id"), 1);
   const size = Math.min(positive(params.get("page_size"), 20), 100);
   const name = (params.get("naziv") || "").trim();
-  const { data, error, isFetching, refetch } = usePartners(page, size, name);
+  const org = positive(params.get("id_ugo_org"), 0);
+  const permissions = usePermissions();
+  const { data, error, isFetching, refetch } = usePartners(
+    page,
+    size,
+    name,
+    org,
+  );
   const [selected, setSelected] = useState(null);
   const pages = Math.max(1, Math.ceil((data?.total || 0) / size));
   const queryKey = params.toString();
@@ -84,12 +92,13 @@ export default function PartnersList() {
       opening.current = false;
     }
   }
-  function change(pageID, pageSize = size, naziv = name) {
+  function change(pageID, pageSize = size, naziv = name, orgID = org) {
     setSelected(null);
     setParams({
       page_id: String(pageID),
       page_size: String(pageSize),
       ...(naziv ? { naziv } : {}),
+      ...(orgID ? { id_ugo_org: String(orgID) } : {}),
     });
   }
   const address = (partner) =>
@@ -101,7 +110,9 @@ export default function PartnersList() {
       <div className="page-heading">
         <div>
           <h1>Moji partneri</h1>
-          <p>Dobavljači iz ugovora vaše organizacione jedinice.</p>
+          <p>
+            Dobavljači iz ugovora organizacionih jedinica kojima imate pristup.
+          </p>
         </div>
         <button
           className="button"
@@ -117,6 +128,35 @@ export default function PartnersList() {
       </div>
       <section className="contracts-panel" aria-label="Pregled partnera">
         <div className="table-toolbar">
+          <div className="partner-filter partner-org-filter">
+            <label htmlFor="partner-org">Organizaciona jedinica</label>
+            <select
+              id="partner-org"
+              value={org}
+              disabled={permissions.isPending || !!permissions.error}
+              onChange={(event) =>
+                change(1, size, name, Number(event.target.value))
+              }
+            >
+              <option value={0}>Sve dostupne OJ</option>
+              {org > 0 &&
+                !permissions.organizations.some((o) => o.id === org) && (
+                  <option value={org} disabled>
+                    OJ nije dostupna
+                  </option>
+                )}
+              {permissions.organizations.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.sifra} — {o.naziv}
+                </option>
+              ))}
+            </select>
+            {permissions.error && (
+              <p role="alert">
+                Lista organizacionih jedinica trenutno nije dostupna.
+              </p>
+            )}
+          </div>
           <NameFilter
             key={name}
             name={name}
@@ -193,7 +233,7 @@ export default function PartnersList() {
             <p>
               {name
                 ? "Nema dobavljača koji odgovaraju unetom nazivu."
-                : "Za vašu organizacionu jedinicu nema partnera na ovoj stranici."}
+                : "Za izabrani opseg organizacionih jedinica nema partnera na ovoj stranici."}
             </p>
             {page > 1 && (
               <button className="button" onClick={() => change(1)}>

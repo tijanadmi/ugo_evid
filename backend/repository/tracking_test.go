@@ -291,10 +291,13 @@ func TestRemindersAreOrganizationScoped(t *testing.T) {
 		if len(a) != 2 || a[0].Value != 3 || a[1].Value != 3 || strings.Count(q, "e.id_ugo_org=") != 2 || !strings.Contains(q, "'NACRT','ZAVRSEN','OTKAZAN','OBRISAN'") {
 			return nil, fmt.Errorf("reminders are not scoped")
 		}
-		return editRows(int64(9), "RAZ", int64(1), "Z-1", "2026-01-10", int64(1)), nil
+		if strings.Count(q, "s.predmet_ugovora") != 2 {
+			return nil, fmt.Errorf("missing contract subject")
+		}
+		return editRows(int64(9), "RAZ", int64(1), "Z-1", "2026-01-10", int64(1), "Software maintenance"), nil
 	}})
 	items, e := store.ListReminders(context.Background(), 3)
-	if e != nil || len(items) != 1 || !items[0].Overdue {
+	if e != nil || len(items) != 1 || !items[0].Overdue || items[0].Subject != "Software maintenance" {
 		t.Fatalf("%+v %v", items, e)
 	}
 }

@@ -35,7 +35,7 @@ export default function Reminders({ contractID }) {
           {items.map((p) => (
             <li key={`${p.vrsta}-${p.id}`}>
               <Link to={`/ugovori/detalji/${p.id_ugo_evid}`}>
-                Ugovor #{p.id_ugo_evid}
+                {p.predmet_ugovora?.trim() || "Predmet ugovora nije unet"}
               </Link>{" "}
               — {p.vrsta === "TEH" ? "Tehnička podrška" : "Razvojni zahtev"}:{" "}
               {p.opis}; {p.vrsta === "RAZ" ? "rok realizacije" : "period / rok"}{" "}
