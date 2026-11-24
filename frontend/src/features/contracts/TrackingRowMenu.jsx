@@ -19,9 +19,9 @@ export default function TrackingRowMenu({
     ? `Akcije za period ${formatDate(row.period_od)} - ${formatDate(row.period_do)}`
     : `Akcije za zahtev ${row.broj_zahteva}`;
   const actions = [];
-  if (isPeriod && onReports)
+  if (isPeriod && onReports && canWrite)
     actions.push({
-      label: canWrite ? "Generiši / preuzmi izveštaj" : "Preuzmi izveštaje",
+      label: "Generiši / preuzmi izveštaj",
       icon: "file",
       onClick: onReports,
     });

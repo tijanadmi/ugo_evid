@@ -43,16 +43,19 @@ func TestTechnicalReportChecksSnapshotAndLease(t *testing.T) {
 				return nil, errors.New("unexpected query")
 			}, func(q string, args []driver.NamedValue) (driver.Result, error) {
 				writes++
+				if strings.Contains(q, "UGO_TEH_IZVESTAJ") {
+					t.Fatal("must not archive reports")
+				}
 				if strings.Contains(q, "UPDATE TED.UGO_TEH_PERIOD") && strings.Contains(q, "status=") {
 					return nil, errors.New("generation must not complete period")
 				}
 				return driver.RowsAffected(1), nil
 			})
-			p := models.TechnicalReport{ContractID: 1, PeriodID: 2, TemplateID: 9, Quarter: 3, Start: "2026-01-01", End: "2026-03-31", Signed: "2026-04-01", DOCX: "report.docx"}
+			p := models.TechnicalReport{ContractID: 1, PeriodID: 2, TemplateID: 9, Quarter: 3, Start: "2026-01-01", End: "2026-03-31", Signed: "2026-04-01"}
 			if mode == "monthly" {
 				p.Quarter = 0
 			}
-			err := store.SaveTechnicalReport(context.Background(), &p, 2, 4)
+			err := store.ConfirmTechnicalReport(context.Background(), &p, 2, 4)
 			success := mode == "success" || mode == "monthly"
 			if (err == nil) != success || tx.committed != success {
 				t.Fatalf("err=%v committed=%v", err, tx.committed)

@@ -29,13 +29,6 @@ export default function TechnicalReportDialog({
     enabled: !!period,
     retry: false,
   });
-  const reports = useQuery({
-    queryKey: ["technical-reports", user.username, contractID, period?.id],
-    queryFn: ({ signal }) =>
-      api(`${base}/teh-period/${period.id}/izvestaji`, { signal }),
-    enabled: !!period,
-    retry: false,
-  });
   const row = tracking.data?.periodi?.find((p) => p.id === period?.id);
   const currentPeriods = tracking.data?.periodi || periods || [];
   const suggestion =
@@ -50,7 +43,7 @@ export default function TechnicalReportDialog({
   const [quarter, setQuarter] = useState("");
   const [type, setType] = useState(period?.id_tip_doc || types[0]?.id || "");
   const [file, setFile] = useState(null);
-  const [pdf, setPDF] = useState(true);
+  const [format, setFormat] = useState("docx");
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const pending = useRef(false);
@@ -95,18 +88,27 @@ export default function TechnicalReportDialog({
         e.target.reset();
         await templates.refetch();
       } else {
-        await api(`${base}/teh-period/${period.id}/izvestaji`, {
+        const blob = await api(`${base}/teh-period/${period.id}/izvestaj`, {
+          responseType: "blob",
           method: "POST",
           signal: controller.signal,
           body: {
             id_template: template.id,
-            ...(template.koristi_kvartal ? {broj_kvartala: Number(quarter || suggestion)} : {}),
+            ...(template.koristi_kvartal
+              ? { broj_kvartala: Number(quarter || suggestion) }
+              : {}),
             version: row.version,
-            pdf: pdf && templates.data.pdf_available,
+            format,
           },
         });
-        toast.success("Izveštaj je generisan. Status perioda nije promenjen.");
-        await Promise.all([tracking.refetch(), reports.refetch()]);
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = `tehnicka-podrska-${period.id}.${format}`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(href), 10000);
+        toast.success("Dokument je spreman za preuzimanje.");
+        await Promise.all([tracking.refetch()]);
         client.invalidateQueries({ queryKey: ["maintenance-tracking"] });
         announceBusinessChange();
       }
@@ -132,7 +134,7 @@ export default function TechnicalReportDialog({
       setBusy(false);
     }
   }
-  const error = templates.error || tracking.error || reports.error;
+  const error = templates.error || tracking.error;
   return (
     <DocumentDialog
       title={
@@ -164,87 +166,53 @@ export default function TechnicalReportDialog({
                   Pre generisanja unesite datum potpisa kroz „Izmeni period“.
                 </p>
               )}
-              {template?.koristi_kvartal && <><label>
-                Broj kvartala
-                <input
-                  type="number"
-                  min="1"
-                  max="9999"
-                  step="1"
-                  required
-                  value={quarter || suggestion}
-                  disabled={busy || !canWrite}
-                  onChange={(e) => setQuarter(e.target.value)}
-                />
-              </label>
-              <p>
-                Predlog je broj prethodnih završenih perioda + 1. Potvrđena
-                vrednost čuva se uz period. Generisani dokument nije dokaz da je
-                potpisan.
-              </p></>}
+              {template?.koristi_kvartal && (
+                <>
+                  <label>
+                    Broj kvartala
+                    <input
+                      type="number"
+                      min="1"
+                      max="9999"
+                      step="1"
+                      required
+                      value={quarter || suggestion}
+                      disabled={busy || !canWrite}
+                      onChange={(e) => setQuarter(e.target.value)}
+                    />
+                  </label>
+                  <p>
+                    Predlog je broj prethodnih završenih perioda + 1. Potvrđena
+                    vrednost čuva se uz period. Generisani dokument nije dokaz
+                    da je potpisan.
+                  </p>
+                </>
+              )}
               <p>
                 Šablon:{" "}
                 {template
                   ? `${template.naziv} — verzija ${template.verzija}`
                   : "Nema šablona za tip dokumenta ovog perioda. Učitajte ga kroz Šabloni tehničke podrške."}
               </p>
-              {canWrite && (
-                <label className="report-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={pdf && !!templates.data?.pdf_available}
-                    disabled={busy || !templates.data?.pdf_available}
-                    onChange={(e) => setPDF(e.target.checked)}
-                  />
-                  Generiši i PDF (DOCX se uvek čuva)
-                </label>
-              )}
+              <label>
+                Format dokumenta
+                <select
+                  value={format}
+                  disabled={busy}
+                  onChange={(e) => setFormat(e.target.value)}
+                >
+                  <option value="docx">DOCX</option>
+                  <option value="pdf" disabled={!templates.data?.pdf_available}>
+                    PDF
+                  </option>
+                </select>
+              </label>
+              <p>Dokument se preuzima na računar i ne čuva se na serveru.</p>
               {canWrite && !templates.data?.pdf_available && (
                 <p>
                   PDF zahteva LibreOffice na serveru i podešen LIBREOFFICE_PATH.
                   DOCX je dostupan.
                 </p>
-              )}
-              <h3>Generisani izveštaji</h3>
-              {reports.isPending ? (
-                <p>Učitavanje…</p>
-              ) : !reports.data?.items?.length ? (
-                <p>Nema generisanih izveštaja.</p>
-              ) : (
-                reports.data.items.map((r) => (
-                  <div className="report-history" key={r.id}>
-                    <p>
-                      {r.broj_kvartala > 0 ? `Kvartal ${r.broj_kvartala} · ` : ""}Potpis{" "}
-                      {formatDate(r.datum_potpisa)} · Generisano {r.kreiran}
-                    </p>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() =>
-                        download(
-                          `${base}/teh-period/${period.id}/izvestaji/${r.id}?format=docx`,
-                          `izvestaj-${r.id}.docx`,
-                        )
-                      }
-                    >
-                      Preuzmi DOCX
-                    </button>
-                    {r.ima_pdf && (
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() =>
-                          download(
-                            `${base}/teh-period/${period.id}/izvestaji/${r.id}?format=pdf`,
-                            `izvestaj-${r.id}.pdf`,
-                          )
-                        }
-                      >
-                        Preuzmi PDF
-                      </button>
-                    )}
-                  </div>
-                ))
               )}
             </>
           ) : (
@@ -290,7 +258,7 @@ export default function TechnicalReportDialog({
               )}
               <p>
                 Nova verzija zamenjuje aktivni šablon za ovaj tip dokumenta.
-                Prethodne verzije i već generisani izveštaji ostaju sačuvani.
+                Prethodne verzije šablona ostaju sačuvane.
               </p>
               {(templates.data?.items || []).map((t) => (
                 <p key={t.id}>
@@ -315,7 +283,7 @@ export default function TechnicalReportDialog({
                 onClick={async () => {
                   const results = await Promise.all([
                     templates.refetch(),
-                    ...(period ? [tracking.refetch(), reports.refetch()] : []),
+                    ...(period ? [tracking.refetch()] : []),
                   ]);
                   if (results.every((r) => !r.error)) setBlocked(false);
                 }}
@@ -354,7 +322,7 @@ export default function TechnicalReportDialog({
               {busy
                 ? "Obrada…"
                 : period
-                  ? "Generiši izveštaj"
+                  ? "Generiši i preuzmi"
                   : "Sačuvaj šablon"}
             </button>
           )}

@@ -127,7 +127,7 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 		if p.ID < 1 || p.Version < 1 {
 			return ErrTrackingInput
 		}
-		result, e := tx.ExecContext(ctx, `DELETE FROM TED.UGO_TEH_PERIOD p WHERE p.id=:id AND p.id_odrzavanja=:mid AND p.version=:version AND p.status='PLANIRAN' AND NOT EXISTS (SELECT 1 FROM TED.UGO_TEH_IZVESTAJ i WHERE i.id_teh_period=p.id)`, sql.Named("id", p.ID), sql.Named("mid", mid), sql.Named("version", p.Version))
+		result, e := tx.ExecContext(ctx, `DELETE FROM TED.UGO_TEH_PERIOD p WHERE p.id=:id AND p.id_odrzavanja=:mid AND p.version=:version AND p.status='PLANIRAN' `, sql.Named("id", p.ID), sql.Named("mid", mid), sql.Named("version", p.Version))
 		if e != nil {
 			return e
 		}

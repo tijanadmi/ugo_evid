@@ -6,9 +6,25 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestReportPDFFailureRemovesTemporaryFiles(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("TMP", dir)
+	t.Setenv("TEMP", dir)
+	t.Setenv("TMPDIR", dir)
+	_, err := ReportPDF(context.Background(), filepath.Join(dir, "missing-converter"), []byte("docx"))
+	if err == nil {
+		t.Fatal("missing converter must fail")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("temporary conversion files remain: %v, %v", entries, err)
+	}
+}
 
 func TestReportTemplateProvidedFixture(t *testing.T) {
 	path := os.Getenv("REPORT_TEMPLATE_FIXTURE")

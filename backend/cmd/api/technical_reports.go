@@ -226,24 +226,15 @@ func (s *Server) TechnicalReports(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "Neispravan period."})
 		return
 	}
-	if c.Request.Method == "GET" {
-		items, err := store.ListTechnicalReports(c.Request.Context(), id, period)
-		if err != nil {
-			reportError(c, err)
-			return
-		}
-		c.JSON(200, gin.H{"items": items})
-		return
-	}
 	var req struct {
-		Template int   `json:"id_template"`
-		Quarter  int   `json:"broj_kvartala"`
-		Version  int64 `json:"version,string"`
-		PDF      bool  `json:"pdf"`
+		Template int    `json:"id_template"`
+		Quarter  int    `json:"broj_kvartala"`
+		Version  int64  `json:"version,string"`
+		Format   string `json:"format"`
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 4096)
-	if c.ShouldBindJSON(&req) != nil || req.Template < 1 || req.Version < 1 || req.Quarter < 0 || req.Quarter > 9999 {
-		c.JSON(400, gin.H{"error": "Izaberite šablon i kvartal (1–9999)."})
+	if c.ShouldBindJSON(&req) != nil || (req.Format != "docx" && req.Format != "pdf") || req.Template < 1 || req.Version < 1 || req.Quarter < 0 || req.Quarter > 9999 {
+		c.JSON(400, gin.H{"error": "Proverite format (DOCX/PDF), verziju, šablon i broj kvartala (1–9999)."})
 		return
 	}
 	tracking, err := s.store.GetTracking(c.Request.Context(), id)
@@ -315,70 +306,25 @@ func (s *Server) TechnicalReports(c *gin.Context) {
 		reportError(c, err)
 		return
 	}
-	var pdf []byte
-	if req.PDF {
-		pdf, err = util.ReportPDF(c.Request.Context(), s.config.LibreOfficePath, docx)
+	output := docx
+	mimeType := "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	if req.Format == "pdf" {
+		output, err = util.ReportPDF(c.Request.Context(), s.config.LibreOfficePath, docx)
 		if err != nil {
 			c.JSON(503, gin.H{"error": err.Error()})
 			return
 		}
+		mimeType = "application/pdf"
 	}
-	folder, err := s.reportFolder(c, id, fmt.Sprintf("izvestaji/%d", period))
-	if err != nil {
+	// Recheck the snapshot and persist the selected quarter before returning bytes.
+	if err = store.ConfirmTechnicalReport(c.Request.Context(), &p, row.Version, user); err != nil {
 		reportError(c, err)
 		return
 	}
-	p.DOCX, err = writeReportFile(root, folder, ".docx", docx)
-	if err != nil {
-		reportError(c, err)
-		return
-	}
-	if req.PDF {
-		p.PDF, err = writeReportFile(root, folder, ".pdf", pdf)
-		if err != nil {
-			root.Remove(p.DOCX)
-			reportError(c, err)
-			return
-		}
-		p.HasPDF = true
-	}
-	if err = store.SaveTechnicalReport(c.Request.Context(), &p, row.Version, user); err != nil {
-		reportError(c, err)
-		return
-	}
-	c.JSON(201, p)
-}
-func (s *Server) TechnicalReportContent(c *gin.Context) {
-	store, id, _, ok := s.reportStore(c)
-	if !ok {
-		return
-	}
-	period, _ := strconv.Atoi(c.Param("period"))
-	report, _ := strconv.Atoi(c.Param("report"))
-	items, err := store.ListTechnicalReports(c.Request.Context(), id, period)
-	if err != nil {
-		reportError(c, err)
-		return
-	}
-	for _, p := range items {
-		if p.ID == report {
-			ext := c.Query("format")
-			path, mimeType := p.DOCX, "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-			if ext == "pdf" {
-				path = p.PDF
-				mimeType = "application/pdf"
-			} else if ext != "docx" {
-				c.JSON(400, gin.H{"error": "Nepoznat format."})
-				return
-			}
-			if path == "" {
-				break
-			}
-			s.sendReportFile(c, path, fmt.Sprintf("tehnicka-podrska-%d-%d.%s", period, report, ext), mimeType)
-			return
-		}
-	}
-	c.JSON(404, gin.H{"error": "Izveštaj nije pronađen."})
+	c.Header("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": fmt.Sprintf("tehnicka-podrska-%d.%s", period, req.Format)}))
+	c.Header("Cache-Control", "private, no-store")
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Data(200, mimeType, output)
 }
 func (s *Server) sendReportFile(c *gin.Context, path, name, mimeType string) {
 	root, err := util.DocumentStorage(s.config.DocumentRoot)

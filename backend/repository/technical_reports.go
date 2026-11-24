@@ -9,8 +9,7 @@ import (
 type TechnicalReportStore interface {
 	ListReportTemplates(context.Context, int) ([]models.ReportTemplate, error)
 	SaveReportTemplate(context.Context, *models.ReportTemplate, int, int) error
-	ListTechnicalReports(context.Context, int, int) ([]models.TechnicalReport, error)
-	SaveTechnicalReport(context.Context, *models.TechnicalReport, int64, int) error
+	ConfirmTechnicalReport(context.Context, *models.TechnicalReport, int64, int) error
 }
 
 // Serialize template changes and report generation with maintenance edits.
@@ -79,24 +78,7 @@ func (r *OracleStore) SaveReportTemplate(ctx context.Context, t *models.ReportTe
 	}
 	return tx.Commit()
 }
-func (r *OracleStore) ListTechnicalReports(ctx context.Context, contract, period int) ([]models.TechnicalReport, error) {
-	rows, err := r.DB.QueryContext(ctx, `SELECT id,id_ugo_evid,id_teh_period,id_template,broj_kvartala,TO_CHAR(period_od,'YYYY-MM-DD'),TO_CHAR(period_do,'YYYY-MM-DD'),TO_CHAR(datum_potpisa,'YYYY-MM-DD'),docx_putanja,pdf_putanja,TO_CHAR(datpri,'DD.MM.YYYY HH24:MI') FROM TED.UGO_TEH_IZVESTAJ WHERE id_ugo_evid=:contract AND id_teh_period=:period ORDER BY id DESC`, sql.Named("contract", contract), sql.Named("period", period))
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []models.TechnicalReport{}
-	for rows.Next() {
-		var p models.TechnicalReport
-		if err = scanNullable(rows, &p.ID, &p.ContractID, &p.PeriodID, &p.TemplateID, &p.Quarter, &p.Start, &p.End, &p.Signed, &p.DOCX, &p.PDF, &p.Created); err != nil {
-			return nil, err
-		}
-		p.HasPDF = p.PDF != ""
-		out = append(out, p)
-	}
-	return out, rows.Err()
-}
-func (r *OracleStore) SaveTechnicalReport(ctx context.Context, p *models.TechnicalReport, version int64, user int) error {
+func (r *OracleStore) ConfirmTechnicalReport(ctx context.Context, p *models.TechnicalReport, version int64, user int) error {
 	if p.Quarter < 0 || p.Quarter > 9999 || p.Signed == "" {
 		return ErrTrackingInput
 	}
@@ -124,10 +106,6 @@ func (r *OracleStore) SaveTechnicalReport(ctx context.Context, p *models.Technic
 		return ErrDocumentVersion
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE TED.UGO_TEH_PERIOD SET broj_kvartala=CASE WHEN :quarter=0 THEN broj_kvartala ELSE :quarter_value END,version=version+1,datizm=SYSTIMESTAMP,id_korisnika=:actor WHERE id=:id`, sql.Named("quarter", p.Quarter), sql.Named("quarter_value", p.Quarter), sql.Named("actor", user), sql.Named("id", p.PeriodID))
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_IZVESTAJ(id_ugo_evid,id_teh_period,id_template,broj_kvartala,period_od,period_do,datum_potpisa,docx_putanja,pdf_putanja,id_korisnika) VALUES(:contract,:period,:template,NULLIF(:quarter,0),TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:docx,:pdf,:actor) RETURNING id INTO :out_id`, sql.Named("contract", p.ContractID), sql.Named("period", p.PeriodID), sql.Named("template", p.TemplateID), sql.Named("quarter", p.Quarter), sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("signed", p.Signed), sql.Named("docx", p.DOCX), sql.Named("pdf", p.PDF), sql.Named("actor", user), sql.Named("out_id", sql.Out{Dest: &p.ID}))
 	if err != nil {
 		return err
 	}

@@ -1,72 +1,48 @@
-# Šabloni i izveštaji tehničke podrške
+# Technical support reports: download only
 
-## Redosled primene
+Reports are rendered from the current UGO_TEH_PERIOD and current contract template.
+Select DOCX or PDF, then Generate and download. No report history or permanent
+report files are created. DOCX stays in memory; PDF uses a private temporary
+folder removed on return, including converter errors. An abrupt OS/process kill
+can leave temporary files in the system temp directory.
 
-Zaustaviti backend tokom migracije i prethodno napraviti rezervnu kopiju baze.
-Kao TED pokrenuti jednom, redom:
+## Database setup
 
-1. `technical_period_quarter.sql` — dodaje opciono `UGO_TEH_PERIOD.BROJ_KVARTALA`, celobrojno 1–9999.
-2. `technical_report_templates.sql` — kreira `UGO_DOC_TEMPLATE` i `UGO_TEH_IZVESTAJ`.
-3. Objaviti novu verziju backenda i frontenda zajedno. Novi backend očekuje obe migracije.
+Run scripts as TED, only for objects not already created:
 
-Oracle DDL automatski potvrđuje promene. Ako skripta stane, pregledati grešku i stanje baze pre ponavljanja; ROLLBACK ne poništava već izvršen DDL. Skripte nisu automatski pokrenute na poslovnoj bazi.
+1. `technical_period_quarter.sql` adds UGO_TEH_PERIOD.BROJ_KVARTALA.
+   Skip it if that column already exists.
+2. `technical_report_templates.sql` creates only UGO_DOC_TEMPLATE.
+   Run it once if that table does not yet exist.
+3. Deploy the backend and frontend together.
 
-## PDF na Ubuntu serveru
+No report history table or deletion migration is needed. Existing uploaded
+UGO_DOC documents remain unchanged. These scripts are not executed automatically.
 
-Instalirati LibreOffice Writer i fontove korišćene u ugovornim obrascima. U lokalni `app.env` na serveru dodati putanju do izvršnog programa, na primer:
+## Templates and values
 
-```dotenv
-LIBREOFFICE_PATH=/usr/bin/libreoffice
-```
+Templates remain stored per contract/document type with immutable versions.
+Keep fixed text, RUN number and signatory in the Word template.
+Required markers: {{datum_od}}, {{datum_do}}, {{datum_potpisa}}.
+Legacy {{sysdate}} means the stored signature date, NOT today's date.
+Dates are formatted dd.mm.yyyy.
 
-Postojeći `DOCUMENT_ROOT` ostaje lokacija dokumenata. Nema promene DB konekcije niti drugih poverljivih podešavanja. Ne dodavati stvarni `app.env` u Git.
+When {{broj_kvartala}} is present, the dialog offers a quarter and saves the
+confirmed value in UGO_TEH_PERIOD. Otherwise it hides that field and preserves
+any existing period quarter. Generation does not change the period status.
+The signature date must already exist in the period.
+Signed final documents can still be uploaded through the existing document UI.
+Regeneration uses current data/template, not an archived historical snapshot.
 
-Backend korisnik mora imati pristup izvršnom programu, privremenom direktorijumu i `DOCUMENT_ROOT`. Konverzija koristi zaseban privremeni LibreOffice profil po zahtevu, najviše dva istovremena procesa po backend instanci i rok od 60 sekundi. Poziva se direktno, bez komandnog shell-a. Izlaz se proverava pre čuvanja.
+## PDF setup
 
-Bez `LIBREOFFICE_PATH` moguće je generisati DOCX; PDF opcija je onemogućena. Ako je putanja podešena, ali konverter ne radi, zahtev za DOCX+PDF prijavljuje grešku i ne menja kvartal niti stvara uspešan zapis izveštaja. Može se izabrati samo DOCX.
+Install LibreOffice Writer and template fonts on the backend machine.
+Set LIBREOFFICE_PATH in private app.env, e.g. /usr/bin/libreoffice on Ubuntu or
+C:/Program Files/LibreOffice/program/soffice.com on Windows.
+Without this setting only DOCX is selectable. Conversion has a time limit and
+an isolated LibreOffice profile for each request.
 
-Zvanična dokumentacija parametara konverzije: https://help.libreoffice.org/latest/en-GB/text/shared/guide/start_parameters.html
-
-Stvarna PDF konverzija i vizuelna podudarnost s Wordom moraju se proveriti na serveru: LibreOffice nije instaliran u razvojnom okruženju. Posebno proveriti ćirilicu, fontove, tabele i prelome stranica.
-
-## Priprema i učitavanje šablona
-
-U Wordu ostaviti stalni tekst po ugovoru, uključujući RUN broj, podatke partnera i potpisnika. Na mestima za popunjavanje uneti običan tekst oznake:
-
-| Oznaka | Izvor |
-|---|---|
-| `{{datum_od}}` | Početak izabranog tehničkog perioda |
-| `{{datum_do}}` | Kraj izabranog tehničkog perioda |
-| `{{datum_potpisa}}` | Postojeći datum potpisa perioda |
-| `{{broj_kvartala}}` | Potvrđen broj kvartala |
-| `{{sysdate}}` | Kompatibilna stara oznaka za datum potpisa, nikada današnji datum |
-
-Period od/do i datum potpisa (jedna od dve oznake datuma) moraju postojati u šablonu. Kvartal je opcion u tekstu šablona. Datumi se ispisuju kao `dd.mm.yyyy` bez dodatne završne tačke; interpunkciju dodati u samom šablonu po potrebi.
-
-Oznake rade u običnim Word pasusima, tabelama, zaglavlju i podnožju, uključujući oznake koje je Word podelio na više tekstualnih delova zbog stilova. Nepoznate oznake se odbijaju. Učitava se DOCX do 10 MB, bez makroa, ugrađenih objekata, spoljnih veza i Word polja; takve elemente treba zameniti običnim tekstom. Izgled i statični delovi dokumenta ostaju u šablonu.
-
-Na detaljima ugovora otvoriti **Šabloni tehničke podrške**, izabrati tip (potvrda ili zapisnik) i učitati fajl. Svako učitavanje pravi novu, neizmenjivu verziju. Za generisanje se koristi najnovija verzija za ugovor i tip dokumenta izabranog perioda. Stare verzije mogu se preuzeti; već generisani dokumenti se ne menjaju.
-
-## Generisanje
-
-1. U **Izmeni period** uneti datum potpisa ako nedostaje. Tu se može uneti i opcioni broj kvartala.
-2. U meniju reda izabrati **Generiši / preuzmi izveštaj**.
-3. Ako kvartal nije sačuvan, aplikacija predlaže broj ranijih završenih perioda tog ugovora + 1. Izabrani period i kasniji periodi se ne broje. Korisnik može promeniti predlog (npr. ako istorijska evidencija nije potpuna).
-4. Izabrati da li je potreban i PDF, pa generisati. DOCX se uvek čuva.
-5. Preuzeti dokumente iz istorije tog perioda. Potpisan primerak se naknadno učitava kroz postojeće **Dodaj dokument**.
-
-Generisanje čuva kvartal i uvećava verziju perioda, ali ne menja status niti datum potpisa. Datum potpisa se nikada ne izmišlja ili automatski postavlja. Generisan dokument ne predstavlja potvrdu da je zaista potpisan.
-
-Izveštaji se vode odvojeno od učitanih/potpisanih dokumenata u `UGO_DOC`. `UGO_TEH_IZVESTAJ` čuva korišćenu verziju šablona i neizmenjive vrednosti perioda, kvartala i potpisa. Nove generacije dodaju novi zapis; ne prepisuju starije. Period sa generisanim izveštajima ne može se fizički obrisati, radi očuvanja istorije; može se urediti/otkazati prema pravilima aplikacije.
-
-## Prava, zaključavanje i čuvanje
-
-- GLE dozvoljava pregled/preuzimanje za dostupne OJ. IUD i otvoren ugovor potrebni su za učitavanje šablona i generisanje. ADMIN sam po sebi ne daje pristup ugovoru.
-- Generisanje ponovo proverava verziju perioda, datum potpisa i najnoviji šablon u transakciji. Aktivno uređivanje održavanja u drugom tabu blokira upis. Promene tokom konverzije uzrokuju konflikt i zahtevaju osvežavanje, bez prepisivanja tuđih izmena.
-- Šabloni su u podfolderu `sabloni`, a izveštaji u `izvestaji/<id_perioda>` postojećeg foldera ugovora pod `DOCUMENT_ROOT`. Imena fajlova na disku su nasumična. Preuzimanje ide samo kroz autentifikovan API sa proverom OJ.
-- Backup mora obuhvatiti bazu i `DOCUMENT_ROOT` zajedno.
-- Ako odgovor baze pri upisu nije pouzdan, fajl se zadržava da se ne bi obrisao fajl za potvrđen zapis. Takvi retki prekidi mogu ostaviti nereferencirane fajlove; ne prikazuju se korisnicima. Ovaj tok ne koristi `doc-reconcile` za obične upload dokumente i nema automatsko brisanje takvih ostataka.
-
-## Provere u razvoju
-
-Go testovi pokrivaju zamenu oznaka kroz više Word delova, očuvanje XML strukture, odbijanje nepodržanih šablona, čuvanje/preuzimanje izveštaja, konflikt verzije/šablona, zaključavanje i zabranu pristupa drugoj OJ. Browser testovi koriste simulirani API. Provereno je popunjavanje priloženog IPS DOCX šablona bez menjanja originala. Oracle migracije i stvarna LibreOffice konverzija zahtevaju proveru na ciljnom okruženju.
+POST /ugo_evid/:id/teh-period/:period/izvestaj accepts id_template, version
+(string), format (docx/pdf), and optional broj_kvartala. It returns attachment
+bytes with Cache-Control: private, no-store. Old report history routes are removed.
+Contract write permission, lease and snapshot/version checks still apply.

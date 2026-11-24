@@ -30,11 +30,7 @@ func (s *reportTestStore) SaveReportTemplate(_ context.Context, t *models.Report
 	s.templates = append(s.templates, *t)
 	return nil
 }
-func (s *reportTestStore) ListTechnicalReports(context.Context, int, int) ([]models.TechnicalReport, error) {
-	return s.reports, nil
-}
-func (s *reportTestStore) SaveTechnicalReport(_ context.Context, p *models.TechnicalReport, _ int64, _ int) error {
-	p.ID = 1
+func (s *reportTestStore) ConfirmTechnicalReport(_ context.Context, p *models.TechnicalReport, _ int64, _ int) error {
 	s.reports = append(s.reports, *p)
 	return nil
 }
@@ -66,17 +62,13 @@ func TestTechnicalReportUploadGenerateDownload(t *testing.T) {
 	if rec.Code != 201 {
 		t.Fatalf("upload: %d %s", rec.Code, rec.Body.String())
 	}
-	payload := `{"id_template":1,"broj_kvartala":5,"version":"2","pdf":false}`
-	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaji", strings.NewReader(payload), "application/json")
-	if rec.Code != 201 {
+	payload := `{"id_template":1,"broj_kvartala":5,"version":"2","format":"docx"}`
+	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaj", strings.NewReader(payload), "application/json")
+	if rec.Code != 200 {
 		t.Fatalf("generate: %d %s", rec.Code, rec.Body.String())
 	}
 	if len(store.reports) != 1 || store.reports[0].Quarter != 5 || store.reports[0].Signed != store.signed {
 		t.Fatal("snapshot not saved")
-	}
-	rec = docRequest(t, server, "GET", "/ugo_evid/9/teh-period/7/izvestaji/1?format=docx", nil, "")
-	if rec.Code != 200 {
-		t.Fatalf("download: %d", rec.Code)
 	}
 	generated, err := zip.NewReader(bytes.NewReader(rec.Body.Bytes()), int64(rec.Body.Len()))
 	if err != nil {
@@ -111,17 +103,43 @@ func TestTechnicalReportUploadGenerateDownload(t *testing.T) {
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"koristi_kvartal":false`) {
 		t.Fatalf("%d %s", rec.Code, rec.Body.String())
 	}
-	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaji", strings.NewReader(payload), "application/json")
-	if rec.Code != 201 || len(store.reports) != 2 || store.reports[1].Quarter != 0 {
+	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaj", strings.NewReader(payload), "application/json")
+	if rec.Code != 200 || len(store.reports) != 2 || store.reports[1].Quarter != 0 {
 		t.Fatal("monthly report required or stored a quarter")
 	}
+	count := 0
+	if err := filepath.WalkDir(server.config.DocumentRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			count++
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected template only, found %d files", count)
+	}
+	for _, format := range []string{"pdf", "invalid"} {
+		body := strings.Replace(payload, `"format":"docx"`, `"format":"`+format+`"`, 1)
+		rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaj", strings.NewReader(body), "application/json")
+		want := 400
+		if format == "pdf" {
+			want = 503
+		}
+		if rec.Code != want || len(store.reports) != 2 {
+			t.Fatalf("invalid/unavailable format %s: %d", format, rec.Code)
+		}
+	}
 	store.signed = ""
-	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaji", strings.NewReader(payload), "application/json")
+	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaj", strings.NewReader(payload), "application/json")
 	if rec.Code != 400 || len(store.reports) != 2 {
 		t.Fatal("unsigned report generated")
 	}
 	store.foreign = true
-	rec = docRequest(t, server, "GET", "/ugo_evid/9/teh-period/7/izvestaji/1?format=docx", nil, "")
+	rec = docRequest(t, server, "POST", "/ugo_evid/9/teh-period/7/izvestaj", strings.NewReader(payload), "application/json")
 	if rec.Code != 403 {
 		t.Fatal("foreign contract report leaked")
 	}
