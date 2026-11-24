@@ -11,6 +11,7 @@ import (
 )
 
 type Config struct {
+	LibreOfficePath      string        `mapstructure:"LIBREOFFICE_PATH"`
 	HolidaysAPIURL       string        `mapstructure:"HOLIDAYS_API_URL"`
 	DocumentRoot         string        `mapstructure:"DOCUMENT_ROOT"`
 	DocumentMaxBytes     int64         `mapstructure:"DOCUMENT_MAX_BYTES"`

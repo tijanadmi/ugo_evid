@@ -8,6 +8,7 @@ export default function TechnicalPeriodsTable({
   busy,
   open,
   onDocuments,
+  onReports,
 }) {
   return (
     <div className="tracking-table">
@@ -16,6 +17,7 @@ export default function TechnicalPeriodsTable({
           <tr>
             <th>Radnja</th>
             <th>Period</th>
+            <th>Kvartal</th>
             <th>Status</th>
             <th>Rok dokumenta</th>
             <th>Potpisano</th>
@@ -33,11 +35,13 @@ export default function TechnicalPeriodsTable({
                   onEdit={() => open("periodi", p)}
                   onDelete={() => open("periodi", p, false, true)}
                   onDocuments={(upload) => onDocuments({ row: p, upload })}
+                  onReports={onReports ? () => onReports(p) : undefined}
                 />
               </td>
               <td>
                 {formatDate(p.period_od)} — {formatDate(p.period_do)}
               </td>
+              <td>{p.broj_kvartala || "—"}</td>
               <td>
                 {p.status === "ZAVRSEN" ? (
                   <strong>{labels[p.status]}</strong>

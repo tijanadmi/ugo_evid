@@ -12,13 +12,13 @@ import (
 
 func (r *OracleStore) GetTracking(ctx context.Context, id int) (*models.TrackingData, error) {
 	out := &models.TrackingData{Periods: []models.TrackingItem{}, Requests: []models.TrackingItem{}, Funds: []models.FundBalance{}}
-	rows, err := r.DB.QueryContext(ctx, `SELECT p.id,p.version,TO_CHAR(p.period_od,'YYYY-MM-DD'),TO_CHAR(p.period_do,'YYYY-MM-DD'),p.id_tip_doc,TO_CHAR(p.rok_dokumenta,'YYYY-MM-DD'),TO_CHAR(p.datum_potpisa,'YYYY-MM-DD'),p.status,p.napomena FROM TED.UGO_TEH_PERIOD p JOIN TED.UGO_ODRZAVANJE o ON o.id=p.id_odrzavanja WHERE o.id_ugo_evid=:id ORDER BY p.period_od,p.id`, sql.Named("id", id))
+	rows, err := r.DB.QueryContext(ctx, `SELECT p.id,p.version,TO_CHAR(p.period_od,'YYYY-MM-DD'),TO_CHAR(p.period_do,'YYYY-MM-DD'),p.id_tip_doc,TO_CHAR(p.rok_dokumenta,'YYYY-MM-DD'),TO_CHAR(p.datum_potpisa,'YYYY-MM-DD'),p.status,p.napomena,NVL(p.broj_kvartala,0) FROM TED.UGO_TEH_PERIOD p JOIN TED.UGO_ODRZAVANJE o ON o.id=p.id_odrzavanja WHERE o.id_ugo_evid=:id ORDER BY p.period_od,p.id`, sql.Named("id", id))
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var p models.TrackingItem
-		if err = scanNullable(rows, &p.ID, &p.Version, &p.Start, &p.End, &p.DocumentType, &p.Deadline, &p.Signed, &p.Status, &p.Note); err != nil {
+		if err = scanNullable(rows, &p.ID, &p.Version, &p.Start, &p.End, &p.DocumentType, &p.Deadline, &p.Signed, &p.Status, &p.Note, &p.Quarter); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 		if p.ID < 1 || p.Version < 1 {
 			return ErrTrackingInput
 		}
-		result, e := tx.ExecContext(ctx, `DELETE FROM TED.UGO_TEH_PERIOD WHERE id=:id AND id_odrzavanja=:mid AND version=:version AND status='PLANIRAN'`, sql.Named("id", p.ID), sql.Named("mid", mid), sql.Named("version", p.Version))
+		result, e := tx.ExecContext(ctx, `DELETE FROM TED.UGO_TEH_PERIOD p WHERE p.id=:id AND p.id_odrzavanja=:mid AND p.version=:version AND p.status='PLANIRAN' AND NOT EXISTS (SELECT 1 FROM TED.UGO_TEH_IZVESTAJ i WHERE i.id_teh_period=p.id)`, sql.Named("id", p.ID), sql.Named("mid", mid), sql.Named("version", p.Version))
 		if e != nil {
 			return e
 		}
@@ -182,6 +182,9 @@ func (r *OracleStore) SaveTracking(ctx context.Context, id, org, user int, kind 
 
 // Document associations are stored exclusively in UGO_DOC by row upload.
 func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end string, p *models.TrackingItem) error {
+	if p.Quarter < 0 || p.Quarter > 9999 {
+		return ErrTrackingInput
+	}
 	if _, e := date(p.Start); e != nil {
 		return ErrTrackingInput
 	}
@@ -215,13 +218,13 @@ func savePeriod(ctx context.Context, tx *sql.Tx, mid, user int, start, end strin
 			return ErrTrackingInput
 		}
 	}
-	args := []any{sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("dtype", p.DocumentType), sql.Named("deadline", p.Deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user), sql.Named("mid", mid)}
+	args := []any{sql.Named("quarter", p.Quarter), sql.Named("start_date", p.Start), sql.Named("end_date", p.End), sql.Named("dtype", p.DocumentType), sql.Named("deadline", p.Deadline), sql.Named("signed", p.Signed), sql.Named("status", p.Status), sql.Named("note", p.Note), sql.Named("user_id", user), sql.Named("mid", mid)}
 	if p.ID == 0 {
-		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,status,napomena,id_korisnika,id_odrzavanja) VALUES(TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id,:mid) RETURNING id INTO :new_id`, append(args, sql.Named("new_id", sql.Out{Dest: &p.ID}))...)
+		_, e := tx.ExecContext(ctx, `INSERT INTO TED.UGO_TEH_PERIOD(broj_kvartala,period_od,period_do,id_tip_doc,rok_dokumenta,datum_potpisa,status,napomena,id_korisnika,id_odrzavanja) VALUES(NULLIF(:quarter,0),TO_DATE(:start_date,'YYYY-MM-DD'),TO_DATE(:end_date,'YYYY-MM-DD'),:dtype,TO_DATE(:deadline,'YYYY-MM-DD'),TO_DATE(:signed,'YYYY-MM-DD'),:status,:note,:user_id,:mid) RETURNING id INTO :new_id`, append(args, sql.Named("new_id", sql.Out{Dest: &p.ID}))...)
 		return e
 	}
 	args = append(args, sql.Named("id", p.ID), sql.Named("version", p.Version))
-	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_TEH_PERIOD SET period_od=TO_DATE(:start_date,'YYYY-MM-DD'),period_do=TO_DATE(:end_date,'YYYY-MM-DD'),id_tip_doc=:dtype,rok_dokumenta=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id_odrzavanja=:mid AND id=:id AND version=:version`, args...)
+	result, e := tx.ExecContext(ctx, `UPDATE TED.UGO_TEH_PERIOD SET broj_kvartala=NULLIF(:quarter,0),period_od=TO_DATE(:start_date,'YYYY-MM-DD'),period_do=TO_DATE(:end_date,'YYYY-MM-DD'),id_tip_doc=:dtype,rok_dokumenta=TO_DATE(:deadline,'YYYY-MM-DD'),datum_potpisa=TO_DATE(:signed,'YYYY-MM-DD'),status=:status,napomena=:note,id_korisnika=:user_id,datizm=SYSTIMESTAMP,version=version+1 WHERE id_odrzavanja=:mid AND id=:id AND version=:version`, args...)
 	if e != nil {
 		return e
 	}

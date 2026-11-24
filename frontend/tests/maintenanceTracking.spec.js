@@ -1,13 +1,27 @@
 import { test, expect } from '@playwright/test';
 
 async function setup(context,extra={}){
- const state={token:null,periodi:[],zahtevi:[],writes:[],error:null,closed:false,uploads:[],docs:[],...extra};
+ const state={token:null,periodi:[],zahtevi:[],writes:[],error:null,closed:false,uploads:[],docs:[],templates:[],reports:[],reportWrites:[],pdfAvailable:true,...extra};
  const maintenance={id:1,version:'1',pocetak_odrzavanja:'',ima_razvojnu_podrsku:true,teh_period_meseci:1,id_teh_tip_doc:5,teh_podsetnik_dana:7,raz_podsetnik_dana:3,fondovi:[{id_vrsta_rada:1,ugovoreno_casova:100},{id_vrsta_rada:3,ugovoreno_casova:0}]};
  await context.addInitScript(()=>sessionStorage.setItem('ugo-evid-session',JSON.stringify({access_token:'access',refresh_token:'refresh',access_token_expires_at:new Date(Date.now()+3600000).toISOString(),refresh_token_expires_at:new Date(Date.now()+7200000).toISOString(),user:{username:'test.user'}})));
  await context.route('**/api/**',async route=>{
     if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Centar za telekomunikacione sisteme',can_write:true}],calendar_admin:true}});
   const req=route.request(),path=new URL(req.url()).pathname,body=req.postData() && !req.headers()['content-type']?.includes('multipart/form-data')?req.postDataJSON():{};
   const json=(data,status=200)=>route.fulfill({status,json:data});
+  if(path.endsWith('/sabloni')) {
+   if(req.method()==='POST') { state.templates=[{id:9,id_tip_doc:5,verzija:1,naziv:'potvrda.docx',koristi_kvartal:true}]; return json(state.templates[0],201); }
+   return json({items:state.templates,pdf_available:state.pdfAvailable});
+  }
+  if(path.endsWith('/izvestaji')) {
+   if(req.method()==='POST') {
+    state.reportWrites.push(body);
+    const id=Number(path.split('/').at(-2));const p=state.periodi.find(p=>p.id===id);
+    if(body.broj_kvartala) p.broj_kvartala=body.broj_kvartala;p.version=String(Number(p.version)+1);
+    state.reports.push({id:22,broj_kvartala:body.broj_kvartala,datum_potpisa:p.datum_potpisa,ima_pdf:body.pdf,kreiran:'01.12.2026 10:00'});
+    return json(state.reports[0],201);
+   }
+   return json({items:state.reports});
+  }
   if(path.endsWith('/detalji'))return json({id_ugo_evid:9,id_ugo_org:3,br_ugovor:'460',predmet_ugovora:'Održavanje',otvoren_ug:state.closed?'':'X',lica_dobavljaca:[]});
   if(path.endsWith('/ugo_tip_ugovora'))return json({items:[{id:1,sifra:'ODRZAVANJE',naziv:'Održavanje softvera'}]});
   if(path.endsWith('/dokumenti') && req.method()==='POST'){
@@ -39,6 +53,48 @@ async function setup(context,extra={}){
  });return state;
 }
 async function open(page){await page.goto('/ugovori/detalji/9');await expect(page.getByRole('heading',{name:'Praćenje održavanja'})).toBeVisible();}
+
+test('technical report suggests earlier completed quarters, saves override and preserves status',async({page,context})=>{
+ const row={id:7,version:'2',period_od:'2026-04-01',period_do:'2026-06-30',id_tip_doc:5,datum_potpisa:'2026-07-01',status:'NA_POTPISU'};
+ const state=await setup(context,{periodi:[{...row,id:6,period_od:'2026-01-01',period_do:'2026-03-31',status:'ZAVRSEN'},row,{...row,id:8,period_od:'2026-07-01',period_do:'2026-09-30',status:'ZAVRSEN'}],templates:[{id:9,id_tip_doc:5,verzija:1,naziv:'potvrda.docx',koristi_kvartal:true}]});
+ await open(page);await page.getByRole('button',{name:'Akcije za period 01.04.2026 - 30.06.2026'}).click();
+ await page.getByRole('menuitem',{name:'Generiši / preuzmi izveštaj'}).click();
+ const dialog=page.getByRole('dialog',{name:'Izveštaji tehničkog perioda'});
+ await expect(dialog.getByLabel('Broj kvartala',{exact:true})).toHaveValue('2');
+ await dialog.getByLabel('Broj kvartala',{exact:true}).fill('5');
+ await dialog.getByRole('button',{name:'Generiši izveštaj',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:'Preuzmi DOCX',exact:true})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Preuzmi PDF',exact:true})).toBeVisible();
+ expect(state.reportWrites[0]).toEqual({id_template:9,broj_kvartala:5,version:'2',pdf:true});
+ expect(row.status).toBe('NA_POTPISU');
+});
+
+test('monthly template hides quarter and preserves the period quarter',async({page,context})=>{
+ const row={id:7,version:'2',period_od:'2026-10-01',period_do:'2026-10-31',id_tip_doc:5,datum_potpisa:'2026-11-01',status:'NA_POTPISU',broj_kvartala:4};
+ const state=await setup(context,{periodi:[row],templates:[{id:9,id_tip_doc:5,verzija:1,naziv:'mesecni.docx',koristi_kvartal:false}]});
+ await open(page);await page.getByRole('button',{name:'Akcije za period 01.10.2026 - 31.10.2026'}).click();
+ await page.getByRole('menuitem',{name:'Generiši / preuzmi izveštaj'}).click();
+ const dialog=page.getByRole('dialog',{name:'Izveštaji tehničkog perioda'});
+ await expect(dialog.getByLabel('Broj kvartala',{exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:'Generiši izveštaj',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:'Preuzmi DOCX',exact:true})).toBeVisible();
+ expect(state.reportWrites[0]).not.toHaveProperty('broj_kvartala');expect(row.broj_kvartala).toBe(4);
+ await expect(dialog.locator('.report-history')).not.toContainText('Kvartal');
+});
+
+test('template upload is per contract and unsigned period cannot generate',async({page,context})=>{
+ await setup(context,{periodi:[{id:7,version:'1',period_od:'2026-01-01',period_do:'2026-03-31',id_tip_doc:5,status:'PLANIRAN'}],pdfAvailable:false});
+ await open(page);await page.getByRole('button',{name:'Šabloni tehničke podrške',exact:true}).click();
+ const templates=page.getByRole('dialog',{name:'Šabloni tehničke podrške'});
+ await templates.getByLabel('DOCX šablon (do 10 MB)').setInputFiles({name:'potvrda.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:Buffer.from('mock DOCX transport')});
+ await templates.getByRole('button',{name:'Sačuvaj šablon'}).click();
+ await expect(templates.getByRole('button',{name:'potvrda.docx — verzija 1'})).toBeVisible();
+ await templates.getByRole('button',{name:'Zatvori',exact:true}).click();
+ await page.getByRole('button',{name:'Akcije za period 01.01.2026 - 31.03.2026'}).click();await page.getByRole('menuitem',{name:'Generiši / preuzmi izveštaj'}).click();
+ const report=page.getByRole('dialog',{name:'Izveštaji tehničkog perioda'});
+ await expect(report.getByRole('button',{name:'Generiši izveštaj'})).toBeDisabled();
+ await expect(report.getByText(/Pre generisanja unesite datum potpisa/)).toBeVisible();
+});
 
 test('request shows calculated deadline and reminder without filling completion date',async({page,context})=>{
  await setup(context); await open(page);
@@ -244,7 +300,8 @@ test('closed contracts keep document viewing in row menus without write actions'
  await expect(page.getByRole('button',{name:'Upload',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Prikaži',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Akcije za period 15.01.2026 - 31.01.2026'}).click();
- await expect(page.getByRole('menuitem')).toHaveCount(1);
+ await expect(page.getByRole('menuitem')).toHaveCount(2);
+ await expect(page.getByRole('menuitem',{name:'Preuzmi izveštaje',exact:true})).toBeVisible();
  await page.getByRole('menuitem',{name:'Prikaži dokumenta',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('Potvrda januar');
  await page.keyboard.press('Escape');

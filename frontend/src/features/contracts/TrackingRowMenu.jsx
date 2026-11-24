@@ -9,6 +9,7 @@ export default function TrackingRowMenu({
   onEdit,
   onDelete,
   onDocuments,
+  onReports,
 }) {
   const isPeriod = kind === "periodi";
   const canDelete = isPeriod
@@ -18,6 +19,12 @@ export default function TrackingRowMenu({
     ? `Akcije za period ${formatDate(row.period_od)} - ${formatDate(row.period_do)}`
     : `Akcije za zahtev ${row.broj_zahteva}`;
   const actions = [];
+  if (isPeriod && onReports)
+    actions.push({
+      label: canWrite ? "Generiši / preuzmi izveštaj" : "Preuzmi izveštaje",
+      icon: "file",
+      onClick: onReports,
+    });
 
   if (canWrite) {
     actions.push({

@@ -1,0 +1,47 @@
+.technical-report-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px 24px 24px;
+  gap: 16px;
+}
+.technical-report-scroll {
+  overflow: auto;
+  min-height: 0;
+}
+.technical-report-form > .contact-actions {
+  flex-shrink: 0;
+}
+.technical-report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+.technical-report-form input:not([type="checkbox"]),
+.technical-report-form select {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  width: 100%;
+}
+.technical-report-form .report-checkbox {
+  flex-direction: row;
+  align-items: center;
+}
+.technical-report-form p {
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.technical-report-form code {
+  overflow-wrap: anywhere;
+}
+.report-history {
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.report-history .button {
+  margin: 4px;
+}

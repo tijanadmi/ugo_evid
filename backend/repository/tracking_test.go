@@ -48,7 +48,7 @@ func TestTrackingReadAfterLegacyColumnsRemoved(t *testing.T) {
 		}
 		switch {
 		case strings.Contains(q, "FROM TED.UGO_TEH_PERIOD"):
-			return editRows(int64(1), int64(2), "2026-01-01", "2026-01-31", int64(5), nil, "2026-02-01", "ZAVRSEN", nil), nil
+			return editRows(int64(1), int64(2), "2026-01-01", "2026-01-31", int64(5), nil, "2026-02-01", "ZAVRSEN", nil, int64(2)), nil
 		case strings.Contains(q, "FROM TED.UGO_RAZ_ZAHTEV z JOIN"):
 			return editRows(int64(3), int64(4), int64(1), "R-3", "2026-01-01", int64(8), int64(10), "2026-01-15", "2026-01-10", "ZAVRSEN", nil, "2026-01-09"), nil
 		case strings.Contains(q, "FROM TED.UGO_RAZ_FOND"):

@@ -2,6 +2,7 @@ package models
 
 // A common API envelope; persistence uses separate period and request tables.
 type TrackingItem struct {
+	Quarter      int    `json:"broj_kvartala"`
 	ID           int    `json:"id"`
 	Version      int64  `json:"version,string"`
 	Start        string `json:"period_od"`

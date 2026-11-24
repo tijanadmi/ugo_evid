@@ -1,6 +1,7 @@
 import Icon from "../../ui/Icon";
 import { usePermissions } from "../../context/usePermissions";
 import TechnicalPeriodsTable from "./TechnicalPeriodsTable";
+import TechnicalReportDialog from "./TechnicalReportDialog";
 import DevelopmentRequestsTable from "./DevelopmentRequestsTable";
 import MaintenanceTrackingEditor from "./MaintenanceTrackingEditor";
 import { emptyTrackingItem as empty } from "./trackingConstants";
@@ -28,6 +29,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
     [blocked, setBlocked] = useState(false);
   const [requestDocuments, setRequestDocuments] = useState(null);
   const [periodDocuments, setPeriodDocuments] = useState(null);
+  const [reportDialog, setReportDialog] = useState(null);
   const pending = useRef(false),
     id = item.id_ugo_evid;
   const query = useQuery({
@@ -193,6 +195,14 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
       ) : (
         <>
           <h3>Tehnički periodi</h3>
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() => setReportDialog({ period: null })}
+          >
+            <Icon name="file" />
+            Šabloni tehničke podrške
+          </button>
           {canWrite && (
             <div className="tracking-actions">
               <button
@@ -233,6 +243,7 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
             busy={busy}
             open={open}
             onDocuments={setPeriodDocuments}
+            onReports={(period) => setReportDialog({ period })}
           />
           {!periods.length && <p>Nema evidentiranih tehničkih perioda.</p>}
           {settings.odrzavanje.ima_razvojnu_podrsku && (
@@ -344,6 +355,18 @@ export default function MaintenanceTracking({ item, settings, documentTypes }) {
         documentTypes={documentTypes}
         funds={data?.fondovi || []}
       />
+      {reportDialog && (
+        <TechnicalReportDialog
+          contractID={id}
+          period={reportDialog.period}
+          periods={periods}
+          types={documentTypes.filter((t) =>
+            ["POTVRDA_TEH", "ZAPISNIK_TEH"].includes(t.sifra),
+          )}
+          canWrite={canWrite}
+          onClose={() => setReportDialog(null)}
+        />
+      )}
     </section>
   );
 }

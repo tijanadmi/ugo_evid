@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var ErrPeriodDelete = errors.New("Period nije obrisan: samo nepromenjen period sa statusom Planiran moze da se obrise. Osvezite podatke.")
+var ErrPeriodDelete = errors.New("Period nije obrisan: samo nepromenjen period sa statusom Planiran, bez generisanih izveštaja, može da se obriše. Osvežite podatke.")
 
 var ErrTrackingInput = errors.New("Proverite datume, status, dokument i ugovorene casove. Periodi ne smeju da se preklapaju.")
 var ErrTrackingCalendar = errors.New("Otvorite Radni kalendar, dopunite potrebne datume i potvrdite godinu.")

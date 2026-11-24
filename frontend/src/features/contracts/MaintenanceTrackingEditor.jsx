@@ -175,6 +175,22 @@ export default function MaintenanceTrackingEditor({
                           </select>
                         </label>
                         <label>
+                          Broj kvartala (opciono)
+                          <input
+                            type="number"
+                            min="1"
+                            max="9999"
+                            step="1"
+                            value={editor.row.broj_kvartala || ""}
+                            onChange={(e) =>
+                              change(
+                                "broj_kvartala",
+                                e.target.value ? Number(e.target.value) : 0,
+                              )
+                            }
+                          />
+                        </label>
+                        <label>
                           Rok dokumenta (opciono)
                           <DateInput
                             value={editor.row.rok}
