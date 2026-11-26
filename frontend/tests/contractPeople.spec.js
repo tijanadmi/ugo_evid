@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 async function setup(context, writable = true) {
   const state = {
     writes: [],
+    created: [],
     items: [
       {
         id: 10,
@@ -50,6 +51,11 @@ async function setup(context, writable = true) {
         otvoren_ug: "X",
         lica_dobavljaca: [],
       });
+    if (path === "/api/ugo_dob_lica" && request.method() === "POST") {
+      const person = { ...request.postDataJSON(), id: 9 };
+      state.created.push(person);
+      return json({ data: person });
+    }
     if (path.endsWith("/lica")) {
       if (request.method() !== "GET") {
         const body = request.postDataJSON();
@@ -66,8 +72,11 @@ async function setup(context, writable = true) {
           state.items.push({
             ...body,
             id: 11,
-            ime: "Bojan",
-            rola: "Service Level Manager",
+            ime: body.id_ugo_dob_lica === 9 ? state.created[0].ime : "Bojan",
+            rola:
+              body.id_ugo_dob_lica_rola === 2
+                ? "Tehnička podrška"
+                : "Service Level Manager",
             status: "A",
             status_lica: "A",
             version: "1",
@@ -80,6 +89,7 @@ async function setup(context, writable = true) {
         candidates: [
           { id_ugo_dob_lica: 7, ime: "Ana" },
           { id_ugo_dob_lica: 8, ime: "Bojan" },
+          ...state.created.map((p) => ({ id_ugo_dob_lica: p.id, ime: p.ime })),
         ],
       });
     }
@@ -163,3 +173,53 @@ test("read-only organization can view assigned people but cannot change them", a
     page.getByRole("button", { name: "Dodaj lice na ugovor" }),
   ).toHaveCount(0);
 });
+
+for (const fails of [false, true]) {
+  test(`new technical contact is linked automatically; link failure=${fails}`, async ({
+    page,
+    context,
+  }) => {
+    const state = await setup(context);
+    state.conflict = fails;
+    await page.goto("/ugovori/detalji/9");
+    await page
+      .getByRole("button", { name: "Dodaj lice na ugovor", exact: true })
+      .click();
+    await page.getByLabel("Uloga na ugovoru").selectOption("2");
+    await page
+      .getByRole("button", { name: "Dodaj novo lice u imenik", exact: true })
+      .click();
+    await expect(
+      page
+        .getByRole("dialog", { name: "Unos novog lica" })
+        .getByLabel("Rola", { exact: true }),
+    ).toHaveCount(0);
+    await page.getByLabel("Ime i prezime").fill("Novi tehnicar");
+    await page
+      .getByRole("button", {
+        name: "Sačuvaj i poveži sa ugovorom",
+        exact: true,
+      })
+      .click();
+    await expect.poll(() => state.writes.length).toBe(1);
+    expect(state.writes[0].id_ugo_dob_lica).toBe(9);
+    expect(state.writes[0].id_ugo_dob_lica_rola).toBe(2);
+    expect(state.created).toHaveLength(1);
+    expect(state.created[0]).not.toHaveProperty("id_ugo_dob_lica_rola");
+    const people = page.getByRole("list", { name: "Lica ugovora" });
+    await expect(people).toContainText("Ana");
+    if (fails) {
+      await expect(
+        page.getByText(/Lice je sačuvano u imeniku, ali nije povezano/),
+      ).toBeVisible();
+      await expect(people).not.toContainText("Novi tehnicar");
+      await expect(
+        page.getByRole("button", { name: "Sačuvaj angažovanje", exact: true }),
+      ).toBeDisabled();
+    } else {
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(people).toContainText("Novi tehnicar");
+      await expect(people).toContainText("Tehnička podrška");
+    }
+  });
+}

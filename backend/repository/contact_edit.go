@@ -141,9 +141,9 @@ func (r *OracleStore) UpdateUgoDobLice(ctx context.Context, m *models.UgoDobLice
 		return nil, ErrContactVersion
 	}
 	result, err := tx.ExecContext(ctx, `UPDATE TED.UGO_DOB_LICA SET ime = :ime, radno_mesto = :radno_mesto,
- telefon = :telefon, email = :email, id_ugo_dob_lica_rola = :rola, status = :status, datzm = SYSDATE, version = version + 1
+ telefon = :telefon, email = :email, status = :status, datzm = SYSDATE, version = version + 1
  WHERE id = :id AND version = :version`, sql.Named("ime", m.Ime), sql.Named("radno_mesto", m.RadnoMesto),
-		sql.Named("telefon", m.Telefon), sql.Named("email", m.Email), sql.Named("rola", optionalID(m.UgoDobLicaRola.ID)),
+		sql.Named("telefon", m.Telefon), sql.Named("email", m.Email),
 		sql.Named("status", m.Status), sql.Named("id", m.ID), sql.Named("version", m.Version))
 	if err != nil {
 		return nil, err

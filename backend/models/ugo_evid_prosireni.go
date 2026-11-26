@@ -59,5 +59,5 @@ type UgoDobLiceKontakt struct {
 	RadnoMesto string `json:"radno_mesto"`
 	Telefon    string `json:"telefon"`
 	Email      string `json:"email"`
-	RolaLica   string `json:"rola_lica"`
+	RolaLica   string `json:"rola_lica,omitempty"`
 }

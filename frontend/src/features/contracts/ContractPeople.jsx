@@ -46,7 +46,7 @@ export default function ContractPeople({ item }) {
       version: currentSLM?.version || "0",
     });
   }
-  async function save(remove = false) {
+  async function save(remove = false, createdPerson = null) {
     if (busy || blocked) return;
     setBusy(true);
     try {
@@ -55,7 +55,7 @@ export default function ContractPeople({ item }) {
         body: remove
           ? { id: ending.id, version: ending.version }
           : {
-              id_ugo_dob_lica: Number(editor.person),
+              id_ugo_dob_lica: Number(createdPerson?.id || editor.person),
               id_ugo_dob_lica_rola: Number(editor.role),
               prethodni_slm: editor.previous,
               prethodna_verzija: editor.version,
@@ -68,7 +68,11 @@ export default function ContractPeople({ item }) {
         remove ? "Angažovanje je završeno." : "Lice je povezano sa ugovorom.",
       );
     } catch (e) {
-      toast.error(e.message);
+      toast.error(
+        createdPerson
+          ? `Lice je sačuvano u imeniku, ali nije povezano sa ugovorom. ${e.message}`
+          : e.message,
+      );
       setBlocked(true);
       await query.refetch();
     } finally {
@@ -91,7 +95,7 @@ export default function ContractPeople({ item }) {
         <p role="status">Za ovaj ugovor nije izabran aktivni SLM.</p>
       )}
       {writable && (
-        <div className="partner-add">
+        <div className="contract-people-actions">
           <button
             className="button primary"
             disabled={query.isFetching || !!query.error || contacts.busy}
@@ -228,14 +232,20 @@ export default function ContractPeople({ item }) {
             <button
               type="button"
               className="button"
-              disabled={busy}
+              disabled={
+                busy ||
+                blocked ||
+                !editor.role ||
+                roles.isPending ||
+                !!roles.error
+              }
               onClick={() => setAdding(true)}
             >
               Dodaj novo lice u imenik
             </button>
             <p>
-              Novo lice se prvo čuva u imeniku. Zatim ga izaberite i sačuvajte
-              vezu sa ugovorom.
+              Za novo lice prvo izaberite ulogu na ugovoru. Čuvanjem novog lica
+              ono se dodaje u imenik i odmah povezuje sa ovim ugovorom.
             </p>
             {editor.role === "1" && currentSLM && (
               <p>
@@ -270,6 +280,18 @@ export default function ContractPeople({ item }) {
       {adding && (
         <AddContactDialog
           supplierID={item.id_sap_dobavljac}
+          onCreated={async (person) => {
+            setAdding(false);
+            if (!person?.id) {
+              toast.error(
+                "Lice je sačuvano u imeniku, ali server nije vratio njegov ID. Osvežite listu i izaberite lice za povezivanje.",
+              );
+              await query.refetch();
+              return;
+            }
+            setEditor((current) => ({ ...current, person: String(person.id) }));
+            await save(false, person);
+          }}
           onClose={() => {
             setAdding(false);
             query.refetch();

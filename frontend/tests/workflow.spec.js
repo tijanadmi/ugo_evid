@@ -107,8 +107,8 @@ test('my partners navigation, contacts, pagination, empty and denied organizatio
   await expect(page.getByText('Ana Anić', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Moj partner', exact: true }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
-  await expect(page.locator('.partner-person-slm')).toContainText('Ana Anić');
-  await expect(page.locator('.partner-person-slm')).toContainText('011 999');
+  await expect(page.locator('.partner-person')).toContainText('Ana Anić');
+  await expect(page.locator('.partner-person')).toContainText('011 999');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Sledeća stranica', exact: true }).click();

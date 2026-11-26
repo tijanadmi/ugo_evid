@@ -6,7 +6,7 @@ import ConfirmAction from "../../ui/ConfirmAction";
 import Icon from "../../ui/Icon";
 import { announceBusinessChange } from "../../services/DataSync";
 
-export default function AddContactDialog({ supplierID, onClose }) {
+export default function AddContactDialog({ supplierID, onClose, onCreated }) {
   const ref = useRef(null);
   const client = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -19,8 +19,12 @@ export default function AddContactDialog({ supplierID, onClose }) {
   function close() {
     if (!busy) setConfirmClose(true);
   }
-  function saved() {
+  async function saved(person) {
     announceBusinessChange(client);
+    if (onCreated) {
+      await onCreated(person);
+      return;
+    }
     toast.success("Lice je dodato.");
     onClose();
   }
@@ -54,6 +58,7 @@ export default function AddContactDialog({ supplierID, onClose }) {
         onBusy={setBusy}
         onCancel={close}
         onSaved={saved}
+        submitLabel={onCreated ? "Sačuvaj i poveži sa ugovorom" : "Sačuvaj"}
       />
       {confirmClose && (
         <ConfirmAction

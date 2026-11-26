@@ -1,6 +1,5 @@
 import RowMenu from "../../ui/RowMenu";
 import SupplierAddress from "../contracts/SupplierAddress";
-import { isServiceLevelManager } from "../contracts/supplierContacts";
 import { value } from "../../utils/contractFormatting";
 
 export default function PartnerCard({ partner, onEdit, onDelete }) {
@@ -25,16 +24,12 @@ export default function PartnerCard({ partner, onEdit, onDelete }) {
           aria-label={`Kontakt osobe: ${partner.naziv}`}
         >
           {people.map((person) => (
-            <li
-              key={person.id}
-              className={`partner-person${isServiceLevelManager(person) ? " partner-person-slm" : ""}`}
-            >
+            <li key={person.id} className="partner-person directory-person">
               <div className="partner-person-identity">
                 <strong>{value(person, "ime")}</strong>
                 {person.status === "N" && <span>Neaktivan</span>}
                 <span>{value(person, "radno_mesto")}</span>
               </div>
-              <span className="partner-role">{value(person, "rola_lica")}</span>
               <div className="partner-person-contact">
                 <span>{value(person, "email")}</span>
                 <span>{value(person, "telefon")}</span>

@@ -59,8 +59,8 @@ func TestRegistrationTransaction(t *testing.T) {
 					if len(locks) != 2 {
 						t.Fatal("supplier must be locked before resolving SLM")
 					}
-					if !strings.Contains(q, "status = 'A'") || !strings.Contains(q, "id_ugo_dob_lica_rola = 1") {
-						t.Fatal("SLM filter missing")
+					if !strings.Contains(q, "status = 'A'") || strings.Contains(q, "id_ugo_dob_lica_rola") {
+						t.Fatal("directory must filter active supplier people, not roles")
 					}
 					if tc.newContact {
 						return &schemaRows{width: 6}, nil
@@ -91,7 +91,7 @@ func TestRegistrationTransaction(t *testing.T) {
 					locks = append(locks, a[0].Value.(string))
 				case strings.Contains(q, "INSERT INTO TED.UGO_DOB_LICA"):
 					writes = append(writes, "contact")
-					if !strings.Contains(q, "1,'A',SYSDATE,SYSDATE") {
+					if !strings.Contains(q, "'A',SYSDATE,SYSDATE") {
 						t.Fatal("new contact role/status/timestamps")
 					}
 					*a[len(a)-1].Value.(sql.Out).Dest.(*int) = 99

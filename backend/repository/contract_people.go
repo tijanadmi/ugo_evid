@@ -38,7 +38,7 @@ func (r *OracleStore) ListContractPeople(ctx context.Context, id int) ([]models.
 }
 
 func (r *OracleStore) ContractPeopleCandidates(ctx context.Context, id int) ([]models.ContractPerson, error) {
-	rows, err := r.DB.QueryContext(ctx, `SELECT l.id,l.ime,l.telefon,l.email,NVL(l.id_ugo_dob_lica_rola,0) FROM TED.UGO_DOB_LICA l
+	rows, err := r.DB.QueryContext(ctx, `SELECT l.id,l.ime,l.telefon,l.email FROM TED.UGO_DOB_LICA l
  JOIN TED.SAP_UGOVORI s ON s.id_sap_dobavljac=l.id_sap_dobavljac JOIN TED.UGO_EVID e ON e.id_sap_ugovor=s.id
  WHERE e.id=:id AND l.status='A' ORDER BY l.ime,l.id`, sql.Named("id", id))
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *OracleStore) ContractPeopleCandidates(ctx context.Context, id int) ([]m
 	out := []models.ContractPerson{}
 	for rows.Next() {
 		var p models.ContractPerson
-		if err = scanNullable(rows, &p.PersonID, &p.Name, &p.Phone, &p.Email, &p.RoleID); err != nil {
+		if err = scanNullable(rows, &p.PersonID, &p.Name, &p.Phone, &p.Email); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

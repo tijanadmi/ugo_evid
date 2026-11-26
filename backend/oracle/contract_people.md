@@ -19,9 +19,14 @@ Skripta nije pokrenuta na poslovnoj bazi.
 
 ## Model
 
-UGO_DOB_LICA ostaje imenik dobavljača. Njegova postojeća rola služi kao podrazumevana
-klasifikacija (npr. lista SLM-ova pri unosu ugovora). UGO_EVID_LICA određuje stvarnu
-ulogu na konkretnom ugovoru. Tehnička podrška nije obavezna i ne prenosi se svim
+UGO_DOB_LICA ostaje imenik dobavljača, bez role. UGO_EVID_LICA određuje
+ulogu na konkretnom ugovoru. Pri unosu ugovora za SLM-a se nude sva aktivna
+lica dobavljača. Nakon primene contract_people.sql pokrenuti i
+contact_roles_on_contract_only.sql za uklanjanje stare kolone imenika.
+Pre toga pregledati spoljne view-ove, trigere i izveštaje koji je eventualno koriste.
+Šifarnik UGO_DOB_LICA_ROLE ostaje jer ga koristi veza sa ugovorom.
+
+Tehnička podrška nije obavezna i ne prenosi se svim
 ugovorima automatski. U tabeli nema DATUM_OD/DATUM_DO.
 
 STATUS A/P u vezi označava aktivno/prethodno angažovanje. Jedinstveni indeksi
@@ -41,7 +46,7 @@ pre njihovog kasnijeg uklanjanja.
 - Unos ugovora: izbor aktivnog SLM-a ili unos novog, čak i kada već postoje drugi.
   Lice, ugovor i početno angažovanje čuvaju se u istoj transakciji.
 - Detalji ugovora: „Promeni SLM-a“, „Dodaj lice na ugovor“, „Završi angažovanje“.
-  Novo lice iz ovog dijaloga prvo se sačuva u imeniku, zatim se izabere i poveže.
+  Novo lice iz ovog dijaloga prvo se sačuva u imeniku, a zatim ga aplikacija automatski povezuje sa ugovorom u izabranoj ulozi. Ako povezivanje ne uspe, lice ostaje u imeniku i aplikacija prikazuje poruku; ne treba ponavljati unos lica, već ga izabrati iz liste za ponovno povezivanje.
 - Zamena SLM-a pasivizira prethodnu vezu i dodaje novu u jednoj transakciji.
   Prethodna angažovanja ostaju dostupna. Nema fizičkog brisanja veze.
 - „Moji partneri“ ostaje zajednički imenik. Izmena imena/telefona/emaila utiče na

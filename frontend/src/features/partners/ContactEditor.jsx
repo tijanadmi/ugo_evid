@@ -3,14 +3,13 @@ import ConfirmAction from "../../ui/ConfirmAction";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../context/useAuth";
-import { getContactRoles, saveContact } from "../../services/apiContacts";
+import { saveContact } from "../../services/apiContacts";
 
 const empty = {
   ime: "",
   radno_mesto: "",
   telefon: "",
   email: "",
-  id_ugo_dob_lica_rola: 0,
   status: "A",
 };
 const toDraft = (person) => ({
@@ -18,7 +17,6 @@ const toDraft = (person) => ({
   radno_mesto: person.radno_mesto || "",
   telefon: person.telefon || "",
   email: person.email || "",
-  id_ugo_dob_lica_rola: person.ugo_dob_lica_rola?.id || 0,
   status: person.status || "A",
 });
 
@@ -32,10 +30,11 @@ export default function ContactEditor({
   onCancel,
   onSaved,
   onBusy,
+  submitLabel = "Sačuvaj",
 }) {
   const { api, user } = useAuth();
   const [draft, setDraft] = useState(() =>
-    session ? toDraft(session.person) : empty,
+    session ? toDraft(session.person) : { ...empty },
   );
   const engagements = useQuery({
     queryKey: ["contact-engagements", user.username, personID],
@@ -44,8 +43,6 @@ export default function ContactEditor({
     enabled: !!personID && draft.status !== "A",
     retry: false,
   });
-  const [roles, setRoles] = useState([]);
-  const [ready, setReady] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [confirmReload, setConfirmReload] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,38 +54,22 @@ export default function ContactEditor({
       setBlocked(false);
     }
   }, [session]);
-  useEffect(() => {
-    let stopped = false;
-    getContactRoles(api)
-      .then((items) => {
-        if (!stopped) {
-          setRoles(items);
-          setReady(true);
-        }
-      })
-      .catch((error) => {
-        if (!stopped) toast.error(error.message, { id: "operation-error" });
-      });
-    return () => {
-      stopped = true;
-    };
-  }, [api]);
   async function submit(event) {
     event.preventDefault();
-    if (working.current || !ready || lost) return;
+    if (working.current || lost) return;
     working.current = true;
     setBusy(true);
     onBusy(true);
     try {
       if (personID && !(await beforeWrite())) return;
-      await saveContact(api, personID, {
+      const result = await saveContact(api, personID, {
         ...draft,
         id_sap_dobavljac: supplierID,
         ...(personID
           ? { version: session.person.version, lock_token: session.token }
           : {}),
       });
-      onSaved();
+      await onSaved(result?.data);
     } catch (error) {
       toast.error(error.message, { id: "operation-error" });
       if ([0, 409, 423, 404].includes(error.status) || error.status >= 500)
@@ -130,8 +111,7 @@ export default function ContactEditor({
         </ConfirmAction>
       )}
       <h3>{personID ? "Izmeni lice" : "Dodaj lice"}</h3>
-      {!ready && <p role="status">Učitavanje podataka…</p>}
-      <fieldset disabled={!ready || busy}>
+      <fieldset disabled={busy}>
         <label>
           Ime i prezime
           <input
@@ -172,31 +152,6 @@ export default function ContactEditor({
             value={draft.email}
             onChange={(e) => setDraft({ ...draft, email: e.target.value })}
           />
-        </label>
-        <label>
-          Rola
-          <select
-            value={draft.id_ugo_dob_lica_rola}
-            onChange={(e) =>
-              setDraft({
-                ...draft,
-                id_ugo_dob_lica_rola: Number(e.target.value),
-              })
-            }
-          >
-            <option value={0}>Bez role</option>
-            {draft.id_ugo_dob_lica_rola !== 0 &&
-              !roles.some((role) => role.id === draft.id_ugo_dob_lica_rola) && (
-                <option value={draft.id_ugo_dob_lica_rola}>
-                  Trenutna rola
-                </option>
-              )}
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.naziv}
-              </option>
-            ))}
-          </select>
         </label>
         <label>
           Status
@@ -265,9 +220,9 @@ export default function ContactEditor({
         <button
           className="button primary"
           type="submit"
-          disabled={!ready || lost || busy}
+          disabled={lost || busy}
         >
-          {busy ? "Obrada…" : "Sačuvaj"}
+          {busy ? "Obrada…" : submitLabel}
         </button>
       </div>
     </form>

@@ -23,14 +23,10 @@ l.version,
 s.id AS c6,
 s.sifra AS c7,
 s.naziv AS c8,
-s.web_portal AS c9,
-COALESCE(r.id, 0) AS c16,
-COALESCE(r.naziv, '') AS c17,
-COALESCE(r.status, '') AS c18
+s.web_portal AS c9
  FROM TED.UGO_DOB_LICA l
         JOIN TED.SAP_DOBAVLJACI s ON s.id = l.id_sap_dobavljac
 
-        LEFT JOIN TED.UGO_DOB_LICA_ROLE r ON r.id = l.id_ugo_dob_lica_rola
         WHERE l.id = :p1
     `
 
@@ -52,10 +48,6 @@ COALESCE(r.status, '') AS c18
 		&m.SapDobavljac.Sifra,
 		&m.SapDobavljac.Naziv,
 		&m.SapDobavljac.WebPortal,
-
-		&m.UgoDobLicaRola.ID,
-		&m.UgoDobLicaRola.Naziv,
-		&m.UgoDobLicaRola.Status,
 	)
 
 	if err != nil {
@@ -84,14 +76,10 @@ s.id AS c6,
 s.sifra AS c7,
 s.naziv AS c8,
 s.web_portal AS c9,
-COALESCE(r2.id, 0) AS c16,
-COALESCE(r2.naziv, '') AS c17,
-COALESCE(r2.status, '') AS c18,
 COUNT(*) OVER() AS c19
  FROM TED.UGO_DOB_LICA l
         JOIN TED.SAP_DOBAVLJACI s ON s.id = l.id_sap_dobavljac
 
-        LEFT JOIN TED.UGO_DOB_LICA_ROLE r2 ON r2.id = l.id_ugo_dob_lica_rola
         WHERE 1=1
     `
 
@@ -108,9 +96,8 @@ COUNT(*) OVER() AS c19
                 OR LOWER(l.telefon) LIKE LOWER('%%' || :p%d || '%%')
                 OR LOWER(s.naziv) LIKE LOWER('%%' || :p%d || '%%')
 
-                OR LOWER(r2.naziv) LIKE LOWER('%%' || :p%d || '%%')
             )
-        `, pos, pos, pos, pos, pos, pos)
+        `, pos, pos, pos, pos, pos)
 
 		args = append(args, filter)
 		pos++
@@ -149,10 +136,6 @@ COUNT(*) OVER() AS c19
 			&m.SapDobavljac.Naziv,
 			&m.SapDobavljac.WebPortal,
 
-			&m.UgoDobLicaRola.ID,
-			&m.UgoDobLicaRola.Naziv,
-			&m.UgoDobLicaRola.Status,
-
 			&rowTotal,
 		)
 		if err != nil {
@@ -169,9 +152,9 @@ COUNT(*) OVER() AS c19
 func (r *OracleStore) InsertUgoDobLice(ctx context.Context, m *models.UgoDobLice) (*models.UgoDobLice, error) {
 	query := `
         INSERT INTO TED.UGO_DOB_LICA
-            (id_sap_dobavljac, ime, radno_mesto, telefon, email, id_ugo_dob_lica_rola, status, datpri, datzm)
+            (id_sap_dobavljac, ime, radno_mesto, telefon, email, status, datpri, datzm)
         VALUES 
-            (:p1, :p2, :p3, :p4, :p5, :p6, :p7, SYSDATE, SYSDATE)
+            (:p1, :p2, :p3, :p4, :p5, :p7, SYSDATE, SYSDATE)
         RETURNING id INTO :out0
     `
 
@@ -182,7 +165,6 @@ func (r *OracleStore) InsertUgoDobLice(ctx context.Context, m *models.UgoDobLice
 		sql.Named("p3", m.RadnoMesto),
 		sql.Named("p4", m.Telefon),
 		sql.Named("p5", m.Email),
-		sql.Named("p6", optionalID(m.UgoDobLicaRola.ID)),
 		sql.Named("p7", m.Status),
 		sql.Named("out0", sql.Out{Dest: &m.ID}),
 	)

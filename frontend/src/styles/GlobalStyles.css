@@ -1644,6 +1644,12 @@ table small {
 .partner-add {
   padding: 0 24px 16px;
 }
+.contract-people-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
 .contact-error {
   color: #a32121;
   background: #fff2f2;
@@ -1669,6 +1675,11 @@ table small {
 
 .partner-person {
   grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr) auto;
+}
+@media (min-width: 761px) {
+  .directory-person {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  }
 }
 .row-menu {
   justify-self: end;

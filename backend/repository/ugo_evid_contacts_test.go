@@ -17,7 +17,7 @@ func TestContactsBatchMapping(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 		calls++
 		checkBinds(t, q, args)
-		if len(args) != 3 || !strings.Contains(q, "ORDER BY r.id, l.id") {
+		if len(args) != 3 || !strings.Contains(q, "ORDER BY l.ime, l.id") {
 			t.Fatalf("query=%s args=%v", q, args)
 		}
 		return &schemaRows{width: 8, values: [][]driver.Value{{int64(20), "B", nil, nil, nil, nil, int64(21), "A"}, {int64(10), "A1", "Manager", "123", "a@example.test", "SLM", int64(11), "A"}, {int64(10), "A2", nil, nil, nil, "Other", int64(12), "A"}}}, nil

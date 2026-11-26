@@ -11,15 +11,14 @@ import (
 )
 
 type UgoDobLiceRequest struct {
-	IDSapDobavljac   int    `json:"id_sap_dobavljac" binding:"required,min=1"`
-	Ime              string `json:"ime" binding:"required"`
-	RadnoMesto       string `json:"radno_mesto"`
-	Telefon          string `json:"telefon"`
-	Email            string `json:"email"`
-	IDUgoDobLicaRola int    `json:"id_ugo_dob_lica_rola"`
-	Status           string `json:"status" binding:"required,oneof=A N"`
-	Version          int64  `json:"version,string"`
-	LockToken        string `json:"lock_token"`
+	IDSapDobavljac int    `json:"id_sap_dobavljac" binding:"required,min=1"`
+	Ime            string `json:"ime" binding:"required"`
+	RadnoMesto     string `json:"radno_mesto"`
+	Telefon        string `json:"telefon"`
+	Email          string `json:"email"`
+	Status         string `json:"status" binding:"required,oneof=A N"`
+	Version        int64  `json:"version,string"`
+	LockToken      string `json:"lock_token"`
 }
 
 type UgoDobLiceResponse struct {
@@ -107,11 +106,8 @@ func (server *Server) InsertUgoDobLice(ctx *gin.Context) {
 		RadnoMesto:   req.RadnoMesto,
 		Telefon:      req.Telefon,
 		Email:        req.Email,
-		UgoDobLicaRola: models.UgoDobLicaRola{
-			ID: req.IDUgoDobLicaRola,
-		},
-		Status:  req.Status,
-		Version: req.Version,
+		Status:       req.Status,
+		Version:      req.Version,
 	}
 
 	if _, ok := server.contactAccess(ctx, req.IDSapDobavljac); !ok {
@@ -150,11 +146,8 @@ func (server *Server) UpdateUgoDobLice(ctx *gin.Context) {
 		RadnoMesto:   req.RadnoMesto,
 		Telefon:      req.Telefon,
 		Email:        req.Email,
-		UgoDobLicaRola: models.UgoDobLicaRola{
-			ID: req.IDUgoDobLicaRola,
-		},
-		Status:  req.Status,
-		Version: req.Version,
+		Status:       req.Status,
+		Version:      req.Version,
 	}
 
 	if !validLeaseInput(ctx, req.Version, req.LockToken) {
@@ -209,8 +202,8 @@ func (server *Server) validateContact(ctx *gin.Context, req *UgoDobLiceRequest) 
 	req.Ime, req.RadnoMesto = strings.TrimSpace(req.Ime), strings.TrimSpace(req.RadnoMesto)
 	req.Telefon, req.Email = strings.TrimSpace(req.Telefon), strings.TrimSpace(req.Email)
 	// Match the BYTE-sized columns in the Oracle schema.
-	if req.Ime == "" || len(req.Ime) > 100 || len(req.RadnoMesto) > 200 || len(req.Telefon) > 100 || len(req.Email) > 100 || req.IDUgoDobLicaRola < 0 {
-		ctx.JSON(400, gin.H{"error": "Ime je obavezno. Proverite dužinu unetih podataka i izabranu rolu."})
+	if req.Ime == "" || len(req.Ime) > 100 || len(req.RadnoMesto) > 200 || len(req.Telefon) > 100 || len(req.Email) > 100 {
+		ctx.JSON(400, gin.H{"error": "Ime je obavezno. Proverite dužinu unetih podataka."})
 		return false
 	}
 	if req.Email != "" {
@@ -220,16 +213,6 @@ func (server *Server) validateContact(ctx *gin.Context, req *UgoDobLiceRequest) 
 			return false
 		}
 	}
-	if req.IDUgoDobLicaRola != 0 {
-		role, err := server.store.GetUgoDobLicaRoleById(ctx.Request.Context(), req.IDUgoDobLicaRola)
-		if err != nil {
-			contactError(ctx, err)
-			return false
-		}
-		if role == nil {
-			ctx.JSON(400, gin.H{"error": "Izabrana rola ne postoji."})
-			return false
-		}
-	}
+
 	return true
 }

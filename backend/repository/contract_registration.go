@@ -107,7 +107,7 @@ func registrationContract(ctx context.Context, q contractQueryer, id, orgID int)
 
 func registrationContacts(ctx context.Context, q contractQueryer, supplier int) ([]models.UgoDobLice, error) {
 	rows, err := q.QueryContext(ctx, `SELECT id, ime, radno_mesto, telefon, email, version FROM TED.UGO_DOB_LICA
- WHERE id_sap_dobavljac = :supplier AND id_ugo_dob_lica_rola = 1 AND status = 'A' ORDER BY id`, sql.Named("supplier", supplier))
+ WHERE id_sap_dobavljac = :supplier AND status = 'A' ORDER BY id`, sql.Named("supplier", supplier))
 	if err != nil {
 		return nil, err
 	}
@@ -202,8 +202,8 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 			return nil, ErrContractContactRequired
 		}
 		person.Ime, person.RadnoMesto, person.Telefon, person.Email = req.Contact.Ime, req.Contact.RadnoMesto, req.Contact.Telefon, req.Contact.Email
-		_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_DOB_LICA (id_sap_dobavljac,ime,radno_mesto,telefon,email,id_ugo_dob_lica_rola,status,datpri,datzm)
- VALUES (:supplier,:ime,:radno_mesto,:telefon,:email,1,'A',SYSDATE,SYSDATE) RETURNING id INTO :new_id`,
+		_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_DOB_LICA (id_sap_dobavljac,ime,radno_mesto,telefon,email,status,datpri,datzm)
+ VALUES (:supplier,:ime,:radno_mesto,:telefon,:email,'A',SYSDATE,SYSDATE) RETURNING id INTO :new_id`,
 			sql.Named("supplier", contract.SupplierID), sql.Named("ime", person.Ime), sql.Named("radno_mesto", person.RadnoMesto), sql.Named("telefon", person.Telefon), sql.Named("email", person.Email), sql.Named("new_id", sql.Out{Dest: &person.ID}))
 		if err != nil {
 			if strings.Contains(err.Error(), "ORA-00001") {
@@ -225,7 +225,7 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 			return nil, ErrContractContactChanged
 		}
 		var version int64
-		err = tx.QueryRowContext(ctx, `SELECT version FROM TED.UGO_DOB_LICA WHERE id = :id AND id_sap_dobavljac = :supplier AND id_ugo_dob_lica_rola = 1 AND status = 'A' FOR UPDATE NOWAIT`, sql.Named("id", person.ID), sql.Named("supplier", contract.SupplierID)).Scan(&version)
+		err = tx.QueryRowContext(ctx, `SELECT version FROM TED.UGO_DOB_LICA WHERE id = :id AND id_sap_dobavljac = :supplier AND status = 'A' FOR UPDATE NOWAIT`, sql.Named("id", person.ID), sql.Named("supplier", contract.SupplierID)).Scan(&version)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrContractContactChanged
 		}

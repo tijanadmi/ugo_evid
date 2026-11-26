@@ -150,7 +150,7 @@ func TestTEDContactReadsWithoutOrganization(t *testing.T) {
 				if !strings.Contains(q, "FROM TED.UGO_DOB_LICA") {
 					t.Fatal(q)
 				}
-				values := []driver.Value{int64(4), "Kontakt", nil, nil, nil, "A", nil, nil, int64(1), int64(9), "D9", "Dobavljac", nil, nil, nil, nil}
+				values := []driver.Value{int64(4), "Kontakt", nil, nil, nil, "A", nil, nil, int64(1), int64(9), "D9", "Dobavljac", nil}
 				if paged {
 					values = append(values, int64(1))
 				}
@@ -173,7 +173,7 @@ func TestTEDContactReadsWithoutOrganization(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if contact.ID != 4 || contact.SapDobavljac.ID != 9 || contact.UgoDobLicaRola.ID != 0 || !contact.DatPri.IsZero() {
+			if contact.ID != 4 || contact.SapDobavljac.ID != 9 || !contact.DatPri.IsZero() {
 				t.Fatalf("unexpected contact: %+v", contact)
 			}
 		})
@@ -182,12 +182,10 @@ func TestTEDContactReadsWithoutOrganization(t *testing.T) {
 
 func TestTEDContactInsertWithoutOrganization(t *testing.T) {
 	store := testSchemaStore(t, &schemaConn{exec: func(q string, args []driver.NamedValue) (driver.Result, error) {
-		forbidColumns(t, q, "id_ugo_org")
+		forbidColumns(t, q, "id_ugo_org", "id_ugo_dob_lica_rola")
 		checkBinds(t, q, args)
 		for _, a := range args {
-			if a.Name == "p6" && a.Value != nil {
-				t.Fatal("optional role must be NULL")
-			}
+
 			if a.Name == "out0" {
 				*a.Value.(sql.Out).Dest.(*int) = 8
 			}
