@@ -35,12 +35,12 @@ func TestProsireniViewMappingAndPredicates(t *testing.T) {
 			now := time.Date(2026, 9, 17, 0, 0, 0, 0, time.UTC)
 			store := testSchemaStore(t, &schemaConn{query: func(q string, args []driver.NamedValue) (driver.Rows, error) {
 				calls++
-				if strings.Contains(q, "FROM TED.UGO_DOB_LICA l") {
+				if strings.HasPrefix(q, "SELECT a.id_ugo_evid,") {
 					checkBinds(t, q, args)
-					if len(args) != 1 || args[0].Value != 400 {
+					if len(args) != 1 || args[0].Value != 100 {
 						t.Fatalf("supplier binds: %v", args)
 					}
-					return &schemaRows{width: 8, values: [][]driver.Value{{int64(400), "SLM", nil, "011", "slm@example.test", "Service Level Manager", int64(81), "A"}}}, nil
+					return &schemaRows{width: 8, values: [][]driver.Value{{int64(100), "SLM", nil, "011", "slm@example.test", "Service Level Manager", int64(81), "A"}}}, nil
 				}
 				predicate := "v.otvoren_ug = 'X'"
 				if !open {

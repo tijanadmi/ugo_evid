@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import ConfirmAction from "../../ui/ConfirmAction";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -32,10 +33,17 @@ export default function ContactEditor({
   onSaved,
   onBusy,
 }) {
-  const { api } = useAuth();
+  const { api, user } = useAuth();
   const [draft, setDraft] = useState(() =>
     session ? toDraft(session.person) : empty,
   );
+  const engagements = useQuery({
+    queryKey: ["contact-engagements", user.username, personID],
+    queryFn: ({ signal }) =>
+      api(`/ugo_dob_lica/${personID}/angazovanja`, { signal }),
+    enabled: !!personID && draft.status !== "A",
+    retry: false,
+  });
   const [roles, setRoles] = useState([]);
   const [ready, setReady] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -213,6 +221,37 @@ export default function ContactEditor({
         >
           Učitaj aktuelne podatke
         </button>
+      )}
+      {personID && draft.status !== "A" && (
+        <section>
+          <p>
+            Pasivizacija važi za imenik dobavljača i sva angažovanja. Lice se
+            više ne nudi za nove ugovore; postojeće veze ostaju vidljive radi
+            izbora zamene.
+          </p>
+          {engagements.isPending && <p>Provera otvorenih ugovora…</p>}
+          {engagements.error && (
+            <p role="alert">
+              Provera angažovanja nije uspela. Proverite ugovore pre
+              pasivizacije.
+            </p>
+          )}
+          {!!engagements.data?.items?.length && (
+            <>
+              <p>
+                Otvoreni ugovori dostupni vašim pravima na kojima je lice
+                angažovano:
+              </p>
+              <ul>
+                {engagements.data.items.map((p, i) => (
+                  <li key={`${p.id_ugo_evid}-${i}`}>
+                    {p.br_ugovor} — {p.predmet_ugovora} ({p.rola})
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
       )}
       <div className="contact-actions">
         <button

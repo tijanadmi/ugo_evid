@@ -133,6 +133,17 @@ func (server *Server) UpdateUgoEvid(ctx *gin.Context) {
 	if _, ok = server.documentAccess(ctx, id, true); !ok {
 		return
 	}
+	// Contact fields on this legacy endpoint are no longer an independent source.
+	// Change assignments through /ugo_evid/:id/lica and shared details in the directory.
+	current, err := server.store.GetUgoEvidById(ctx.Request.Context(), id)
+	if err != nil || current == nil {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "Učitajte aktuelne podatke ugovora pre izmene."})
+		return
+	}
+	if req.UgoDobLiceID != current.UgoDobLice.ID || req.Ime != current.Ime || req.Telefon != current.Telefon || req.Email != current.Email {
+		ctx.JSON(http.StatusConflict, gin.H{"error": "SLM se menja kroz Lica angažovana na ugovoru, a ime, telefon i email kroz imenik dobavljača."})
+		return
+	}
 	evid := &models.UgoEvid{
 		ID:         id,
 		SapUgovor:  models.SapUgovor{ID: req.SapUgovorID},

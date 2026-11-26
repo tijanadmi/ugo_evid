@@ -13,6 +13,13 @@ async function setup(context, sharedState) {
     if (new URL(route.request().url()).pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
     if (new URL(route.request().url()).pathname.endsWith('/podesavanja')) return json({ settings: {id_tip_ugovora:0,version:'1',odrzavanje:null}, document_types:[] });
     if (new URL(req.url()).pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
+    if (path.endsWith('/angazovanja')) return json({items:[{id_ugo_evid:2,br_ugovor:'4600012345',predmet_ugovora:'Podrska',rola:'SLM'}]});
+    if (path.endsWith('/lica')) {
+      state.assignments ||= [{id:10,id_ugo_dob_lica:7,id_ugo_dob_lica_rola:1,status:'A',version:'1'}];
+      if(method==='POST') state.assignments.push({...body,id:11,status:'A',version:'1'});
+      if(method==='DELETE') state.assignments.find(a=>a.id===body.id).status='P';
+      return json({items:state.assignments.map(a=>{const p=state.people.find(p=>p.id===a.id_ugo_dob_lica);return {...a,ime:p?.ime,telefon:p?.telefon,email:p?.email,status_lica:p?.status,rola:'Kontakt'};}),candidates:state.people.map(p=>({id_ugo_dob_lica:p.id,ime:p.ime}))});
+    }
     if (path === '/api/moji_partneri') return json({ total: 1, items: [{ id: 20, can_write: true, naziv: 'Moj partner', lica_dobavljaca: state.people.map(person => ({ ...person, rola_lica: 'Kontakt' })) }] });
     if (path === '/api/ugo_dob_lica_rola') {
       const size = Number(new URL(req.url()).searchParams.get('page_size'));
@@ -269,12 +276,16 @@ test('open contract adds contact for its supplier, preserves cancelled draft and
     br_ugovor: '4600012345', naziv: 'Moj partner', lica_dobavljaca: state.people,
   } }));
   await page.goto('/ugovori/detalji/2');
-  await page.getByRole('button', { name: '+ Unos novog lica', exact: true }).click();
+  await page.getByRole('button', { name: 'Dodaj lice na ugovor', exact: true }).click();
+  await page.getByRole('button', { name: 'Dodaj novo lice u imenik', exact: true }).click();
   await page.getByLabel('Ime i prezime').fill('Kontakt iz ugovora');
-  await page.getByRole('button', { name: 'Odustani', exact: true }).click();
+  await page.getByRole('dialog', {name:'Unos novog lica'}).getByRole('button', { name: 'Odustani', exact: true }).click();
   await page.getByRole('button', { name: 'Otkaži', exact: true }).click();
   await expect(page.getByLabel('Ime i prezime')).toHaveValue('Kontakt iz ugovora');
   await page.getByRole('button', { name: 'Sačuvaj', exact: true }).click();
+  await page.getByLabel('Uloga na ugovoru').selectOption('1');
+  await page.getByLabel('Lice dobavljača').selectOption('8');
+  await page.getByRole('button',{name:'Sačuvaj angažovanje'}).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.partner-person').filter({ hasText: 'Kontakt iz ugovora' })).toBeVisible();
   expect(state.writes).toHaveLength(1);
@@ -287,7 +298,7 @@ test('open contract adds contact for its supplier, preserves cancelled draft and
 });
 
 
-test('contract contact menus edit and delete with shared locking and refreshed data', async ({ context, page }) => {
+test('contract contact menus edit with shared locking and end assignment without deleting person', async ({ context, page }) => {
   const state = await setup(context);
   await context.route('**/api/ugo_evid/*/detalji', route => route.fulfill({ json: {
     id_ugo_evid: 2, id_ugo_org: 3, id_sap_dobavljac: 20, otvoren_ug: 'X',
@@ -297,12 +308,12 @@ test('contract contact menus edit and delete with shared locking and refreshed d
   await page.goto('/ugovori/detalji/2');
   await expect(page.getByRole('button', { name: 'Akcije za lice Istorijski kontakt' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Izmeni', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Izmeni podatke lica', exact: true }).click();
   await expect(page.getByLabel('Ime i prezime')).toHaveValue('Ana');
   const second = await context.newPage();
   await second.goto('/ugovori/detalji/2');
   await second.getByRole('button', { name: 'Akcije za lice Ana', exact: true }).click();
-  await second.getByRole('menuitem', { name: 'Obriši', exact: true }).click();
+  await second.getByRole('menuitem', { name: 'Izmeni podatke lica', exact: true }).click();
   await expect(second.getByRole('alert')).toContainText('drugi korisnik');
   await expect(second.getByRole('dialog')).toHaveCount(0);
   await page.getByLabel('Ime i prezime').fill('Ana iz ugovora');
@@ -312,15 +323,16 @@ test('contract contact menus edit and delete with shared locking and refreshed d
   expect(state.writes[0].version).toBe('1');
   expect(state.writes[0].lock_token).toHaveLength(64);
   await page.getByRole('button', { name: 'Akcije za lice Ana iz ugovora', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Obriši', exact: true }).click();
-  await page.getByRole('button', { name: 'Odustani', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Završi angažovanje', exact: true }).click();
+  await page.getByRole('button', { name: 'Otkaži', exact: true }).click();
   await expect.poll(() => state.token).toBeNull();
   expect(state.people).toHaveLength(1);
   await page.getByRole('button', { name: 'Akcije za lice Ana iz ugovora', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Obriši', exact: true }).click();
-  await page.getByRole('button', { name: 'Potvrdi brisanje' }).click();
+  await page.getByRole('menuitem', { name: 'Završi angažovanje', exact: true }).click();
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Akcije za lice Ana iz ugovora', exact: true })).toHaveCount(0);
   await expect(second.getByRole('button', { name: 'Akcije za lice Ana iz ugovora', exact: true })).toHaveCount(0);
-  expect(state.people).toHaveLength(0);
+  expect(state.people).toHaveLength(1);
+  expect(state.assignments[0].status).toBe("P");
 });

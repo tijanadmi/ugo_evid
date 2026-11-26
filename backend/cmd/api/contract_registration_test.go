@@ -93,7 +93,6 @@ func TestRegisterContractAPI(t *testing.T) {
 		{"duplicate", existing, nil, repository.ErrContractRegistered, 409, 1},
 		{"closed or different procurement owner", existing, nil, repository.ErrContractUnavailable, 403, 1},
 		{"active editor", existing, nil, repository.ErrContactLocked, 423, 1},
-		{"multiple active SLM", existing, nil, repository.ErrContractContacts, 409, 1},
 		{"legacy bypass rejected", `{"sap_ugovor_id":101,"ugo_org_id":999,"ime":"Fake"}`, nil, nil, 400, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

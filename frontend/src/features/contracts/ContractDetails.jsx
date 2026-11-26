@@ -1,13 +1,8 @@
-import { usePermissions } from "../../context/usePermissions";
 import Icon from "../../ui/Icon";
-import RowMenu from "../../ui/RowMenu";
-import { useContactActions } from "../partners/useContactActions";
-import { useState } from "react";
-import AddContactDialog from "../partners/AddContactDialog";
 import { value } from "../../utils/contractFormatting";
 import ResponsiblePersons from "./ResponsiblePersons";
 import SupplierAddress from "./SupplierAddress";
-import { supplierContacts, isServiceLevelManager } from "./supplierContacts";
+import ContractPeople from "./ContractPeople";
 
 const fields = [
   ["godina", "Godina"],
@@ -23,12 +18,6 @@ export default function ContractDetails({
   onUploadResolution,
   onViewResolutions,
 }) {
-  const permissions = usePermissions();
-  const [addingContact, setAddingContact] = useState(false);
-  const actions = useContactActions(item.id_sap_dobavljac);
-  const contacts = supplierContacts(item, {
-    requireLinkedID: item.otvoren_ug === "X",
-  });
   return (
     <div className="contract-summary-grid">
       <section
@@ -94,98 +83,8 @@ export default function ContractDetails({
             <p className="partner-name">{value(item, "naziv")}</p>
             <SupplierAddress item={item} />
           </div>
-          <span className="partner-count">Kontakti: {contacts.length}</span>
         </div>
-        {permissions.canWrite(item.id_ugo_org) &&
-          item.otvoren_ug === "X" &&
-          item.id_sap_dobavljac > 0 && (
-            <div className="partner-add">
-              <button
-                type="button"
-                className="button primary"
-                disabled={actions.busy}
-                onClick={() => setAddingContact(true)}
-              >
-                + Unos novog lica
-              </button>
-            </div>
-          )}
-        {actions.dialog}
-        {addingContact && (
-          <AddContactDialog
-            supplierID={item.id_sap_dobavljac}
-            onClose={() => setAddingContact(false)}
-          />
-        )}
-        {!contacts.length ? (
-          <p className="compact-empty">
-            Nema evidentiranih lica za ovog dobavljača.
-          </p>
-        ) : (
-          <ul className="partner-people" aria-label="Lica dobavljača">
-            {contacts.map((person, index) => {
-              // A saved contract snapshot may only target an explicitly linked contact.
-              const actionPerson = person.saved
-                ? (item.lica_dobavljaca || []).find(
-                    (contact) =>
-                      String(contact.id) === String(item.id_ugo_dob_lica),
-                  )
-                : person;
-              const isSLM = isServiceLevelManager(person);
-              return (
-                <li
-                  key={index}
-                  className={
-                    isSLM
-                      ? "partner-person partner-person-slm"
-                      : "partner-person"
-                  }
-                >
-                  <div className="partner-person-identity">
-                    <strong>{value(person, "ime")}</strong>
-                    <span>{value(person, "radno_mesto")}</span>
-                  </div>
-                  <div className="partner-role">
-                    {person.saved ? (
-                      <strong>Kontakt za ovaj ugovor</strong>
-                    ) : (
-                      <span className="contact-source">Trenutni podaci</span>
-                    )}
-                    {person.rola_lica && (
-                      <span className="contact-role-name">
-                        {person.rola_lica}
-                      </span>
-                    )}
-                  </div>
-                  <div className="partner-person-contact">
-                    <span>{value(person, "email")}</span>
-                    <span>{value(person, "telefon")}</span>
-                  </div>
-                  {permissions.canWrite(item.id_ugo_org) &&
-                    item.otvoren_ug === "X" &&
-                    actionPerson?.id > 0 && (
-                      <RowMenu
-                        label={`Akcije za lice ${person.ime}`}
-                        actions={[
-                          {
-                            label: "Izmeni",
-                            icon: "edit",
-                            onClick: () => actions.open(actionPerson, "edit"),
-                          },
-                          {
-                            label: "Obriši",
-                            icon: "trash",
-                            danger: true,
-                            onClick: () => actions.open(actionPerson, "delete"),
-                          },
-                        ]}
-                      />
-                    )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <ContractPeople item={item} />
       </section>
     </div>
   );

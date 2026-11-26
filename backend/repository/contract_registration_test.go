@@ -25,7 +25,7 @@ func TestRegistrationTransaction(t *testing.T) {
 		{name: "already registered", duplicate: true, want: ErrContractRegistered},
 		{name: "contact changed", changed: true, want: ErrContractContactChanged},
 		{name: "contact being edited", editing: true, want: ErrContactLocked},
-		{name: "multiple active SLM", multiple: true, want: ErrContractContacts},
+		{name: "multiple active SLM", multiple: true},
 		{name: "rollback both inserts", newContact: true, failEvidence: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,6 +95,8 @@ func TestRegistrationTransaction(t *testing.T) {
 						t.Fatal("new contact role/status/timestamps")
 					}
 					*a[len(a)-1].Value.(sql.Out).Dest.(*int) = 99
+				case strings.Contains(q, "INSERT INTO TED.UGO_EVID_LICA"):
+					writes = append(writes, "assignment")
 				case strings.Contains(q, "INSERT INTO TED.UGO_EVID"):
 					writes = append(writes, "evidence")
 					if a[0].Value != 1 || a[1].Value != 101 || a[2].Value != 3 || !strings.Contains(q, "'A',SYSDATE") {
@@ -188,7 +190,7 @@ func TestPreparationRejectsContractOutsideScope(t *testing.T) {
 	}
 }
 
-func TestRegistrationRejectsNewContactIfAnotherRequestCreatedSLM(t *testing.T) {
+func TestRegistrationAllowsNewContactAlongsideExistingSLM(t *testing.T) {
 	store, tx := editStore(t, func(q string, a []driver.NamedValue) (driver.Rows, error) {
 		if strings.Contains(q, "FROM TED.UGO_TIP_UGOVORA") {
 			return editRows("ODRZAVANJE"), nil
@@ -204,13 +206,13 @@ func TestRegistrationRejectsNewContactIfAnotherRequestCreatedSLM(t *testing.T) {
 		}
 		return editRows(int64(7), "Ana", nil, "011", "ana@example.test", int64(1)), nil
 	}, func(q string, a []driver.NamedValue) (driver.Result, error) {
-		if !strings.Contains(q, "INSERT INTO TED.UGO_EDIT_LOCK") {
-			t.Fatal("must not create duplicate contact")
+		if strings.Contains(q, "RETURNING id INTO") {
+			*a[len(a)-1].Value.(sql.Out).Dest.(*int) = 99
 		}
 		return driver.RowsAffected(1), nil
 	})
 	_, err := store.RegisterContract(context.Background(), models.RegisterContract{TypeID: 1, ContractID: 101, Contact: &models.NewContractContact{Ime: "Novo"}}, 3, 5)
-	if !errors.Is(err, ErrContractContactChanged) || tx.committed || !tx.rolledBack {
+	if err != nil || !tx.committed {
 		t.Fatal(err)
 	}
 }

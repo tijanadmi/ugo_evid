@@ -15,6 +15,8 @@ export function invalidateBusinessData(client) {
       "partners",
       "contracts",
       "contract",
+      "contract-people",
+      "contact-engagements",
       "unregistered-contracts",
       "documents",
       "contract-settings",

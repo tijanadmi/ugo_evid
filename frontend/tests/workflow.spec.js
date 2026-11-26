@@ -55,6 +55,7 @@ async function mockAPI(page, options = {}) {
       return json({ total: 21, id_ugo_org: 3, items: [{ id: 20, can_write: true, naziv: url.searchParams.get('page_id') === '2' ? 'Drugi partner' : 'Moj partner', adresa: 'Ulica 12', grad: 'Beograd', lica_dobavljaca: [{ id: 7, ime: 'Ana Anić', rola_lica: 'Service Level Manager', telefon: '011 999', email: 'ana@example.test' }] }] });
     }
     if (url.pathname === '/api/ugo_org') return json({ total: 2, items: [{ id: 3, sifra: 'CTKS', naziv: 'Centar za telekomunikacione sisteme' }, { id: 4, sifra: 'CITI', naziv: 'Centar za IT infrastrukturu' }] });
+    if (url.pathname.endsWith('/lica')) return json({items: options.noContacts ? [] : [{id:10,id_ugo_dob_lica:7,id_ugo_dob_lica_rola:1,ime:'Ana Anić',rola:'Service Level Manager',telefon:'011 999',email:'ana@example.test',status:'A',status_lica:'A',version:'1'}],candidates:[]});
     if (url.pathname.startsWith('/api/ugo_evid/')) {
       if (url.pathname.endsWith('/detalji')) {
         if (options.detailError) return json({ error: 'Detalji nisu dostupni' }, options.detailError);
@@ -171,10 +172,10 @@ test('login, portal, both lists, supplier filter, pagination and details', async
   await expect(page.getByRole('heading', { name: /4600099999.*Održavanje/ })).toBeVisible();
   await expect(page.getByRole('list', { name: 'Odgovorna lica' }).getByText(/Šesto odgovorno lice/)).toBeVisible();
   await expect(page.getByText('Service Level Manager', { exact: true })).toBeVisible();
-  const supplierRows = page.getByRole('list', { name: 'Lica dobavljača' }).getByRole('listitem');
-  await expect(supplierRows).toHaveCount(2);
-  await expect(supplierRows.first()).toContainText('Kontakt za ovaj ugovor');
-  await expect(supplierRows.first()).toContainText('Petar Petrović');
+  const supplierRows = page.getByRole('list', { name: 'Lica ugovora' }).getByRole('listitem');
+  await expect(supplierRows).toHaveCount(1);
+  await expect(supplierRows.first()).toContainText('Service Level Manager');
+  await expect(supplierRows.first()).toContainText('Ana Anić');
   await expect(page.getByText('011 999', { exact: true })).toBeVisible();
   await page.screenshot({ path: 'test-results/detalji.png', fullPage: true });
   await page.reload();
@@ -199,7 +200,7 @@ test('direct details handle empty contacts, missing contracts and retry', async 
   await mockAPI(page, options);
   await login(page);
   await page.goto('/ugovori/detalji/2');
-  await expect(page.getByText('Nema evidentiranih lica za ovog dobavljača.')).toBeVisible();
+  await expect(page.getByText('Za ovaj ugovor nije izabran aktivni SLM.')).toBeVisible();
   options.detailError = 404;
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ugovor nije pronađen' })).toBeVisible();

@@ -13,6 +13,7 @@ type ContractChoice struct {
 
 type ContractPreparation struct {
 	Contract ContractChoice `json:"contract"`
+	Contacts []UgoDobLice   `json:"contacts"`
 	Contact  *UgoDobLice    `json:"contact"`
 }
 

@@ -24,7 +24,7 @@ func registrationError(ctx *gin.Context, err error) {
 		code, message = 403, err.Error()
 	case errors.Is(err, repository.ErrUserOrganization):
 		code, message = 403, "Korisniku mora biti dodeljena jedna aktivna organizaciona jedinica."
-	case errors.Is(err, repository.ErrContractRegistered), errors.Is(err, repository.ErrContractContacts), errors.Is(err, repository.ErrContractContactChanged):
+	case errors.Is(err, repository.ErrContractRegistered), errors.Is(err, repository.ErrContractContactChanged):
 		code, message = 409, err.Error()
 	case errors.Is(err, repository.ErrContractType), errors.Is(err, repository.ErrContractContactRequired), errors.Is(err, repository.ErrContractSupplier):
 		code, message = 400, err.Error()
@@ -115,7 +115,7 @@ func (server *Server) PrepareContractRegistration(ctx *gin.Context) {
 		registrationError(ctx, err)
 		return
 	}
-	ctx.JSON(200, gin.H{"contract": result.Contract, "contact": result.Contact, "id_ugo_org": orgID})
+	ctx.JSON(200, gin.H{"contract": result.Contract, "contact": result.Contact, "contacts": result.Contacts, "id_ugo_org": orgID})
 }
 
 func (server *Server) InsertUgoEvid(ctx *gin.Context) {

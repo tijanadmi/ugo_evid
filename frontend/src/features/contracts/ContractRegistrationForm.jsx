@@ -38,11 +38,21 @@ export default function ContractRegistrationForm({
   const [mustReload, setMustReload] = useState(false);
   const submitting = useRef(false);
   const data = query.data;
-  const person = data?.contact;
+  const [selectedPerson, setSelectedPerson] = useState(null);
+  const candidates = data?.contacts || (data?.contact ? [data.contact] : []);
+  const selection =
+    selectedPerson ??
+    (candidates.length === 1
+      ? String(candidates[0].id)
+      : candidates.length === 0
+        ? "new"
+        : "");
+  const person = candidates.find((p) => String(p.id) === selection);
   const org = organizations.find((item) => item.id === data?.id_ugo_org);
   async function save(event) {
     event.preventDefault();
     if (
+      (!person && selection !== "new") ||
       !typeID ||
       !data ||
       query.isFetching ||
@@ -135,6 +145,23 @@ export default function ContractRegistrationForm({
               ugovorima.
             </p>
           )}
+          <label>
+            Service Level Manager za ovaj ugovor
+            <select
+              required
+              value={selection}
+              disabled={saving || query.isFetching}
+              onChange={(e) => setSelectedPerson(e.target.value)}
+            >
+              <option value="">Izaberite SLM-a</option>
+              {candidates.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.ime} ? {p.email}
+                </option>
+              ))}
+              <option value="new">Dodaj novo lice</option>
+            </select>
+          </label>
           {person ? (
             <section
               className="registration-contact"
@@ -149,10 +176,10 @@ export default function ContractRegistrationForm({
                 Ovi podaci biće preuzeti u evidenciju ugovora.
               </p>
             </section>
-          ) : (
+          ) : selection === "new" ? (
             <>
               <p>
-                Dobavljač nema aktivnog Service Level Manager-a. Unesite
+                Unesite novog Service Level Manager-a za ovaj ugovor. Unesite
                 kontakt; lice i evidencija ugovora biće sačuvani zajedno.
               </p>
               <fieldset disabled={saving || query.isFetching}>
@@ -207,7 +234,7 @@ export default function ContractRegistrationForm({
                 </label>
               </fieldset>
             </>
-          )}
+          ) : null}
         </>
       )}
       {(query.error || mustReload) && (
@@ -233,6 +260,7 @@ export default function ContractRegistrationForm({
           type="submit"
           className="button primary"
           disabled={
+            (!person && selection !== "new") ||
             !typeID ||
             types.isPending ||
             !!types.error ||

@@ -19,7 +19,7 @@ func (r *OracleStore) GetUgoEvidProsireniByID(ctx context.Context, id int) (mode
 		return item, err
 	}
 	items := []models.UgoEvidProsireni{item}
-	if err := r.loadProsireniContacts(ctx, items); err != nil {
+	if err := r.loadContractContacts(ctx, items); err != nil {
 		return item, err
 	}
 	return items[0], nil
@@ -135,7 +135,7 @@ func (r *OracleStore) listContracts(ctx context.Context, open bool, offset, limi
 		return nil, 0, err
 	}
 	if contacts {
-		if err := r.loadProsireniContacts(ctx, items); err != nil {
+		if err := r.loadContractContacts(ctx, items); err != nil {
 			return nil, 0, err
 		}
 	}
@@ -151,8 +151,10 @@ const prosireniSelect = `SELECT
  v.odg_zap_1, v.naziv_odg_zap_1, v.odg_zap_2, v.naziv_odg_zap_2,
  v.odg_zap_3, v.naziv_odg_zap_3, v.odg_zap_4, v.naziv_odg_zap_4,
  v.odg_zap_5, v.naziv_odg_zap_5, v.odg_zap_6, v.naziv_odg_zap_6,
- v.ime, v.telefon, v.email, v.status, v.datpri, v.datizm,
- (SELECT e.id_ugo_dob_lica FROM TED.UGO_EVID e WHERE e.id = v.id_ugo_evid) AS id_ugo_dob_lica,
+ (SELECT l.ime FROM TED.UGO_EVID_LICA a JOIN TED.UGO_DOB_LICA l ON l.id=a.id_ugo_dob_lica WHERE a.id_ugo_evid=v.id_ugo_evid AND a.status='A' AND a.id_ugo_dob_lica_rola=1),
+ (SELECT l.telefon FROM TED.UGO_EVID_LICA a JOIN TED.UGO_DOB_LICA l ON l.id=a.id_ugo_dob_lica WHERE a.id_ugo_evid=v.id_ugo_evid AND a.status='A' AND a.id_ugo_dob_lica_rola=1),
+ (SELECT l.email FROM TED.UGO_EVID_LICA a JOIN TED.UGO_DOB_LICA l ON l.id=a.id_ugo_dob_lica WHERE a.id_ugo_evid=v.id_ugo_evid AND a.status='A' AND a.id_ugo_dob_lica_rola=1), v.status, v.datpri, v.datizm,
+ (SELECT a.id_ugo_dob_lica FROM TED.UGO_EVID_LICA a WHERE a.id_ugo_evid=v.id_ugo_evid AND a.status='A' AND a.id_ugo_dob_lica_rola=1) AS id_ugo_dob_lica,
  v.adresa, v.grad`
 
 func scanProsireni(rows interface{ Scan(...any) error }, m *models.UgoEvidProsireni) error {

@@ -14,9 +14,9 @@ func (r *OracleStore) GetUgoEvidById(ctx context.Context, id int) (*models.UgoEv
 	query := `
         SELECT
 e.id AS c0,
-e.ime AS c1,
-e.telefon AS c2,
-e.email AS c3,
+dl.ime AS c1,
+dl.telefon AS c2,
+dl.email AS c3,
 e.status AS c4,
 e.datpri AS c5,
 e.datizm AS c6,
@@ -42,7 +42,8 @@ dl.status AS c25
  FROM TED.UGO_EVID e
         JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
         JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
-        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
+        LEFT JOIN TED.UGO_EVID_LICA el ON el.id_ugo_evid=e.id AND el.status='A' AND el.id_ugo_dob_lica_rola=1
+        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = el.id_ugo_dob_lica
         WHERE e.id = :p1
     `
 
@@ -98,9 +99,9 @@ func (r *OracleStore) GetUgoEvidPaged(ctx context.Context, orgID, offset, limit 
 	query := `
         SELECT
 e.id AS c0,
-e.ime AS c1,
-e.telefon AS c2,
-e.email AS c3,
+dl.ime AS c1,
+dl.telefon AS c2,
+dl.email AS c3,
 e.status AS c4,
 e.datpri AS c5,
 e.datizm AS c6,
@@ -127,7 +128,8 @@ COUNT(*) OVER() AS c26
  FROM TED.UGO_EVID e
         JOIN TED.SAP_UGOVORI su ON su.id = e.id_sap_ugovor
         JOIN TED.UGO_ORG o      ON o.id = e.id_ugo_org
-        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = e.id_ugo_dob_lica
+        LEFT JOIN TED.UGO_EVID_LICA el ON el.id_ugo_evid=e.id AND el.status='A' AND el.id_ugo_dob_lica_rola=1
+        LEFT JOIN TED.UGO_DOB_LICA dl ON dl.id = el.id_ugo_dob_lica
         WHERE ` + accessPredicate(ctx, "e.id_ugo_org", "e.id_ugo_org = :p1") + `
     `
 
@@ -137,9 +139,9 @@ COUNT(*) OVER() AS c26
 	if filter != "" {
 		query += fmt.Sprintf(`
             AND (
-                LOWER(e.ime) LIKE LOWER('%%' || :p%d || '%%')
-                OR LOWER(e.email) LIKE LOWER('%%' || :p%d || '%%')
-                OR LOWER(e.telefon) LIKE LOWER('%%' || :p%d || '%%')
+                LOWER(dl.ime) LIKE LOWER('%%' || :p%d || '%%')
+                OR LOWER(dl.email) LIKE LOWER('%%' || :p%d || '%%')
+                OR LOWER(dl.telefon) LIKE LOWER('%%' || :p%d || '%%')
             )
         `, pos, pos, pos)
 		args = append(args, filter)

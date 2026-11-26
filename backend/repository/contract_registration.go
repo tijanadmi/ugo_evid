@@ -15,7 +15,6 @@ import (
 var (
 	ErrContractUnavailable     = errors.New("Ugovor nije dostupan za unos: mora biti otvoren i pripadati nosiocu nabavke vase organizacione jedinice.")
 	ErrContractRegistered      = errors.New("Ugovor je već evidentiran. Osvežite izbor ugovora.")
-	ErrContractContacts        = errors.New("Dobavljač ima više aktivnih lica sa rolom 1. Ispravite podatke pre unosa ugovora.")
 	ErrContractContactChanged  = errors.New("Kontakt lice je promenjeno. Ponovo učitajte podatke izabranog ugovora.")
 	ErrContractContactRequired = errors.New("Unesite ime, telefon i email novog kontakt lica.")
 	ErrContractSupplier        = errors.New("Izabrani ugovor nema ispravnog dobavljača.")
@@ -124,9 +123,6 @@ func registrationContacts(ctx context.Context, q contractQueryer, supplier int) 
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	if len(list) > 1 {
-		return nil, ErrContractContacts
-	}
 	return list, nil
 }
 
@@ -139,7 +135,7 @@ func (r *OracleStore) PrepareContractRegistration(ctx context.Context, id, orgID
 	if err != nil {
 		return nil, err
 	}
-	result := &models.ContractPreparation{Contract: contract}
+	result := &models.ContractPreparation{Contract: contract, Contacts: contacts}
 	if len(contacts) == 1 {
 		result.Contact = &contacts[0]
 	}
@@ -184,7 +180,7 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 	if err != nil {
 		return nil, err
 	}
-	// Different contracts from the same supplier must not both create the first SLM.
+	// Serialize registration contact creation for this supplier. Multiple SLMs are allowed.
 	random = make([]byte, 32)
 	if _, err = rand.Read(random); err != nil {
 		return nil, err
@@ -198,7 +194,7 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 		return nil, err
 	}
 	var person models.UgoDobLice
-	if len(contacts) == 0 {
+	if req.Contact != nil {
 		if req.ContactID != 0 || req.ContactVersion != 0 {
 			return nil, ErrContractContactChanged
 		}
@@ -216,7 +212,15 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 			return nil, err
 		}
 	} else {
-		person = contacts[0]
+		for _, candidate := range contacts {
+			if candidate.ID == req.ContactID {
+				person = candidate
+				break
+			}
+		}
+		if person.ID == 0 {
+			return nil, ErrContractContactChanged
+		}
 		if req.Contact != nil || req.ContactID != person.ID || req.ContactVersion != person.Version {
 			return nil, ErrContractContactChanged
 		}
@@ -252,6 +256,10 @@ func (r *OracleStore) RegisterContract(ctx context.Context, req models.RegisterC
 		if strings.Contains(err.Error(), "ORA-00001") {
 			return nil, ErrContractRegistered
 		}
+		return nil, err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO TED.UGO_EVID_LICA (id_ugo_evid,id_ugo_dob_lica,id_ugo_dob_lica_rola,status,id_korisnika) VALUES (:contract,:person,1,'A',:actor)`, sql.Named("contract", result.ID), sql.Named("person", person.ID), sql.Named("actor", userID))
+	if err != nil {
 		return nil, err
 	}
 	_, err = tx.ExecContext(ctx, `DELETE FROM TED.UGO_EDIT_LOCK WHERE lock_token IN (:contract_token,:supplier_token) AND user_id = :user_id`, sql.Named("contract_token", token), sql.Named("supplier_token", supplierToken), sql.Named("user_id", userID))

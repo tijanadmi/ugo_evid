@@ -1,171 +1,428 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
 async function setup(context, options = {}) {
   const state = { bodies: [], filters: [], registered: false, ...options };
-  const contract = { id: 101, id_sap_dobavljac: 20, br_ugovor: '460001', godina: '2026', predmet_ugovora: 'Održavanje opreme', dobavljac: 'Primer dobavljača', otvoren_ug: 'X' };
-  const person = { id: 7, ime: 'Ana Kontakt', telefon: '011 123', email: 'ana@example.test', version: '2' };
-  await context.addInitScript(() => sessionStorage.setItem('ugo-evid-session', JSON.stringify({ access_token: 'access', refresh_token: 'refresh', access_token_expires_at: new Date(Date.now() + 3600000).toISOString(), refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(), user: { username: 'test.user' } })));
-  await context.route('**/api/**', async route => {
-    if (new URL(route.request().url()).pathname === '/api/users/prava') return route.fulfill({json: {organizations:[{id:3,sifra:'CTKS',naziv:'Moja organizacija',can_write:true}],calendar_admin:true}});
+  const contract = {
+    id: 101,
+    id_sap_dobavljac: 20,
+    br_ugovor: "460001",
+    godina: "2026",
+    predmet_ugovora: "Održavanje opreme",
+    dobavljac: "Primer dobavljača",
+    otvoren_ug: "X",
+  };
+  const person = {
+    id: 7,
+    ime: "Ana Kontakt",
+    telefon: "011 123",
+    email: "ana@example.test",
+    version: "2",
+  };
+  await context.addInitScript(() =>
+    sessionStorage.setItem(
+      "ugo-evid-session",
+      JSON.stringify({
+        access_token: "access",
+        refresh_token: "refresh",
+        access_token_expires_at: new Date(Date.now() + 3600000).toISOString(),
+        refresh_token_expires_at: new Date(Date.now() + 7200000).toISOString(),
+        user: { username: "test.user" },
+      }),
+    ),
+  );
+  await context.route("**/api/**", async (route) => {
+    if (new URL(route.request().url()).pathname === "/api/users/prava")
+      return route.fulfill({
+        json: {
+          organizations: [
+            {
+              id: 3,
+              sifra: "CTKS",
+              naziv: "Moja organizacija",
+              can_write: true,
+            },
+          ],
+          calendar_admin: true,
+        },
+      });
     const request = route.request();
     const url = new URL(request.url());
-    const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    if (url.pathname === '/api/ugo_tip_ugovora') return json({ items: [{id:1,sifra:'ODRZAVANJE',naziv:'Odrzavanje softvera'}] });
-    if (url.pathname.endsWith('/dokumenti')) return json({ items: [], types: [{ id: 1, sifra: 'UGOVOR', naziv: 'Ugovor' }], max_bytes: 26214400 });
-    if (url.pathname === '/api/ugo_org') return json({ total: 1, items: [{ id: 3, sifra: 'CTKS', naziv: 'Moja organizacija' }] });
-    if (url.pathname === '/api/ugo_evid/otvoreni' || url.pathname === '/api/ugo_evid/zatvoreni') return json({ total: 0, items: [] });
-    if (url.pathname === '/api/sapugovori/neevidentirani') {
-      state.filters.push(url.searchParams.get('filter'));
-      expect(url.searchParams.get('page_size')).toBe('20');
-      return json({ total: state.registered || url.searchParams.get('filter') === 'Nema' ? 0 : 21, items: state.registered || url.searchParams.get('filter') === 'Nema' ? [] : [contract] });
+    const json = (body, status = 200) =>
+      route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    if (url.pathname === "/api/ugo_tip_ugovora")
+      return json({
+        items: [{ id: 1, sifra: "ODRZAVANJE", naziv: "Odrzavanje softvera" }],
+      });
+    if (url.pathname.endsWith("/dokumenti"))
+      return json({
+        items: [],
+        types: [{ id: 1, sifra: "UGOVOR", naziv: "Ugovor" }],
+        max_bytes: 26214400,
+      });
+    if (url.pathname === "/api/ugo_org")
+      return json({
+        total: 1,
+        items: [{ id: 3, sifra: "CTKS", naziv: "Moja organizacija" }],
+      });
+    if (
+      url.pathname === "/api/ugo_evid/otvoreni" ||
+      url.pathname === "/api/ugo_evid/zatvoreni"
+    )
+      return json({ total: 0, items: [] });
+    if (url.pathname === "/api/sapugovori/neevidentirani") {
+      state.filters.push(url.searchParams.get("filter"));
+      expect(url.searchParams.get("page_size")).toBe("20");
+      return json({
+        total:
+          state.registered || url.searchParams.get("filter") === "Nema"
+            ? 0
+            : 21,
+        items:
+          state.registered || url.searchParams.get("filter") === "Nema"
+            ? []
+            : [contract],
+      });
     }
-    if (url.pathname === '/api/sapugovori/101/priprema') {
-      if (state.registered) return json({ error: 'Ugovor je već evidentiran.' }, 409);
-      return json({ contract, contact: state.newContact ? null : person, id_ugo_org: 3 });
+    if (url.pathname === "/api/sapugovori/101/priprema") {
+      if (state.registered)
+        return json({ error: "Ugovor je već evidentiran." }, 409);
+      return json({
+        contract,
+        contact: state.newContact ? null : person,
+        ...(state.multiple
+          ? { contacts: [person, { ...person, id: 8, ime: "Drugi SLM" }] }
+          : {}),
+        id_ugo_org: 3,
+      });
     }
-    if (url.pathname === '/api/ugo_evid' && request.method() === 'POST') {
+    if (url.pathname === "/api/ugo_evid" && request.method() === "POST") {
       const body = request.postDataJSON();
       state.bodies.push(body);
       expect(body.id_ugo_org).toBeUndefined();
       expect(body.id_sap_dobavljac).toBeUndefined();
-      if (state.registered) return json({ error: 'Ugovor je već evidentiran.' }, 409);
-      if (state.locked) return json({ error: 'Lice trenutno uređuje drugi korisnik.' }, 423);
-      if (state.changed) return json({ error: 'Kontakt lice je promenjeno. Ponovo učitajte podatke.' }, 409);
+      if (state.registered)
+        return json({ error: "Ugovor je već evidentiran." }, 409);
+      if (state.locked)
+        return json({ error: "Lice trenutno uređuje drugi korisnik." }, 423);
+      if (state.changed)
+        return json(
+          { error: "Kontakt lice je promenjeno. Ponovo učitajte podatke." },
+          409,
+        );
       state.registered = true;
-      return json({ data: { id: 55, ugo_org: { id: 3 }, sap_ugovor: { id: 101 } } }, 201);
+      return json(
+        { data: { id: 55, ugo_org: { id: 3 }, sap_ugovor: { id: 101 } } },
+        201,
+      );
     }
-    return json({ error: 'Unknown route' }, 404);
+    return json({ error: "Unknown route" }, 404);
   });
   return state;
 }
 async function openPicker(page) {
-  await page.goto('/ugovori/otvoreni');
-  await page.getByRole('button', { name: 'Izaberi ugovor', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Izaberi ugovor' })).toBeVisible();
+  await page.goto("/ugovori/otvoreni");
+  await page
+    .getByRole("button", { name: "Izaberi ugovor", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Izaberi ugovor" }),
+  ).toBeVisible();
 }
 async function choose(page) {
-  await page.getByRole('button', { name: 'Izaberi ugovor 460001', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Evidentiraj ugovor', exact: true })).toBeDisabled();
-  await page.getByLabel('Tip ugovora', { exact: true }).selectOption('1');
-  await expect(page.getByRole('button', { name: 'Evidentiraj ugovor', exact: true })).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Izaberi ugovor 460001", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Evidentiraj ugovor", exact: true }),
+  ).toBeDisabled();
+  await page.getByLabel("Tip ugovora", { exact: true }).selectOption("1");
+  await expect(
+    page.getByRole("button", { name: "Evidentiraj ugovor", exact: true }),
+  ).toBeEnabled();
 }
 
-test('filter, pagination and register using existing active role-1 contact', async ({ context, page }) => {
+test("filter, pagination and register using existing active role-1 contact", async ({
+  context,
+  page,
+}) => {
   const state = await setup(context);
   await openPicker(page);
-  await page.getByLabel('Broj ugovora, predmet ili dobavljač').fill('Nema');
-  await page.getByRole('dialog', { name: 'Izaberi ugovor', exact: true }).getByRole('button', { name: 'Pretraži', exact: true }).click();
-  await expect(page.getByText('Nema neevidentiranih ugovora za izabrani filter.')).toBeVisible();
-  await page.getByLabel('Broj ugovora, predmet ili dobavljač').fill('Oprema');
-  await page.getByRole('dialog', { name: 'Izaberi ugovor', exact: true }).getByRole('button', { name: 'Pretraži', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Sledeća', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Sledeća', exact: true }).click();
-  await expect(page.getByRole('navigation', { name: 'Stranice izbora ugovora' })).toContainText('Stranica 2 od 2');
+  await page.getByLabel("Broj ugovora, predmet ili dobavljač").fill("Nema");
+  await page
+    .getByRole("dialog", { name: "Izaberi ugovor", exact: true })
+    .getByRole("button", { name: "Pretraži", exact: true })
+    .click();
+  await expect(
+    page.getByText("Nema neevidentiranih ugovora za izabrani filter."),
+  ).toBeVisible();
+  await page.getByLabel("Broj ugovora, predmet ili dobavljač").fill("Oprema");
+  await page
+    .getByRole("dialog", { name: "Izaberi ugovor", exact: true })
+    .getByRole("button", { name: "Pretraži", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Sledeća", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Sledeća", exact: true }).click();
+  await expect(
+    page.getByRole("navigation", { name: "Stranice izbora ugovora" }),
+  ).toContainText("Stranica 2 od 2");
   await choose(page);
-  await expect(page.getByRole('region', { name: 'Postojeće kontakt lice' })).toContainText('Ana Kontakt');
-  await expect(page.getByRole('form', { name: 'Unos ugovora' })).toContainText('Moja organizacija');
-  await page.screenshot({ path: 'test-results/contract-registration-compact.png' });
-  await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toHaveAttribute('href', '/ugovori/detalji/55');
-  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_tip_ugovora: 1, id_ugo_dob_lica: 7, contact_version: '2' }]);
-  expect(state.filters).toContain('Oprema');
+  await expect(
+    page.getByRole("region", { name: "Postojeće kontakt lice" }),
+  ).toContainText("Ana Kontakt");
+  await expect(page.getByRole("form", { name: "Unos ugovora" })).toContainText(
+    "Moja organizacija",
+  );
+  await page.screenshot({
+    path: "test-results/contract-registration-compact.png",
+  });
+  await page.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(
+    page.getByRole("link", { name: "Otvori detalje ugovora" }),
+  ).toHaveAttribute("href", "/ugovori/detalji/55");
+  expect(state.bodies).toEqual([
+    {
+      id_sap_ugovor: 101,
+      id_tip_ugovora: 1,
+      id_ugo_dob_lica: 7,
+      contact_version: "2",
+    },
+  ]);
+  expect(state.filters).toContain("Oprema");
 });
 
-test('new role-1 contact is sent together with contract; work position optional', async ({ context, page }) => {
+test("new role-1 contact is sent together with contract; work position optional", async ({
+  context,
+  page,
+}) => {
   const state = await setup(context, { newContact: true });
   await openPicker(page);
   await choose(page);
-  await page.getByLabel('Ime i prezime', { exact: true }).fill('Novo lice');
-  await page.getByLabel('Telefon', { exact: true }).fill('011 555');
-  await page.getByLabel('Email', { exact: true }).fill('novo@example.test');
-  await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toBeVisible();
-  expect(state.bodies).toEqual([{ id_sap_ugovor: 101, id_tip_ugovora: 1, novo_lice: { ime: 'Novo lice', radno_mesto: '', telefon: '011 555', email: 'novo@example.test' } }]);
+  await page.getByLabel("Ime i prezime", { exact: true }).fill("Novo lice");
+  await page.getByLabel("Telefon", { exact: true }).fill("011 555");
+  await page.getByLabel("Email", { exact: true }).fill("novo@example.test");
+  await page.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(
+    page.getByRole("link", { name: "Otvori detalje ugovora" }),
+  ).toBeVisible();
+  expect(state.bodies).toEqual([
+    {
+      id_sap_ugovor: 101,
+      id_tip_ugovora: 1,
+      novo_lice: {
+        ime: "Novo lice",
+        radno_mesto: "",
+        telefon: "011 555",
+        email: "novo@example.test",
+      },
+    },
+  ]);
 });
 
-test('two tabs selecting one SAP contract handle a concurrent registration', async ({ context, page }) => {
+test("two tabs selecting one SAP contract handle a concurrent registration", async ({
+  context,
+  page,
+}) => {
   const state = await setup(context);
-  await openPicker(page); await choose(page);
+  await openPicker(page);
+  await choose(page);
   const second = await context.newPage();
-  await openPicker(second); await choose(second);
-  await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(page.getByRole('link', { name: 'Otvori detalje ugovora' })).toBeVisible();
-  await second.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(second.getByRole('alert')).toContainText('već evidentiran');
-  await expect(second.getByRole('button', { name: 'Evidentiraj ugovor' })).toBeDisabled();
-  await second.getByRole('button', { name: 'Ponovo proveri ugovor' }).click();
-  await expect(second.getByRole('alert')).toContainText('već evidentiran');
+  await openPicker(second);
+  await choose(second);
+  await page.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(
+    page.getByRole("link", { name: "Otvori detalje ugovora" }),
+  ).toBeVisible();
+  await second.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(second.getByRole("alert")).toContainText("već evidentiran");
+  await expect(
+    second.getByRole("button", { name: "Evidentiraj ugovor" }),
+  ).toBeDisabled();
+  await second.getByRole("button", { name: "Ponovo proveri ugovor" }).click();
+  await expect(second.getByRole("alert")).toContainText("već evidentiran");
   expect(state.bodies).toHaveLength(2);
 });
 
-test('contact conflict preserves input and requires rechecking before retry', async ({ context, page }) => {
+test("contact conflict preserves input and requires rechecking before retry", async ({
+  context,
+  page,
+}) => {
   const state = await setup(context, { newContact: true, changed: true });
-  await openPicker(page); await choose(page);
-  await page.getByLabel('Ime i prezime', { exact: true }).fill('Moj unos');
-  await page.getByLabel('Telefon', { exact: true }).fill('011');
-  await page.getByLabel('Email', { exact: true }).fill('moj@example.test');
-  await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(page.getByRole('alert')).toContainText('Kontakt lice je promenjeno');
-  await expect(page.getByLabel('Ime i prezime', { exact: true })).toHaveValue('Moj unos');
-  await expect(page.getByRole('button', { name: 'Evidentiraj ugovor' })).toBeDisabled();
-  state.changed = false; state.newContact = false;
-  await page.getByRole('button', { name: 'Ponovo proveri ugovor' }).click();
-  await expect(page.getByRole('region', { name: 'Postojeće kontakt lice' })).toContainText('Ana Kontakt');
-  await expect(page.getByRole('button', { name: 'Evidentiraj ugovor' })).toBeEnabled();
+  await openPicker(page);
+  await choose(page);
+  await page.getByLabel("Ime i prezime", { exact: true }).fill("Moj unos");
+  await page.getByLabel("Telefon", { exact: true }).fill("011");
+  await page.getByLabel("Email", { exact: true }).fill("moj@example.test");
+  await page.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Kontakt lice je promenjeno",
+  );
+  await expect(page.getByLabel("Ime i prezime", { exact: true })).toHaveValue(
+    "Moj unos",
+  );
+  await expect(
+    page.getByRole("button", { name: "Evidentiraj ugovor" }),
+  ).toBeDisabled();
+  state.changed = false;
+  state.newContact = false;
+  await page.getByRole("button", { name: "Ponovo proveri ugovor" }).click();
+  await expect(
+    page.getByRole("region", { name: "Postojeće kontakt lice" }),
+  ).toContainText("Ana Kontakt");
+  await expect(
+    page.getByRole("button", { name: "Evidentiraj ugovor" }),
+  ).toBeEnabled();
 });
 
-test('active contact edit blocks registration and closed list has no picker', async ({ context, page }) => {
+test("active contact edit blocks registration and closed list has no picker", async ({
+  context,
+  page,
+}) => {
   await setup(context, { locked: true });
-  await openPicker(page); await choose(page);
-  await page.getByRole('button', { name: 'Evidentiraj ugovor' }).click();
-  await expect(page.getByRole('alert')).toContainText('drugi korisnik');
-  await page.goto('/ugovori/zatvoreni');
-  await expect(page.getByRole('heading', { name: 'Zatvoreni ugovori', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Izaberi ugovor', exact: true })).toHaveCount(0);
+  await openPicker(page);
+  await choose(page);
+  await page.getByRole("button", { name: "Evidentiraj ugovor" }).click();
+  await expect(page.getByRole("alert")).toContainText("drugi korisnik");
+  await page.goto("/ugovori/zatvoreni");
+  await expect(
+    page.getByRole("heading", { name: "Zatvoreni ugovori", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Izaberi ugovor", exact: true }),
+  ).toHaveCount(0);
 });
 
-test('picker keeps actions, filter and pagination accessible with long rows on desktop and mobile', async ({ context, page }) => {
- await setup(context);
- await context.route('**/api/sapugovori/neevidentirani?**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ total: 20, items: Array.from({ length: 20 }, (_, i) => ({ id: 101 + i, br_ugovor: String(460001 + i), godina: '2026', predmet_ugovora: 'Dug predmet ugovora za odrzavanje opreme i nabavku rezervnih delova '.repeat(5), dobavljac: 'Dobavljac sa dugim poslovnim imenom '.repeat(3), otvoren_ug: 'X' })) }) }));
- await page.setViewportSize({ width: 1366, height: 768 });
- await openPicker(page);
- const region = page.getByRole('region', { name: 'Ugovori za izbor' });
- await expect(region.locator('tbody tr')).toHaveCount(20);
- await expect(region.locator('tbody tr').first().locator('td').first().getByRole('button')).toHaveText('Izaberi');
- expect(await region.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
- expect(await region.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
- const nav = page.getByRole('navigation', { name: 'Stranice izbora ugovora' });
- async function checkSpacing() {
-  const filter = await page.locator('.contract-picker-body>.partner-filter').boundingBox();
-  const table = await region.boundingBox();
-  const hint = await page.locator('.contract-picker-body>p.muted').boundingBox();
-  expect(hint.y - (filter.y + filter.height)).toBeLessThan(20);
-  expect(table.y - (hint.y + hint.height)).toBeLessThan(20);
-  for (const button of await nav.getByRole('button').all()) {
-   expect(await button.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
-   expect((await button.boundingBox()).width).toBeGreaterThan(60);
+test("picker keeps actions, filter and pagination accessible with long rows on desktop and mobile", async ({
+  context,
+  page,
+}) => {
+  await setup(context);
+  await context.route("**/api/sapugovori/neevidentirani?**", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        total: 20,
+        items: Array.from({ length: 20 }, (_, i) => ({
+          id: 101 + i,
+          br_ugovor: String(460001 + i),
+          godina: "2026",
+          predmet_ugovora:
+            "Dug predmet ugovora za odrzavanje opreme i nabavku rezervnih delova ".repeat(
+              5,
+            ),
+          dobavljac: "Dobavljac sa dugim poslovnim imenom ".repeat(3),
+          otvoren_ug: "X",
+        })),
+      }),
+    }),
+  );
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await openPicker(page);
+  const region = page.getByRole("region", { name: "Ugovori za izbor" });
+  await expect(region.locator("tbody tr")).toHaveCount(20);
+  await expect(
+    region
+      .locator("tbody tr")
+      .first()
+      .locator("td")
+      .first()
+      .getByRole("button"),
+  ).toHaveText("Izaberi");
+  expect(
+    await region.evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
+  ).toBe(true);
+  expect(
+    await region.evaluate((node) => node.scrollHeight > node.clientHeight),
+  ).toBe(true);
+  const nav = page.getByRole("navigation", { name: "Stranice izbora ugovora" });
+  async function checkSpacing() {
+    const filter = await page
+      .locator(".contract-picker-body>.partner-filter")
+      .boundingBox();
+    const table = await region.boundingBox();
+    const hint = await page
+      .locator(".contract-picker-body>p.muted")
+      .boundingBox();
+    expect(hint.y - (filter.y + filter.height)).toBeLessThan(20);
+    expect(table.y - (hint.y + hint.height)).toBeLessThan(20);
+    for (const button of await nav.getByRole("button").all()) {
+      expect(
+        await button.evaluate((node) => node.scrollWidth <= node.clientWidth),
+      ).toBe(true);
+      expect((await button.boundingBox()).width).toBeGreaterThan(60);
+    }
+    const buttons = await nav.getByRole("button").all();
+    const first = await buttons[0].boundingBox(),
+      second = await buttons[1].boundingBox();
+    expect(
+      second.y >= first.y + first.height || second.x >= first.x + first.width,
+    ).toBe(true);
   }
-  const buttons = await nav.getByRole('button').all();
-  const first = await buttons[0].boundingBox(), second = await buttons[1].boundingBox();
-  expect(second.y >= first.y + first.height || second.x >= first.x + first.width).toBe(true);
- }
- await checkSpacing();
- await page.screenshot({ path: 'test-results/contract-picker-desktop.png' });
- const before = await nav.boundingBox();
- await region.evaluate(node => { node.scrollTop = node.scrollHeight; });
- expect((await nav.boundingBox()).y).toBe(before.y);
- expect(before.y + before.height).toBeLessThan(768);
- await page.setViewportSize({ width: 390, height: 844 });
- await checkSpacing();
- await page.screenshot({ path: 'test-results/contract-picker-mobile.png' });
- await region.evaluate(node => { node.scrollTop = 0; node.scrollLeft = node.scrollWidth; });
- const action = region.getByRole('button', { name: 'Izaberi ugovor 460001', exact: true });
- const buttonBounds = await action.boundingBox();
- const regionBounds = await region.boundingBox();
- expect(buttonBounds.x).toBeGreaterThanOrEqual(regionBounds.x);
- expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(regionBounds.x + regionBounds.width);
- expect((await nav.boundingBox()).y + (await nav.boundingBox()).height).toBeLessThan(844);
- await action.click();
- await expect(page.getByRole('form', { name: 'Unos ugovora' })).toBeVisible();
- await page.screenshot({ path: 'test-results/contract-registration-mobile.png' });
+  await checkSpacing();
+  await page.screenshot({ path: "test-results/contract-picker-desktop.png" });
+  const before = await nav.boundingBox();
+  await region.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  expect((await nav.boundingBox()).y).toBe(before.y);
+  expect(before.y + before.height).toBeLessThan(768);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await checkSpacing();
+  await page.screenshot({ path: "test-results/contract-picker-mobile.png" });
+  await region.evaluate((node) => {
+    node.scrollTop = 0;
+    node.scrollLeft = node.scrollWidth;
+  });
+  const action = region.getByRole("button", {
+    name: "Izaberi ugovor 460001",
+    exact: true,
+  });
+  const buttonBounds = await action.boundingBox();
+  const regionBounds = await region.boundingBox();
+  expect(buttonBounds.x).toBeGreaterThanOrEqual(regionBounds.x);
+  expect(buttonBounds.x + buttonBounds.width).toBeLessThanOrEqual(
+    regionBounds.x + regionBounds.width,
+  );
+  expect(
+    (await nav.boundingBox()).y + (await nav.boundingBox()).height,
+  ).toBeLessThan(844);
+  await action.click();
+  await expect(page.getByRole("form", { name: "Unos ugovora" })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/contract-registration-mobile.png",
+  });
+});
+
+test("selects one of several SLMs or creates a new one", async ({
+  context,
+  page,
+}) => {
+  const state = await setup(context, { multiple: true });
+  await openPicker(page);
+  await page
+    .getByRole("button", { name: "Izaberi ugovor 460001", exact: true })
+    .click();
+  await page.getByLabel("Tip ugovora", { exact: true }).selectOption("1");
+  await expect(
+    page.getByRole("button", { name: "Evidentiraj ugovor", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByLabel("Service Level Manager za ovaj ugovor")
+    .selectOption("new");
+  await expect(page.getByLabel("Ime i prezime", { exact: true })).toBeVisible();
+  await page
+    .getByLabel("Service Level Manager za ovaj ugovor")
+    .selectOption("8");
+  await page
+    .getByRole("button", { name: "Evidentiraj ugovor", exact: true })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Otvori detalje ugovora" }),
+  ).toBeVisible();
+  expect(state.bodies[0].id_ugo_dob_lica).toBe(8);
 });

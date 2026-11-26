@@ -65,6 +65,7 @@ async function setup(context, extra = {}) {
           ? req.postDataJSON()
           : {};
     const json = (data, status = 200) => route.fulfill({ status, json: data });
+    if (path.endsWith("/lica")) return json({items:[],candidates:[]});
     if (path.endsWith("/sabloni")) {
       if (req.method() === "POST") {
         state.templates = [

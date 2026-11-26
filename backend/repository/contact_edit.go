@@ -178,7 +178,7 @@ func (r *OracleStore) DeleteUgoDobLiceById(ctx context.Context, id int, version 
 		return ErrContactVersion
 	}
 	var linked int
-	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_EVID WHERE id_ugo_dob_lica = :id`, sql.Named("id", id)).Scan(&linked); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM TED.UGO_EVID_LICA WHERE id_ugo_dob_lica = :id`, sql.Named("id", id)).Scan(&linked); err != nil {
 		return err
 	}
 	if linked > 0 {
