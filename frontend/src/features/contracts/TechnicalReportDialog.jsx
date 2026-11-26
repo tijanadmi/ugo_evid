@@ -108,9 +108,8 @@ export default function TechnicalReportDialog({
         link.click();
         setTimeout(() => URL.revokeObjectURL(href), 10000);
         toast.success("Dokument je spreman za preuzimanje.");
-        await Promise.all([tracking.refetch()]);
-        client.invalidateQueries({ queryKey: ["maintenance-tracking"] });
-        announceBusinessChange();
+        await tracking.refetch();
+        announceBusinessChange(client);
       }
     } catch (e) {
       if (controller.signal.aborted) {
@@ -218,16 +217,32 @@ export default function TechnicalReportDialog({
           ) : (
             <>
               <p>
-                U Word šablonu ostavite stalni tekst ugovora, RUN broj i
-                potpisnika. Aplikacija popunjava oznake u tekstu, tabelama,
-                zaglavlju i podnožju.
+                Sami pripremite šablon u Wordu za ovaj ugovor i sačuvajte ga u
+                DOCX formatu. Unesite stalni tekst, RUN broj, potpisnika i ostale
+                podatke koji se ne menjaju između perioda.
               </p>
               <p>
-                Obavezne oznake:{" "}
-                <code>{"{{datum_od}}, {{datum_do}}, {{datum_potpisa}}"}</code>.
-                Za kvartal dodajte <code>{"{{broj_kvartala}}"}</code>. Stara
-                oznaka <code>{"{{sysdate}}"}</code> takođe koristi datum
-                potpisa, ne današnji datum.
+                Na mesta promenljivih podataka unesite sledeće obavezne oznake,
+                zajedno sa dvostrukim vitičastim zagradama:
+              </p>
+              <ul>
+                <li><code>{"{{datum_od}}"}</code> — početak tehničkog perioda.</li>
+                <li><code>{"{{datum_do}}"}</code> — kraj tehničkog perioda.</li>
+                <li><code>{"{{datum_potpisa}}"}</code> — datum potpisa evidentiran uz period.</li>
+              </ul>
+              <p>
+                Ako dokument treba da sadrži broj kvartala, dodajte i oznaku{" "}
+                <code>{"{{broj_kvartala}}"}</code>. Ona nije obavezna; ako je
+                navedete, aplikacija će ponuditi izbor broja kvartala pre
+                generisanja dokumenta.
+              </p>
+              <p>
+                Izaberite tip dokumenta, učitajte pripremljeni DOCX fajl i
+                kliknite „Sačuvaj šablon“. Zatim u meniju tehničkog perioda
+                izaberite „Generiši / preuzmi izveštaj“. Aplikacija će zameniti
+                oznake podacima izabranog perioda i omogućiti preuzimanje
+                dokumenta u DOCX ili PDF formatu. Datumi se ispisuju u formatu
+                dd.mm.yyyy.
               </p>
               <label>
                 Tip dokumenta

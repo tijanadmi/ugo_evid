@@ -351,6 +351,13 @@ test("technical report suggests earlier completed quarters, saves override and p
     "tehnicka-podrska-7.pdf",
   );
   expect(state.reportWrites[1].format).toBe("pdf");
+  await expect(
+    dialog.getByRole("button", { name: "Generiši i preuzmi", exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByText(/Cannot read properties/)).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() =>
+    localStorage.getItem("ugo-evid-data-changed"),
+  )).not.toBeNull();
 });
 
 test("monthly template hides quarter and preserves the period quarter", async ({
